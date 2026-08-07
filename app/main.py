@@ -1,18 +1,17 @@
-from core.project import Project
-from core.episode_manager import EpisodeManager
+import sys
+
+from PySide6.QtWidgets import QApplication
+from ui.main_window import MainWindow
 
 
 def main():
+    app = QApplication(sys.argv)
 
-    studio = Project()
+    window = MainWindow()
+    window.show()
 
-    studio.info()
-
-    manager = EpisodeManager(studio.episodes)
-
-    manager.print_episodes()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-
     main()
