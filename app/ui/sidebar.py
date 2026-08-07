@@ -10,20 +10,24 @@ class Sidebar(QWidget):
 
         layout = QVBoxLayout(self)
 
-        pages = [
-            "🏠 Dashboard",
-            "📂 Episodes",
-            "🖼 Images",
-            "🎥 Videos",
-            "🎵 Audio",
-            "🤖 AI Models",
-            "📤 Export",
-            "⚙ Settings"
+        self.dashboard = QPushButton("🏠 Dashboard")
+        self.episodes = QPushButton("📂 Episodes")
+        self.images = QPushButton("🖼 Images")
+        self.videos = QPushButton("🎥 Videos")
+        self.export = QPushButton("📤 Export")
+        self.settings = QPushButton("⚙ Settings")
+
+        buttons = [
+            self.dashboard,
+            self.episodes,
+            self.images,
+            self.videos,
+            self.export,
+            self.settings,
         ]
 
-        for page in pages:
-            btn = QPushButton(page)
-            btn.setMinimumHeight(42)
-            layout.addWidget(btn)
+        for b in buttons:
+            b.setMinimumHeight(42)
+            layout.addWidget(b)
 
         layout.addStretch()
