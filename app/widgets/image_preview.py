@@ -1,6 +1,8 @@
-from PySide6.QtWidgets import QLabel
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QLabel
 
 
 class ImagePreview(QLabel):
@@ -10,11 +12,25 @@ class ImagePreview(QLabel):
 
         self.setAlignment(Qt.AlignCenter)
 
-        self.setText("No Image")
-
         self.setMinimumSize(700, 500)
 
-    def load_image(self, image_path):
+        self.setStyleSheet("""
+            border:2px solid #444;
+            border-radius:8px;
+            background:#202124;
+        """)
+
+        self.setText("No Image")
+
+    def show_scene(self, episode_folder, scene):
+
+        image_path = Path(episode_folder) / scene.image
+
+        if not image_path.exists():
+
+            self.setText("Image not found")
+
+            return
 
         pix = QPixmap(str(image_path))
 

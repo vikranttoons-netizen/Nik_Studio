@@ -11,6 +11,7 @@ class Sidebar(QWidget):
         layout = QVBoxLayout(self)
 
         self.dashboard = QPushButton("🏠 Dashboard")
+        self.workspace = QPushButton("🎬 Workspace")
         self.episodes = QPushButton("📂 Episodes")
         self.images = QPushButton("🖼 Images")
         self.videos = QPushButton("🎥 Videos")
@@ -19,6 +20,7 @@ class Sidebar(QWidget):
 
         buttons = [
             self.dashboard,
+            self.workspace,
             self.episodes,
             self.images,
             self.videos,
@@ -26,8 +28,8 @@ class Sidebar(QWidget):
             self.settings,
         ]
 
-        for b in buttons:
-            b.setMinimumHeight(42)
-            layout.addWidget(b)
+        for button in buttons:
+            button.setMinimumHeight(42)
+            layout.addWidget(button)
 
         layout.addStretch()

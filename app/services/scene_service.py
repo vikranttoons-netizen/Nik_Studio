@@ -1,25 +1,30 @@
+import json
 from pathlib import Path
 
 
-class SceneService:
+class SceneSaver:
 
-    def __init__(self, episode_path):
-        self.episode_path = Path(episode_path)
+    def __init__(self, episode_folder):
+        self.episode_folder = Path(episode_folder)
 
-    def get_images(self):
+    def save(self, scenes):
 
-        folder = self.episode_path / "Images"
+        data = {
+            "scenes": []
+        }
 
-        if not folder.exists():
-            return []
+        for scene in scenes:
 
-        return sorted(folder.glob("*.png"))
+            data["scenes"].append({
+                "id": scene.id,
+                "name": scene.name,
+                "prompt": scene.prompt,
+                "image": scene.image,
+                "video": scene.video,
+                "status": scene.status
+            })
 
-    def get_videos(self):
+        file = self.episode_folder / "scenes.json"
 
-        folder = self.episode_path / "Videos"
-
-        if not folder.exists():
-            return []
-
-        return sorted(folder.glob("*.mp4"))
+        with open(file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
