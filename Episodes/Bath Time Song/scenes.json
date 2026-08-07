@@ -3,7 +3,7 @@
         {
             "id": 1,
             "name": "Scene01",
-            "prompt": "Nik happily splashes in the bathtub while smiling.",
+            "prompt": "Nik happily splashes in the bathtub while crying",
             "image": "Images/Scene01.png",
             "video": "",
             "status": "pending"

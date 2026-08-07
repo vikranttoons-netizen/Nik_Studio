@@ -1,0 +1,8 @@
+{
+    "model": "sdxl-turbo",
+    "steps": 4,
+    "guidance": 2.0,
+    "width": 1024,
+    "height": 1024,
+    "seed": -1
+}

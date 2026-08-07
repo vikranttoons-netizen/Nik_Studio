@@ -1,18 +1,16 @@
 from PySide6.QtWidgets import (
     QWidget,
-    QLabel,
     QVBoxLayout,
     QHBoxLayout,
-    QMessageBox,
 )
 
+from widgets.top_toolbar import TopToolbar
 from widgets.scene_list import SceneList
 from widgets.image_preview import ImagePreview
 from widgets.prompt_editor import PromptEditor
 from widgets.properties_panel import PropertiesPanel
-from widgets.bottom_toolbar import BottomToolbar
 
-from services.scene_saver import SceneSaver
+from managers.project_manager import ProjectManager
 
 
 class WorkspacePage(QWidget):
@@ -22,54 +20,57 @@ class WorkspacePage(QWidget):
 
         self.episode_folder = r"D:\NikStudio\Episodes\Bath Time Song"
 
+        # Main Project Manager
+        self.manager = ProjectManager(
+            self.episode_folder
+        )
+
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(12)
 
-        header = QLabel("🎬 Episode Workspace")
-        header.setStyleSheet("""
-            font-size:28px;
-            font-weight:bold;
-        """)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(10)
 
-        main_layout.addWidget(header)
+        # =====================================================
+        # Top Toolbar
+        # =====================================================
+
+        self.toolbar = TopToolbar()
+        main_layout.addWidget(self.toolbar)
+
+        # =====================================================
+        # Main Workspace
+        # =====================================================
 
         center = QHBoxLayout()
-        center.setSpacing(12)
 
+        # Scene List
         self.scene_list = SceneList()
         center.addWidget(self.scene_list, 1)
 
+        # Preview
         self.preview = ImagePreview()
         center.addWidget(self.preview, 3)
 
+        # Right Panel
         right = QVBoxLayout()
 
-        lbl1 = QLabel("📝 Prompt")
-        lbl1.setStyleSheet("font-size:16px;font-weight:bold;")
-
         self.prompt = PromptEditor()
-
-        lbl2 = QLabel("⚙ Properties")
-        lbl2.setStyleSheet("font-size:16px;font-weight:bold;")
-
         self.properties = PropertiesPanel()
 
-        right.addWidget(lbl1)
         right.addWidget(self.prompt, 3)
-
-        right.addWidget(lbl2)
         right.addWidget(self.properties, 2)
 
         center.addLayout(right, 2)
 
-        main_layout.addLayout(center, 1)
+        main_layout.addLayout(center)
 
-        self.toolbar = BottomToolbar()
+        # =====================================================
+        # Load Episode
+        # =====================================================
 
-        main_layout.addWidget(self.toolbar, 0)
-
-        self.scene_list.load_episode(self.episode_folder)
+        self.scene_list.load_episode(
+            self.episode_folder
+        )
 
         self.scene_list.currentRowChanged.connect(
             self.scene_changed
@@ -79,8 +80,18 @@ class WorkspacePage(QWidget):
             self.save_scene
         )
 
-        if self.scene_list.count():
+        self.toolbar.generateImage.clicked.connect(
+            self.generate_image
+        )
+
+        self.toolbar.generateVideo.clicked.connect(
+            self.generate_video
+        )
+
+        if self.scene_list.count() > 0:
             self.scene_list.setCurrentRow(0)
+
+    # =====================================================
 
     def scene_changed(self, row):
 
@@ -98,21 +109,45 @@ class WorkspacePage(QWidget):
             scene
         )
 
+    # =====================================================
+
     def save_scene(self):
+
+        self.prompt.save_scene()
+
+        self.manager.save(
+            self.scene_list.scenes
+        )
+
+        print("✅ Scene Saved")
+
+    # =====================================================
+
+    def generate_image(self):
 
         row = self.scene_list.currentRow()
 
         if row < 0:
             return
 
+        # Save latest prompt into the scene object
         self.prompt.save_scene()
 
-        SceneSaver(self.episode_folder).save(
+        # Save scenes.json
+        self.manager.save(
             self.scene_list.scenes
         )
 
-        QMessageBox.information(
-            self,
-            "Saved",
-            "Scene saved successfully!"
-        )
+        # Current Scene
+        scene = self.scene_list.scenes[row]
+
+        # Create Image Job
+        self.manager.create_image_job(scene)
+
+        print("✅ Image Job Created")
+
+    # =====================================================
+
+    def generate_video(self):
+
+        print("🎥 Generate Video Clicked")
