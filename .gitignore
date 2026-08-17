@@ -26,3 +26,11 @@ Thumbs.db
 
 # App state (per user, not part of the project)
 app/data/state.json
+
+# Generated output. Videos are large and are rebuilt from the images and
+# prompts, so they do not belong in git.
+Episodes/**/Videos/
+Episodes/**/Exports/
+Episodes/**/Jobs/
+Episodes/**/Results/
+Episodes/**/Episode.zip

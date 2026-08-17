@@ -33,6 +33,7 @@ def main():
 
     problems = []
     advice = []
+    finished = []
 
     # ------------------------------------------------------------------
     heading("Where Nik Studio is looking")
@@ -229,6 +230,16 @@ def main():
                 f"{name}: all images are done — press 🚀 RENDER EPISODE "
                 "to build the video."
             )
+        else:
+            # Nothing is outstanding. Say so, and say where the video is,
+            # because that is the thing the user actually wants.
+            finished.append(name)
+
+            for video in sorted((folder / "Exports").glob("*.mp4")):
+                size = video.stat().st_size / (1024 * 1024)
+                print()
+                print(f"{OK} finished video: {video}")
+                print(f"       {size:.1f} MB")
 
     # ------------------------------------------------------------------
     heading("Installed tools")
@@ -262,12 +273,18 @@ def main():
               "cannot run")
         print("       That is fine if you generate on Colab.")
 
-    report(problems, advice)
+    report(problems, advice, finished)
 
 
-def report(problems, advice):
+def report(problems, advice, finished=None):
 
     heading("Verdict")
+
+    for name in finished or []:
+        print(f"{OK} {name} is complete — the video is in its Exports folder.")
+
+    if finished:
+        print()
 
     if problems:
         print("Problems:")
