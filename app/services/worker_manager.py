@@ -18,9 +18,10 @@ class RenderTask(QObject):
         self,
         episode_folder,
         scenes,
-        stages=("image",),
+        stages=("image", "video"),
         force=False,
         job=RenderWorker.RENDER,
+        compose=True,
         parent=None,
     ):
 
@@ -34,6 +35,7 @@ class RenderTask(QObject):
             stages=stages,
             force=force,
             job=job,
+            compose=compose,
         )
 
         self.worker.moveToThread(self.thread)

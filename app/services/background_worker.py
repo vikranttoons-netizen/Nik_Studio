@@ -27,9 +27,10 @@ class RenderWorker(QObject):
         self,
         episode_folder,
         scenes,
-        stages=("image",),
+        stages=("image", "video"),
         force=False,
         job=RENDER,
+        compose=True,
     ):
 
         super().__init__()
@@ -39,6 +40,7 @@ class RenderWorker(QObject):
         self.stages = tuple(stages)
         self.force = force
         self.job = job
+        self.compose = compose
 
         self._cancelled = False
 
@@ -75,6 +77,7 @@ class RenderWorker(QObject):
                     stages=self.stages,
                     force=self.force,
                     on_progress=self.progress.emit,
+                    compose=self.compose,
                 )
 
         except Exception as error:

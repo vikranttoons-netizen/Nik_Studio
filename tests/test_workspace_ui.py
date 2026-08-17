@@ -238,16 +238,94 @@ def main():
     print("   [OK] imported, preview updated, scenes.json written")
 
     # ------------------------------------------------------------------
-    heading("5  Pressing 🚀 RENDER EPISODE with nothing left to do")
+    heading("5  Pressing 🚀 RENDER EPISODE again finishes the episode")
 
     ws.toolbar.renderEpisode.click()
     wait_for_render(ws)
 
-    print("   status :", ws.status.message.text())
+    status = ws.status.message.text()
 
-    assert "already rendered" in ws.status.message.text().lower()
+    print("   status :", status)
 
-    print("   [OK] finished work was skipped")
+    import shutil as _shutil
+
+    if _shutil.which("ffmpeg"):
+        # The images are done, so this pass makes the clips and the MP4.
+        assert "episode ready" in status.lower(), status
+    else:
+        assert "already rendered" in status.lower(), status
+
+    print("   [OK] resumed and carried on to the next stage")
+
+    # ------------------------------------------------------------------
+    heading("5b  Scene management: add, move, delete")
+
+    before = ws.scene_list.count()
+
+    ws.scene_list.setCurrentRow(0)
+    ws.scene_panel.add.click()
+
+    added = ws.scene_list.current_scene()
+
+    print(f"   added   : {added.name} at row {ws.scene_list.currentRow()}")
+    print("   scenes  :", rows(ws.scene_list))
+
+    assert ws.scene_list.count() == before + 1
+    # Inserted below the selected scene, not at the end.
+    assert ws.scene_list.currentRow() == 1
+    # A new scene must not reuse a name, or it looks already rendered.
+    assert added.name not in ("Scene01", "Scene02")
+    assert added.pipeline.image.status.value == "not_started"
+
+    ws.scene_panel.down.click()
+
+    print(f"   moved   : {added.name} to row {ws.scene_list.currentRow()}")
+
+    assert ws.scene_list.currentRow() == 2
+    assert ws.scene_list.scenes[2].name == added.name
+
+    # The edit must be on disk, not just on screen.
+    saved = json.loads((EPISODE / "scenes.json").read_text("utf-8"))
+
+    assert [s["name"] for s in saved["scenes"]][2] == added.name
+
+    # Deleting asks first; answer yes.
+    QMessageBox.question = lambda *a, **k: QMessageBox.Yes
+
+    ws.scene_panel.delete.click()
+
+    print("   deleted :", added.name)
+    print("   scenes  :", rows(ws.scene_list))
+
+    assert ws.scene_list.count() == before
+
+    saved = json.loads((EPISODE / "scenes.json").read_text("utf-8"))
+
+    assert added.name not in [s["name"] for s in saved["scenes"]]
+
+    # The images made earlier must survive a scene-list edit.
+    assert (EPISODE / "Images/Scene01.png").exists()
+
+    print("   [OK] add / move / delete work and are saved")
+
+    # ------------------------------------------------------------------
+    heading("5c  The final episode MP4")
+
+    import shutil as _shutil
+
+    if not _shutil.which("ffmpeg"):
+        print("   SKIPPED: FFmpeg not installed")
+    else:
+        exports = sorted((EPISODE / "Exports").glob("*.mp4"))
+
+        print("   Videos  :", sorted(
+            p.name for p in (EPISODE / "Videos").glob("*.mp4")
+        ))
+        print("   Exports :", [p.name for p in exports])
+
+        assert exports, "Render Episode produced no final video"
+
+        print("   [OK] episode video built from the UI")
 
     # ------------------------------------------------------------------
     heading("6  Reopening the app restores the state from disk")

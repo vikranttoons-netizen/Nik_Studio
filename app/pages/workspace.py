@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 
 from widgets.top_toolbar import TopToolbar
-from widgets.scene_list import SceneList
+from widgets.scene_panel import ScenePanel
 from widgets.image_preview import ImagePreview
 from widgets.prompt_editor import PromptEditor
 from widgets.properties_panel import PropertiesPanel
@@ -15,6 +15,7 @@ from widgets.render_status import RenderStatus
 from managers.project_manager import ProjectManager
 
 from services.background_worker import RenderWorker
+from services.scene_editor import SceneEditor
 from services.worker_manager import RenderTask
 
 from core.project import Project
@@ -62,9 +63,11 @@ class WorkspacePage(QWidget):
 
         center = QHBoxLayout()
 
-        # Scene List
-        self.scene_list = SceneList()
-        center.addWidget(self.scene_list, 1)
+        # Scene list, with the buttons that add / remove / reorder scenes
+        self.scene_panel = ScenePanel()
+        self.scene_list = self.scene_panel.list
+
+        center.addWidget(self.scene_panel, 1)
 
         # Preview
         self.preview = ImagePreview()
@@ -104,6 +107,11 @@ class WorkspacePage(QWidget):
         self.toolbar.export.clicked.connect(self.export_episode)
 
         self.toolbar.cancel.clicked.connect(self.cancel_render)
+
+        self.scene_panel.add.clicked.connect(self.add_scene)
+        self.scene_panel.delete.clicked.connect(self.delete_scene)
+        self.scene_panel.up.clicked.connect(self.move_scene_up)
+        self.scene_panel.down.clicked.connect(self.move_scene_down)
 
         # =====================================================
         # Load
@@ -233,6 +241,108 @@ class WorkspacePage(QWidget):
         self.preview.show_scene(self.episode_folder, scene)
 
     # =====================================================
+    # Editing the scene list
+    # =====================================================
+
+    def editor(self):
+        return SceneEditor(self.scene_list.scenes)
+
+    # ------------------------------------------------------------------
+
+    def apply_scene_edit(self, row, message):
+        """
+        Redraw and save after the scene list changed, then select `row`.
+        """
+
+        self.scene_list.refresh()
+
+        if row < 0:
+            self.prompt.show_scene(None)
+            self.properties.clear()
+            self.preview.setText("No scenes — press ➕ to add one")
+        else:
+            self.scene_list.setCurrentRow(row)
+            self.scene_changed(row)
+
+        self.manager.save(self.scene_list.scenes)
+
+        self.status.begin(message)
+        self.status.end(message)
+
+    # ------------------------------------------------------------------
+
+    def add_scene(self):
+
+        if not self.has_episode():
+            return
+
+        # Keep whatever is being typed before the list changes under it.
+        self.prompt.save_scene()
+
+        row = self.editor().add(after=self.scene_list.currentRow())
+
+        self.apply_scene_edit(
+            row,
+            f"➕ Added {self.scene_list.scenes[row].name}",
+        )
+
+    # ------------------------------------------------------------------
+
+    def delete_scene(self):
+
+        scene = self.scene_list.current_scene()
+
+        if scene is None:
+            self.warn("Select a scene to delete.")
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Nik Studio",
+            f"Remove {scene.name} from this episode?\n\n"
+            "Any image or clip already made for it stays on disk.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        row = self.editor().delete(self.scene_list.currentRow())
+
+        self.apply_scene_edit(row, f"🗑 Removed {scene.name}")
+
+    # ------------------------------------------------------------------
+
+    def move_scene_up(self):
+        self.move_scene(-1)
+
+    def move_scene_down(self):
+        self.move_scene(1)
+
+    def move_scene(self, offset):
+
+        if self.scene_list.current_scene() is None:
+            self.warn("Select a scene to move.")
+            return
+
+        self.prompt.save_scene()
+
+        start = self.scene_list.currentRow()
+
+        row = self.editor().move(start, offset)
+
+        if row == start:
+            # Already at the top or the bottom.
+            return
+
+        self.apply_scene_edit(
+            row,
+            f"↕ Moved {self.scene_list.scenes[row].name} "
+            f"to position {row + 1}",
+        )
+
+    # =====================================================
     # Saving
     # =====================================================
 
@@ -268,6 +378,9 @@ class WorkspacePage(QWidget):
             scenes=[scene],
             force=True,
             label=f"Rendering {scene.name}",
+            # One scene is usually re-rendered to check it; rebuilding the
+            # whole episode video every time would be slow.
+            compose=False,
         )
 
     # ------------------------------------------------------------------
@@ -308,7 +421,14 @@ class WorkspacePage(QWidget):
 
     # ------------------------------------------------------------------
 
-    def start_render(self, scenes, force, label, job=RenderWorker.RENDER):
+    def start_render(
+        self,
+        scenes,
+        force,
+        label,
+        job=RenderWorker.RENDER,
+        compose=True,
+    ):
 
         if not self.has_episode():
             return
@@ -322,6 +442,7 @@ class WorkspacePage(QWidget):
         self.manager.save(self.scene_list.scenes)
 
         self.toolbar.set_rendering(True)
+        self.scene_panel.set_enabled(False)
         self.prompt.setReadOnly(True)
 
         self.status.begin(f"{label}…")
@@ -329,9 +450,10 @@ class WorkspacePage(QWidget):
         self.task = RenderTask(
             self.episode_folder,
             scenes,
-            stages=("image",),
+            stages=("image", "video"),
             force=force,
             job=job,
+            compose=compose,
             parent=self,
         )
 
@@ -357,6 +479,7 @@ class WorkspacePage(QWidget):
     def render_finished(self, result):
 
         self.toolbar.set_rendering(False)
+        self.scene_panel.set_enabled(True)
         self.prompt.setReadOnly(False)
 
         self.status.end(result.message or "Done.")

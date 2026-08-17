@@ -10,6 +10,7 @@ from services.scene_saver import SceneSaver
 
 from core.project import Project
 
+from render.episode_composer import EpisodeComposer, ComposeError
 from render.render_result import RenderResult, RenderProgress
 from render.scene_renderer import SceneRenderer
 
@@ -39,6 +40,10 @@ class EpisodeRenderer:
 
         self.settings = settings if settings is not None else self.load_settings()
 
+        # A single backend can be forced in (used by the tests); normally
+        # each stage gets the backend configured for it.
+        self.forced_backend = backend
+
         self.backend = backend or BackendManager.from_settings(
             self.episode_folder,
             self.settings,
@@ -47,10 +52,48 @@ class EpisodeRenderer:
         # Callable returning True when the user asked to stop.
         self.cancelled = cancelled or (lambda: False)
 
+        self.prompt_builder = self.build_prompt_builder()
+
         self.renderer = SceneRenderer(
             self.episode_folder,
             self.backend,
-            self.build_prompt_builder(),
+            self.prompt_builder,
+        )
+
+        # Backends already built, so a model is loaded once per render and
+        # not once per scene.
+        self._backends = {}
+
+    # ------------------------------------------------------------------
+
+    def backend_for(self, stage):
+        """The backend that renders `stage`, built once and reused."""
+
+        if self.forced_backend is not None:
+            return self.forced_backend
+
+        if stage not in self._backends:
+
+            self._backends[stage] = BackendManager.for_stage(
+                stage,
+                self.episode_folder,
+                self.settings,
+            )
+
+        return self._backends[stage]
+
+    def renderer_for(self, stage):
+        """A SceneRenderer wired to the right backend for this stage."""
+
+        backend = self.backend_for(stage)
+
+        if backend is self.renderer.backend:
+            return self.renderer
+
+        return SceneRenderer(
+            self.episode_folder,
+            backend,
+            self.prompt_builder,
         )
 
     # ------------------------------------------------------------------
@@ -87,17 +130,20 @@ class EpisodeRenderer:
     def render_episode(
         self,
         scenes=None,
-        stages=("image",),
+        stages=("image", "video"),
         force=False,
         on_progress=None,
         save=True,
+        compose=True,
     ):
         """
-        Render `stages` for every scene.
+        Render `stages` for every scene, then join the clips into the
+        final episode video.
 
         scenes  - the in-memory scenes from the UI, so unsaved prompt
                   edits are used. Loaded from disk when None.
         force   - re-render even stages that are already complete.
+        compose - build the final MP4 once the scenes are done.
         """
 
         if scenes is None:
@@ -111,19 +157,22 @@ class EpisodeRenderer:
 
             return result
 
-        # Availability is checked once, not once per scene, so the user
-        # gets one clear message instead of one per scene.
-        if not self.backend.is_available():
+        # Availability is checked once per stage, not once per scene, so
+        # the user gets one clear message instead of one per scene.
+        for stage_name in stages:
+
+            backend = self.backend_for(stage_name)
+
+            if backend.is_available():
+                continue
 
             result.success = False
-            result.message = (
-                f"The {self.backend.name} backend is not ready."
-            )
+            result.message = f"The {backend.name} backend is not ready."
 
             result.add_error(
                 "-",
-                stages[0] if stages else "image",
-                self.backend.unavailable_reason(),
+                stage_name,
+                backend.unavailable_reason(),
             )
 
             return result
@@ -154,7 +203,7 @@ class EpisodeRenderer:
                         total=total,
                     )
 
-                    stage_result = self.renderer.render_stage(
+                    stage_result = self.renderer_for(stage_name).render_stage(
                         scene,
                         stage_name,
                         force=force,
@@ -181,18 +230,76 @@ class EpisodeRenderer:
                     if stage_result.errors:
                         break
 
+                    # Waiting on a cloud GPU is not a failure, but the
+                    # later stages need this one's file. Stop this scene
+                    # here and pick it up after Import Results, rather
+                    # than reporting "no image yet" as an error.
+                    if stage_result.waiting:
+                        break
+
                 # Save after each scene so progress survives a crash.
                 if save:
                     SceneSaver(self.episode_folder).save(scenes)
 
         finally:
-            # Always release the GPU / loaded model.
-            self.backend.close()
+            # Always release the GPU / loaded models.
+            self.close_backends()
 
             if save:
                 SceneSaver(self.episode_folder).save(scenes)
 
+        # Join the clips into one playable episode.
+        #
+        # Skipped when anything is still waiting on a cloud GPU: those
+        # scenes have no clip yet, so composing would fail and report a
+        # problem when the truth is simply "not finished yet".
+        if (
+            compose
+            and "video" in stages
+            and not result.errors
+            and not result.waiting
+        ):
+
+            self._report(
+                on_progress,
+                stage="final",
+                status="running",
+                message="joining the clips",
+                index=total,
+                total=total,
+            )
+
+            self.compose_final(scenes, result)
+
         result.message = self._episode_message(result)
+
+        return result
+
+    # ------------------------------------------------------------------
+
+    def close_backends(self):
+
+        for backend in list(self._backends.values()) + [self.backend]:
+            try:
+                backend.close()
+            except Exception:
+                # Releasing a model must never break the render result.
+                pass
+
+    # ------------------------------------------------------------------
+
+    def compose_final(self, scenes, result=None):
+        """Stitch the scene clips into Exports/<Episode>.mp4."""
+
+        result = result or RenderResult()
+
+        composer = EpisodeComposer(self.episode_folder, self.settings)
+
+        try:
+            result.final_video = composer.compose(scenes)
+
+        except ComposeError as error:
+            result.add_error("-", "final", error)
 
         return result
 
@@ -202,13 +309,17 @@ class EpisodeRenderer:
         self,
         scene,
         scenes=None,
-        stages=("image",),
+        stages=("image", "video"),
         force=True,
         on_progress=None,
     ):
         """
         Render a single scene. `scenes` is the full list, only needed so
         scenes.json can be written back out complete.
+
+        The final video is not rebuilt here - one scene is usually being
+        re-rendered to check it, and re-joining the whole episode each
+        time would be slow. Press Render Episode for the final cut.
         """
 
         result = self.render_episode(
@@ -217,6 +328,7 @@ class EpisodeRenderer:
             force=force,
             on_progress=on_progress,
             save=False,
+            compose=False,
         )
 
         SceneSaver(self.episode_folder).save(
@@ -310,6 +422,9 @@ class EpisodeRenderer:
 
         if result.waiting:
             return "Render partly finished - some jobs are still running."
+
+        if result.final_video:
+            return f"🎬 Episode ready : {result.final_video}"
 
         if not result.rendered_count and result.skipped:
             return "Everything was already rendered."

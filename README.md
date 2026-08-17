@@ -4,7 +4,7 @@ AI-powered desktop application for creating animated videos.
 
 ## Current Version
 
-v0.2.0
+v0.3.0
 
 ## Running it
 
@@ -24,10 +24,24 @@ python NikStudio.py
 ## Rendering an episode
 
 1. Open **Workspace** and pick an episode from the dropdown.
-2. Click a scene and write its prompt. Press **💾 Save**.
-3. Press **🚀 RENDER EPISODE**.
+2. Build your scene list with **➕ / 🗑 / ▲ / ▼**. The order of the list is
+   the order of the final video.
+3. Click a scene and write its prompt. Press **💾 Save**.
+4. Press **🚀 RENDER EPISODE**.
 
-What happens next depends on the `backend` in the episode's
+That runs the whole pipeline:
+
+```
+prompts -> Images/SceneNN.png -> Videos/SceneNN.mp4 -> Exports/<Episode>.mp4
+```
+
+Each still becomes a clip with a slow pan and zoom, and the clips are
+joined into one playable MP4 in the episode's `Exports` folder.
+
+**FFmpeg is required** for the video stages. Install it with
+`winget install Gyan.FFmpeg`, then reopen Nik Studio.
+
+Which image backend runs depends on `backend` in the episode's
 `episode.json`:
 
 | Backend | What it does |
@@ -49,27 +63,50 @@ Rendering is resumable. Pressing **🚀 RENDER EPISODE** again only renders
 what is still missing, and it checks that each file is really on disk
 rather than trusting the saved status.
 
+## Episode settings
+
+Everything below is optional and lives in the episode's `episode.json`:
+
+| Setting          | Default     | What it does |
+| ---------------- | ----------- | ------------ |
+| `backend`        | `Colab`     | Where images are generated: `Local` or `Colab` |
+| `aspect`         | `16:9`      | `16:9`, `9:16`, `1:1`, or `1920x1080` |
+| `fps`            | `24`        | Frames per second of the output |
+| `scene_duration` | `4`         | Seconds each scene is on screen |
+| `model`          | `sdxl-turbo`| Image model |
+| `style`          | —           | Appended to every prompt |
+| `character`      | —           | Character sheet injected into every prompt |
+| `ffmpeg`         | —           | Full path to `ffmpeg.exe` if it isn't on PATH |
+
+To hold one shot longer than the rest, put `"duration": 8` in that
+scene's `metadata` in `scenes.json`.
+
 ## Testing
 
 ```powershell
 python tests\test_render_pipeline.py
+python tests\test_video_pipeline.py
 python tests\test_workspace_ui.py
 ```
 
-Neither test needs a GPU, and both use a throwaway project folder, so
+None of them need a GPU, and each uses a throwaway project folder, so
 they never touch your real episodes.
 
 ## Features
 
 - Episode management with an episode picker
+- Add, delete and reorder scenes
 - Prompt editor with character sheets injected into every prompt
 - Image generation — local GPU or free Colab GPU
+- Video from stills with pan and zoom, via FFmpeg
+- Final episode MP4 in 16:9, 9:16 or 1:1
 - Render one scene or a whole episode, resumable
 - Production panel showing the real state of every stage
 - Export
 
 ## Not built yet
 
-Video, voice, music and the FFmpeg final cut are modelled in the pipeline
-but have no backend yet, so those stages stay **Not Started**. Buttons for
-them are deliberately absent rather than present and dead.
+Voice and music are modelled in the pipeline but have no backend yet, so
+those stages stay **Not Started**, and the final MP4 has no sound. An AI
+video model (WAN, LTX) can replace the pan-and-zoom stage later by
+implementing the same `generate_video` — nothing in the UI would change.
