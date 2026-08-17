@@ -1,0 +1,15 @@
+# Nik Studio - core requirements
+# Install with:  pip install -r requirements.txt
+
+PySide6>=6.6
+Pillow>=10.0
+
+# ----------------------------------------------------------------------
+# Optional: local GPU image generation (LocalBackend).
+# These are large downloads and need an NVIDIA GPU, so they are NOT
+# installed by default. Nik Studio runs fine without them - the Colab
+# backend does the generating instead.
+#
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+#   pip install diffusers transformers accelerate safetensors
+# ----------------------------------------------------------------------

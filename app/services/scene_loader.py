@@ -5,32 +5,27 @@ from models.scene import Scene
 
 
 class SceneLoader:
+    """Reads scenes.json into Scene objects."""
 
     def __init__(self, episode_folder):
 
         self.episode_folder = Path(episode_folder)
 
+    @property
+    def file(self):
+        return self.episode_folder / "scenes.json"
+
     def load(self):
 
-        file = self.episode_folder / "scenes.json"
+        if not self.file.exists():
+            return []
 
-        with open(file, "r", encoding="utf-8-sig") as f:
-
+        # utf-8-sig because some project files were written by tools that
+        # add a byte order mark.
+        with open(self.file, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
-        scenes = []
-
-        for s in data["scenes"]:
-
-            scenes.append(
-                Scene(
-                    id=s["id"],
-                    name=s["name"],
-                    prompt=s["prompt"],
-                    image=s["image"],
-                    video=s["video"],
-                    status=s["status"],
-                )
-            )
-
-        return scenes
+        return [
+            Scene.from_dict(item)
+            for item in data.get("scenes", [])
+        ]

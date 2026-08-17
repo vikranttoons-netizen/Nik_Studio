@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QLabel
 )
 
+from core.project import Project
 from services.character_manager import CharacterManager
 
 
@@ -31,7 +32,7 @@ class CharacterPanel(QWidget):
         layout.addWidget(self.delete_button)
 
         self.manager = CharacterManager(
-            r"D:\NikStudio\app\data\characters.json"
+            Project().characters_file
         )
 
         self.reload()

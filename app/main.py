@@ -1,8 +1,16 @@
 import sys
+from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
+# Allow "python app/main.py" from the project root as well as
+# "python main.py" from inside the app folder.
+APP_DIR = Path(__file__).resolve().parent
 
-from ui.main_window import MainWindow
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
+
+from PySide6.QtWidgets import QApplication  # noqa: E402
+
+from ui.main_window import MainWindow  # noqa: E402
 
 
 def main():
@@ -13,8 +21,8 @@ def main():
 
     window.show()
 
-    sys.exit(app.exec())
+    return app.exec()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

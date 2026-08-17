@@ -1,5 +1,6 @@
 import json
-from pathlib import Path
+
+from core.project import Project
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -16,7 +17,8 @@ class EpisodesPage(QWidget):
         super().__init__()
 
         # Root folder containing all episodes
-        self.root = Path("D:/NikStudio/Episodes")
+        self.project = Project()
+        self.root = self.project.episodes
 
         # Main Layout
         main_layout = QHBoxLayout(self)

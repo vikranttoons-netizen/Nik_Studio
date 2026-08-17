@@ -12,13 +12,19 @@ from widgets.properties_panel import PropertiesPanel
 
 from managers.project_manager import ProjectManager
 
+from core.project import Project
+
 
 class WorkspacePage(QWidget):
 
     def __init__(self):
         super().__init__()
 
-        self.episode_folder = r"D:\NikStudio\Episodes\Bath Time Song"
+        # Which episode to open is worked out from the project folder
+        # instead of a hardcoded path, and remembered between sessions.
+        self.project = Project()
+
+        self.episode_folder = self.project.last_episode()
 
         # Main Project Manager
         self.manager = ProjectManager(
