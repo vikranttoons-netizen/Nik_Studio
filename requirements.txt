@@ -4,6 +4,12 @@
 PySide6>=6.6
 Pillow>=10.0
 
+# Ships a working ffmpeg binary, which the video stages need.
+# This avoids installing FFmpeg system wide - no admin rights, no PATH
+# editing, and no winget (which older Windows 10 machines do not have).
+# A system FFmpeg is used in preference to this one when there is one.
+imageio-ffmpeg>=0.5
+
 # ----------------------------------------------------------------------
 # Optional: local GPU image generation (LocalBackend).
 # These are large downloads and need an NVIDIA GPU, so they are NOT

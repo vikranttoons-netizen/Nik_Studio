@@ -1,6 +1,7 @@
-import shutil
 import subprocess
 from pathlib import Path
+
+from services.ffmpeg_locator import find_ffmpeg, ffmpeg_help
 
 
 class ComposeError(Exception):
@@ -32,7 +33,7 @@ class EpisodeComposer:
     # ------------------------------------------------------------------
 
     def executable(self):
-        return self.settings.get("ffmpeg") or shutil.which("ffmpeg") or ""
+        return find_ffmpeg(self.settings.get("ffmpeg"))
 
     def is_available(self):
         return bool(self.executable())
@@ -42,13 +43,7 @@ class EpisodeComposer:
         if self.is_available():
             return ""
 
-        return (
-            "FFmpeg was not found, so the final video cannot be "
-            "assembled.\n\n"
-            "Install it with:\n"
-            "  winget install Gyan.FFmpeg\n\n"
-            "Then close and reopen Nik Studio."
-        )
+        return ffmpeg_help()
 
     # ------------------------------------------------------------------
 

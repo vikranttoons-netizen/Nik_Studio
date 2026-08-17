@@ -1,12 +1,12 @@
-import shutil
 import subprocess
-from pathlib import Path
 
 from backends.base_backend import (
     BaseBackend,
     BackendError,
     BackendUnavailable,
 )
+
+from services.ffmpeg_locator import find_ffmpeg, ffmpeg_help
 
 
 class FFmpegBackend(BaseBackend):
@@ -43,26 +43,7 @@ class FFmpegBackend(BaseBackend):
     # ------------------------------------------------------------------
 
     def executable(self):
-        """
-        Path to ffmpeg: the one named in episode.json if it really exists,
-        otherwise whatever is on PATH. A configured path that is wrong
-        must not count as available, or the failure surfaces later as a
-        confusing crash instead of a clear message.
-        """
-
-        configured = self.setting("ffmpeg")
-
-        if configured:
-
-            if Path(configured).exists():
-                return str(configured)
-
-            found = shutil.which(str(configured))
-
-            if found:
-                return found
-
-        return shutil.which("ffmpeg") or ""
+        return find_ffmpeg(self.setting("ffmpeg"))
 
     def is_available(self):
         return bool(self.executable())
@@ -72,16 +53,7 @@ class FFmpegBackend(BaseBackend):
         if self.is_available():
             return ""
 
-        return (
-            "FFmpeg was not found.\n\n"
-            "It turns your scene images into video, so it is needed to "
-            "produce the final MP4.\n\n"
-            "Install it with:\n"
-            "  winget install Gyan.FFmpeg\n\n"
-            "Then close and reopen Nik Studio so it picks up the change.\n"
-            "If FFmpeg is installed somewhere unusual, add its full path "
-            'to episode.json as  "ffmpeg": "C:\\\\path\\\\to\\\\ffmpeg.exe"'
-        )
+        return ffmpeg_help()
 
     # ------------------------------------------------------------------
     # Settings

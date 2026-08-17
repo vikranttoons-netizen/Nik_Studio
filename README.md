@@ -38,8 +38,11 @@ prompts -> Images/SceneNN.png -> Videos/SceneNN.mp4 -> Exports/<Episode>.mp4
 Each still becomes a clip with a slow pan and zoom, and the clips are
 joined into one playable MP4 in the episode's `Exports` folder.
 
-**FFmpeg is required** for the video stages. Install it with
-`winget install Gyan.FFmpeg`, then reopen Nik Studio.
+**FFmpeg is required** for the video stages, and `pip install -r
+requirements.txt` already brings a copy of it, so there is usually nothing
+to do. A system-wide FFmpeg is used in preference to that copy if you have
+one — `winget install Gyan.FFmpeg`, or set `"ffmpeg"` in `episode.json` to
+its full path.
 
 Which image backend runs depends on `backend` in the episode's
 `episode.json`:
