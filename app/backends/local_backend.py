@@ -99,7 +99,21 @@ class LocalBackend(BaseBackend):
                 "(huggingface-cli login)."
             ) from error
 
-        pipe = pipe.to("cuda" if use_gpu else "cpu")
+        if use_gpu and self.setting("low_vram"):
+            # Keeps most of the model in system RAM and moves pieces onto
+            # the GPU as needed. Slower, but it lets a card with 6-8GB
+            # run SDXL instead of failing with "out of memory".
+            pipe.enable_model_cpu_offload()
+
+            try:
+                pipe.enable_vae_slicing()
+            except AttributeError:
+                pass
+
+            print("ℹ low_vram is on - slower, but uses much less VRAM.")
+
+        else:
+            pipe = pipe.to("cuda" if use_gpu else "cpu")
 
         if not use_gpu:
             # A CPU render takes many minutes per image. Allowed, but the
@@ -146,7 +160,7 @@ class LocalBackend(BaseBackend):
 
         pipe = self._load()
 
-        width, height = self._resolution()
+        width, height = self.image_size()
 
         steps = int(self.setting("steps", 4))
         guidance = float(self.setting("guidance", 0.0))
@@ -169,7 +183,23 @@ class LocalBackend(BaseBackend):
 
         try:
             image = pipe(**kwargs).images[0]
+
         except Exception as error:
+
+            text = str(error).lower()
+
+            # Running out of VRAM is by far the most common local failure,
+            # and the raw message does not say what to do about it.
+            if "out of memory" in text or "cuda error" in text:
+                raise BackendError(
+                    f"{scene.name}: the GPU ran out of memory at "
+                    f"{width}x{height}.\n\n"
+                    "Fix it in the episode's episode.json, either:\n"
+                    '  "low_vram": true          (slower, much less VRAM)\n'
+                    '  "image_size": "1024x576"  (smaller images)\n\n'
+                    "Or switch to the Colab backend to use a cloud GPU."
+                ) from error
+
             raise BackendError(
                 f"Image generation failed for {scene.name}: {error}"
             ) from error
@@ -183,22 +213,3 @@ class LocalBackend(BaseBackend):
 
         return relative
 
-    # ------------------------------------------------------------------
-
-    def _resolution(self):
-        """
-        Read "1920x1080" style settings, rounded down to a multiple of 8
-        because diffusion models require it.
-        """
-
-        text = str(self.setting("resolution", "1024x1024")).lower()
-
-        try:
-            width, height = (int(v) for v in text.split("x")[:2])
-        except (ValueError, TypeError):
-            width, height = 1024, 1024
-
-        width = max(256, width - width % 8)
-        height = max(256, height - height % 8)
-
-        return width, height

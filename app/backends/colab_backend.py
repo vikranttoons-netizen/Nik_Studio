@@ -77,7 +77,7 @@ class ColabBackend(BaseBackend):
         self.jobs_folder.mkdir(parents=True, exist_ok=True)
         self.results_folder.mkdir(parents=True, exist_ok=True)
 
-        width, height = self._resolution()
+        width, height = self.image_size()
 
         job = {
             "id": f"{scene.name}_image",
@@ -171,18 +171,3 @@ class ColabBackend(BaseBackend):
 
         return sorted(self.jobs_folder.glob("*.json"))
 
-    # ------------------------------------------------------------------
-
-    def _resolution(self):
-
-        text = str(self.setting("resolution", "1024x1024")).lower()
-
-        try:
-            width, height = (int(v) for v in text.split("x")[:2])
-        except (ValueError, TypeError):
-            width, height = 1024, 1024
-
-        width = max(256, width - width % 8)
-        height = max(256, height - height % 8)
-
-        return width, height

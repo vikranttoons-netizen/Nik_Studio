@@ -44,6 +44,22 @@ class BaseBackend(ABC):
     name = "base"
     supports = ()
 
+    # Image sizes that suit an SDXL class model, per aspect ratio.
+    #
+    # These are NOT the video sizes. A diffusion model is trained at about
+    # a megapixel and gets slow, hungry and badly composed if pushed to
+    # 1920x1080, so images are generated near 1024 and the video stage
+    # scales them up to full HD.
+    IMAGE_SIZES = {
+        "16:9": (1344, 768),
+        "9:16": (768, 1344),
+        "1:1": (1024, 1024),
+        "4:3": (1152, 896),
+        "3:4": (896, 1152),
+    }
+
+    DEFAULT_IMAGE_SIZE = (1024, 1024)
+
     def __init__(self, episode_folder, settings=None):
 
         self.episode_folder = Path(episode_folder)
@@ -112,3 +128,60 @@ class BaseBackend(ABC):
 
     def setting(self, key, default=None):
         return self.settings.get(key, default)
+
+    # ------------------------------------------------------------------
+
+    def image_size(self):
+        """
+        The size to generate images at, as (width, height).
+
+        Taken from "image_size" in episode.json when set, otherwise chosen
+        to match the episode's aspect ratio. Generating at the video's
+        aspect means the video stage crops almost nothing away.
+
+        "resolution" is deliberately not used here - that is the size of
+        the finished video, which is far larger than any diffusion model
+        should be asked for.
+        """
+
+        explicit = self.setting("image_size")
+
+        if explicit:
+
+            size = self.parse_size(explicit)
+
+            if size:
+                return size
+
+        aspect = str(self.setting("aspect", "16:9")).strip()
+
+        if aspect in self.IMAGE_SIZES:
+            return self.IMAGE_SIZES[aspect]
+
+        # An aspect written as "1344x768" is accepted too.
+        size = self.parse_size(aspect)
+
+        return size or self.DEFAULT_IMAGE_SIZE
+
+    @staticmethod
+    def parse_size(value):
+        """
+        Turn "1344x768" into (1344, 768), rounded down to a multiple of 8
+        because diffusion models require it. Returns None if unreadable.
+        """
+
+        try:
+            width, height = (
+                int(v)
+                for v in str(value).lower().split("x")[:2]
+            )
+        except (ValueError, TypeError):
+            return None
+
+        if width <= 0 or height <= 0:
+            return None
+
+        return (
+            max(256, width - width % 8),
+            max(256, height - height % 8),
+        )

@@ -73,6 +73,8 @@ Everything below is optional and lives in the episode's `episode.json`:
 | `aspect`         | `16:9`      | `16:9`, `9:16`, `1:1`, or `1920x1080` |
 | `fps`            | `24`        | Frames per second of the output |
 | `scene_duration` | `4`         | Seconds each scene is on screen |
+| `image_size`     | from `aspect` | Size images are generated at, e.g. `1024x576` |
+| `low_vram`       | `false`     | For a 6–8GB GPU: slower, far less VRAM |
 | `model`          | `sdxl-turbo`| Image model |
 | `style`          | —           | Appended to every prompt |
 | `character`      | —           | Character sheet injected into every prompt |
@@ -80,6 +82,11 @@ Everything below is optional and lives in the episode's `episode.json`:
 
 To hold one shot longer than the rest, put `"duration": 8` in that
 scene's `metadata` in `scenes.json`.
+
+`resolution` is the size of the finished **video** only. Images are
+generated near 1024px to match what SDXL-class models are trained on —
+asking a diffusion model for 1920x1080 is slow, hungry, and composes
+badly — and the video stage scales them up to full HD.
 
 ## Testing
 
