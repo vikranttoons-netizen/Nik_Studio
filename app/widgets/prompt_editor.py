@@ -14,6 +14,10 @@ class PromptEditor(QTextEdit):
 
         self.current_scene = scene
 
+        if scene is None:
+            self.clear()
+            return
+
         self.setPlainText(scene.prompt)
 
     def save_scene(self):

@@ -51,7 +51,7 @@ class StageStatus(str, Enum):
 
         return {
             StageStatus.NOT_STARTED: "⚪",
-            StageStatus.WAITING: "⚪",
+            StageStatus.WAITING: "⏳",
             StageStatus.RUNNING: "🟡",
             StageStatus.COMPLETED: "🟢",
             StageStatus.FAILED: "🔴",

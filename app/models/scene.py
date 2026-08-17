@@ -105,6 +105,10 @@ class Scene:
         if any(s.status == StageStatus.COMPLETED for s in stages):
             return "in_progress"
 
+        # Queued on a cloud GPU and not back yet.
+        if any(s.status == StageStatus.WAITING for s in stages):
+            return "waiting"
+
         return "pending"
 
     # ------------------------------------------------------------------

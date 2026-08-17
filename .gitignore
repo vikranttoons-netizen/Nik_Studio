@@ -23,3 +23,6 @@ Thumbs.db
 
 # macOS
 .DS_Store
+
+# App state (per user, not part of the project)
+app/data/state.json
