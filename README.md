@@ -91,6 +91,17 @@ generated near 1024px to match what SDXL-class models are trained on —
 asking a diffusion model for 1920x1080 is slow, hungry, and composes
 badly — and the video stage scales them up to full HD.
 
+## Something not where you expect it?
+
+```powershell
+python tools\doctor.py
+```
+
+It prints which project folder Nik Studio is really using, the episodes and
+scenes it can see, how many jobs/images/clips exist, whether the character
+in `episode.json` actually exists, what is installed — and then names the
+next thing to do.
+
 ## Testing
 
 ```powershell
