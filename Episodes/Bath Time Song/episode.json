@@ -1,8 +1,11 @@
-﻿{
+{
     "title": "Bath Time Song",
-    "character": "Nik",
+    "character": "vikrant",
     "style": "Pixar",
-    "resolution": "1920x1080",
+    "backend": "Colab",
+    "model": "sdxl-turbo",
+    "aspect": "16:9",
     "fps": 24,
-    "backend": "Local"
+    "scene_duration": 4,
+    "resolution": "1920x1080"
 }
