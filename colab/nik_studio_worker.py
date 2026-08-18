@@ -268,6 +268,66 @@ class Worker:
         except Exception:
             return False
 
+    def reclaim(self):
+        """
+        Recover VRAM held by an earlier run of this cell.
+
+        Running the cell twice leaves the previous pipeline in the
+        notebook's memory, and the card starts full: "VRAM: 0.0GB free of
+        14.6GB". Nothing this worker does can rescue that - the model
+        belongs to an object it cannot see - so the honest thing is to
+        try, and then say plainly what to do.
+        """
+
+        try:
+            import gc
+
+            import torch
+
+            if not torch.cuda.is_available():
+                return
+
+            free, total = torch.cuda.mem_get_info()
+
+            gb = 1024 ** 3
+
+            # Under 4GB free is not enough for SDXL to decode, however
+            # much of the model has been offloaded.
+            if free > 4 * gb:
+                return
+
+            print("\n⚠ The GPU is nearly full before we have even started.")
+            print("  Trying to reclaim it...")
+
+            gc.collect()
+            torch.cuda.empty_cache()
+
+            free, _ = torch.cuda.mem_get_info()
+
+            print(f"  {self.vram_report()}")
+
+            if free > 4 * gb:
+                print("  Recovered enough to carry on.\n")
+                return
+
+            raise SystemExit(
+                "\nThe GPU is still full, and it is held by something this "
+                "cell cannot reach - almost always a model left behind by "
+                "an earlier run.\n\n"
+                "In Colab choose  Runtime > Restart session,  then run the "
+                "cells again from the top.\n"
+                "Nothing is lost: images already generated stay in Drive."
+            )
+
+        except SystemExit:
+            raise
+
+        except Exception:
+            # Never let a memory check stop a run that might have worked.
+            return
+
+    # ------------------------------------------------------------------
+
     def release(self):
         """Give the card its memory back. Never raises."""
 
@@ -497,6 +557,7 @@ class Worker:
 
         self.check_folders()
         self.report_gpu()
+        self.reclaim()
 
         print(f"\nWatching : {self.jobs}")
 
