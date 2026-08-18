@@ -96,6 +96,7 @@ Everything below is optional and lives in the episode's `episode.json`:
 | `steps`          | `4`         | Denoising steps: 4 for turbo models, ~30 for full SDXL |
 | `guidance`       | `0`         | 0 for turbo models, ~7 for full SDXL |
 | `character`      | —           | Character sheet injected into every prompt |
+| `reference_strength` | `0.6`   | How strongly a character's reference picture steers the image |
 | `sync_folder`    | —           | Folder shared with Colab, so the project can stay on a local disk |
 | `ffmpeg`         | —           | Full path to `ffmpeg.exe` if it isn't on PATH |
 
@@ -113,6 +114,26 @@ scene's `metadata` in `scenes.json`.
 generated near 1024px to match what SDXL-class models are trained on —
 asking a diffusion model for 1920x1080 is slow, hungry, and composes
 badly — and the video stage scales them up to full HD.
+
+## Keeping a character the same
+
+A written description only gets a character roughly right, and every
+render drifts a little. Point the character sheet at a picture of them
+instead:
+
+```json
+"reference_image": "Characters/nik.png"
+```
+
+The path is relative to the project folder. That picture is sent with
+every job and applied through IP-Adapter, so the same face carries across
+scenes. `reference_strength` (default `0.6`) controls how hard it pulls —
+raise it towards 0.8 for a closer likeness, lower it if scenes start
+looking like copies of the reference.
+
+Write the sheet to match the picture. A sheet saying "10 month old, blue
+romper" alongside a reference of a toddler in a yellow t-shirt pulls the
+model in two directions at once.
 
 ## Something not where you expect it?
 

@@ -87,26 +87,31 @@ class BaseBackend(ABC):
     # Each returns a path relative to the episode folder, or raises
     # BackendError / BackendUnavailable / BackendDeferred.
     #
-    # `negative` is what the image must not contain. Backends that
-    # cannot use it ignore it.
+    # `negative` is what the image must not contain, and `references`
+    # are picture references for the characters in the scene. Backends
+    # that cannot use either simply ignore them.
     # ------------------------------------------------------------------
 
-    def generate_image(self, scene, prompt, negative=""):
+    def generate_image(self, scene, prompt, negative="",
+                       references=None):
         raise BackendUnavailable(
             f"{self.name} cannot generate images."
         )
 
-    def generate_video(self, scene, prompt, negative=""):
+    def generate_video(self, scene, prompt, negative="",
+                       references=None):
         raise BackendUnavailable(
             f"{self.name} cannot generate videos."
         )
 
-    def generate_voice(self, scene, prompt, negative=""):
+    def generate_voice(self, scene, prompt, negative="",
+                       references=None):
         raise BackendUnavailable(
             f"{self.name} cannot generate voice."
         )
 
-    def generate_music(self, scene, prompt, negative=""):
+    def generate_music(self, scene, prompt, negative="",
+                       references=None):
         raise BackendUnavailable(
             f"{self.name} cannot generate music."
         )

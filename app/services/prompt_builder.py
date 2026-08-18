@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 
 class PromptBuilder:
@@ -21,9 +22,14 @@ class PromptBuilder:
         "blurry, low quality, text, watermark, signature"
     )
 
-    def __init__(self, episode_settings=None, characters=None):
+    def __init__(self, episode_settings=None, characters=None,
+                 project_root=None):
 
         self.episode_settings = dict(episode_settings or {})
+
+        # Reference image paths in characters.json are relative to the
+        # project folder.
+        self.project_root = Path(project_root) if project_root else None
 
         # {lookup key -> Character}, keyed by both id and name so a
         # project can refer to a character either way.
@@ -182,3 +188,37 @@ class PromptBuilder:
             rf"\b{re.escape(needle)}\b",
             haystack,
         ) is not None
+
+    # ------------------------------------------------------------------
+
+    def reference_images(self, scene):
+        """
+        Picture references for the characters in this scene.
+
+        A written description only gets a character roughly right. Handing
+        the model an actual picture of them is what keeps the same face
+        across an episode, so any character with a reference_image
+        contributes one here.
+
+        Missing files are skipped rather than raising - a broken path in a
+        character sheet should not stop a render.
+        """
+
+        found = []
+
+        for key in self.scene_characters(scene):
+
+            character = self.find_character(key)
+
+            if character is None or not character.reference_image:
+                continue
+
+            path = Path(character.reference_image).expanduser()
+
+            if not path.is_absolute() and self.project_root:
+                path = self.project_root / path
+
+            if path.exists():
+                found.append(path)
+
+        return found

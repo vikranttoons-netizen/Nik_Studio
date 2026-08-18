@@ -121,7 +121,9 @@ class EpisodeRenderer:
             # Character sheets are an enhancement, not a requirement.
             characters = []
 
-        return PromptBuilder(self.settings, characters)
+        project = Project()
+
+        return PromptBuilder(self.settings, characters, project.root)
 
     # ------------------------------------------------------------------
     # Rendering

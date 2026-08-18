@@ -76,6 +76,7 @@ class Worker:
 
         self.pipe = None
         self.loaded_model = None
+        self.has_adapter = False
 
     # ------------------------------------------------------------------
 
@@ -110,10 +111,21 @@ class Worker:
 
     # ------------------------------------------------------------------
 
-    def load_model(self, model):
-        """Load the model once and reuse it for every job."""
+    def load_model(self, model, with_reference=False):
+        """
+        Load the model once and reuse it for every job.
 
-        if self.pipe is not None and self.loaded_model == model:
+        `with_reference` also loads IP-Adapter, which lets a picture of the
+        character steer the generation. A written description alone only
+        gets a character roughly right; the picture is what keeps the same
+        face from scene to scene.
+        """
+
+        if (
+            self.pipe is not None
+            and self.loaded_model == model
+            and self.has_adapter == with_reference
+        ):
             return self.pipe
 
         import torch
@@ -131,8 +143,22 @@ class Worker:
 
         pipe = pipe.to("cuda" if use_gpu else "cpu")
 
+        if with_reference:
+            try:
+                pipe.load_ip_adapter(
+                    "h94/IP-Adapter",
+                    subfolder="sdxl_models",
+                    weight_name="ip-adapter_sdxl.bin",
+                )
+                print("IP-Adapter loaded - using your character reference.")
+            except Exception as error:
+                print(f"⚠ Could not load IP-Adapter: {error}")
+                print("  Carrying on with the text description only.")
+                with_reference = False
+
         self.pipe = pipe
         self.loaded_model = model
+        self.has_adapter = with_reference
 
         print("Model ready.\n")
 
@@ -191,7 +217,19 @@ class Worker:
                 "flux": "black-forest-labs/FLUX.1-schnell",
             }.get(model, model)
 
-        pipe = self.load_model(model)
+        # Character reference pictures, if the job carries any.
+        references = []
+
+        for name in job.get("reference_images", []) or []:
+
+            path = self.episode / name
+
+            if path.exists():
+                references.append(path)
+            else:
+                print(f"⚠ reference not found, skipping: {name}")
+
+        pipe = self.load_model(model, with_reference=bool(references))
 
         print(f"🎨 {scene} : {prompt[:70]}...")
 
@@ -212,6 +250,22 @@ class Worker:
 
         if negative and guidance > 1:
             kwargs["negative_prompt"] = negative
+
+        if references and self.has_adapter:
+
+            from PIL import Image
+
+            images = [Image.open(p).convert("RGB") for p in references]
+
+            kwargs["ip_adapter_image"] = (
+                images[0] if len(images) == 1 else images
+            )
+
+            pipe.set_ip_adapter_scale(
+                float(job.get("reference_strength", 0.6))
+            )
+
+            print(f"   using {len(images)} character reference(s)")
 
         seed = int(job.get("seed", -1))
 

@@ -63,6 +63,13 @@ class SceneRenderer:
 
         return self.prompt_builder.build_negative(scene)
 
+    def build_references(self, scene):
+
+        if self.prompt_builder is None:
+            return []
+
+        return self.prompt_builder.reference_images(scene)
+
     # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
@@ -131,7 +138,12 @@ class SceneRenderer:
         stage.start(backend=self.backend.name)
 
         try:
-            output = method(scene, prompt, self.build_negative(scene))
+            output = method(
+                scene,
+                prompt,
+                self.build_negative(scene),
+                self.build_references(scene),
+            )
 
         except BackendDeferred as deferred:
 

@@ -195,11 +195,24 @@ def main():
 
     assert after == before, f"jobs leaked into the episode folder: {after}"
 
-    crossed = [p.suffix for p in shared.rglob("*") if p.is_file()]
+    # Job files cross, and a character reference picture if the sheet has
+    # one. What must NOT cross is the generated work.
+    crossed = sorted(
+        p.relative_to(shared).as_posix()
+        for p in shared.rglob("*")
+        if p.is_file()
+    )
 
-    assert set(crossed) == {".json"}, crossed
+    print(f"   crossed over  : {crossed}")
 
-    print("   only .json files crossed over — no images, clips or video")
+    for name in crossed:
+        assert name.startswith("Jobs/") or name.startswith("Reference/"), name
+
+    assert not (shared / "Images").exists()
+    assert not (shared / "Videos").exists()
+    assert not (shared / "Exports").exists()
+
+    print("   only jobs and character references crossed — no generated work")
 
     # A result comes back and lands on the local disk, not in Drive.
     make_image(shared / "Results" / "Scene01.png")

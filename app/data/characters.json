@@ -2,15 +2,15 @@
     {
         "id": "vikrant",
         "name": "Nik",
-        "description": "cute baby",
-        "age": "10 month old",
-        "gender": "Indian baby boy",
-        "appearance": "round face, expressive eyes, fair skin, adorable smile",
-        "clothes": "blue romper",
-        "hairstyle": "short black hair",
+        "description": "cheerful little boy",
+        "age": "3 year old",
+        "gender": "Indian toddler boy",
+        "appearance": "round chubby face, large dark brown eyes, rosy cheeks, small button nose, fair skin, bright smile",
+        "clothes": "yellow t-shirt with a blue star on the chest, blue shorts, rainbow striped socks, white sneakers",
+        "hairstyle": "short dark brown hair swept up at the front",
         "expression": "happy smile",
         "style": "",
-        "reference_image": "",
+        "reference_image": "Characters/nik.png",
         "voice": "",
         "lora": ""
     }

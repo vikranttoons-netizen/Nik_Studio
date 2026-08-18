@@ -77,7 +77,8 @@ class ColabBackend(BaseBackend):
     # Queueing work
     # ------------------------------------------------------------------
 
-    def generate_image(self, scene, prompt, negative=""):
+    def generate_image(self, scene, prompt, negative="",
+                       references=None):
 
         if not prompt.strip():
             raise BackendError(
@@ -91,7 +92,7 @@ class ColabBackend(BaseBackend):
         if imported:
             return imported
 
-        self.write_job(scene, prompt, negative)
+        self.write_job(scene, prompt, negative, references)
 
         raise BackendDeferred(
             f"{scene.name} queued for Colab.",
@@ -100,7 +101,8 @@ class ColabBackend(BaseBackend):
 
     # ------------------------------------------------------------------
 
-    def write_job(self, scene, prompt, negative=""):
+    def write_job(self, scene, prompt, negative="",
+                  references=None):
 
         self.jobs_folder.mkdir(parents=True, exist_ok=True)
         self.results_folder.mkdir(parents=True, exist_ok=True)
@@ -113,6 +115,10 @@ class ColabBackend(BaseBackend):
             "scene": scene.name,
             "prompt": prompt,
             "negative_prompt": negative,
+            "reference_images": self.copy_references(references),
+            "reference_strength": float(
+                self.setting("reference_strength", 0.6)
+            ),
             "model": self.setting("model", "stabilityai/sdxl-turbo"),
             "steps": int(self.setting("steps", 4)),
             "guidance": float(self.setting("guidance", 0.0)),
@@ -130,6 +136,50 @@ class ColabBackend(BaseBackend):
             json.dump(job, f, indent=4, ensure_ascii=False)
 
         return job_file
+
+    # ------------------------------------------------------------------
+
+    REFERENCE_FOLDER = "Reference"
+
+    def copy_references(self, references):
+        """
+        Put the character reference pictures where Colab can reach them.
+
+        They live on the local disk, so with a sync_folder in use they
+        have to be copied across. They are small and change rarely, so a
+        copy is only made when the file is not already there with the same
+        size.
+
+        Returns paths relative to the shared folder, for the job file.
+        """
+
+        if not references:
+            return []
+
+        folder = self.exchange_folder / self.REFERENCE_FOLDER
+
+        folder.mkdir(parents=True, exist_ok=True)
+
+        names = []
+
+        for source in references:
+
+            source = Path(source)
+
+            if not source.exists():
+                continue
+
+            target = folder / source.name
+
+            if (
+                not target.exists()
+                or target.stat().st_size != source.stat().st_size
+            ):
+                shutil.copy2(source, target)
+
+            names.append(f"{self.REFERENCE_FOLDER}/{source.name}")
+
+        return names
 
     # ------------------------------------------------------------------
     # Collecting finished work

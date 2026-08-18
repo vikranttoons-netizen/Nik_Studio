@@ -106,7 +106,8 @@ class FFmpegBackend(BaseBackend):
     # Generation
     # ------------------------------------------------------------------
 
-    def generate_video(self, scene, prompt, negative=""):
+    def generate_video(self, scene, prompt, negative="",
+                       references=None):
 
         if not self.is_available():
             raise BackendUnavailable(self.unavailable_reason())
