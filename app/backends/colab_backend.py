@@ -117,7 +117,7 @@ class ColabBackend(BaseBackend):
             "negative_prompt": negative,
             "reference_images": self.copy_references(references),
             "reference_strength": float(
-                self.setting("reference_strength", 0.6)
+                self.setting("reference_strength", 0.5)
             ),
             "model": self.setting("model", "stabilityai/sdxl-turbo"),
             "steps": int(self.setting("steps", 4)),

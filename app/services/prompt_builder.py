@@ -16,11 +16,19 @@ class PromptBuilder:
     # Aimed at the two failures this pipeline actually hits: duplicate
     # subjects, and a photographic look where animation was asked for.
     DEFAULT_NEGATIVE = (
-        "two babies, twins, duplicate person, extra person, crowd, "
-        "extra limbs, extra fingers, deformed hands, disfigured, "
-        "photo, photorealistic, realistic skin pores, "
-        "blurry, low quality, text, watermark, signature"
+        "two children, two boys, two babies, twins, siblings, "
+        "duplicate character, second child, cloned face, crowd, "
+        "extra person, extra limbs, extra fingers, deformed hands, "
+        "disfigured, photo, photorealistic, realistic skin pores, "
+        "blurry, low quality, text, watermark, signature, logo"
     )
+
+    # Added when a scene has exactly one character. Wide frames make image
+    # models duplicate the subject to fill the space, and a reference
+    # picture that itself contains the character makes it worse - the model
+    # draws the one from the prompt and the one from the picture. Saying
+    # outright that there is only one is the cheapest defence.
+    SOLO_HINT = "solo, a single child alone in the frame"
 
     def __init__(self, episode_settings=None, characters=None,
                  project_root=None):
@@ -115,6 +123,9 @@ class PromptBuilder:
             parts.append(scene.prompt.strip())
 
         parts.extend(subjects)
+
+        if len(subjects) == 1:
+            parts.append(self.SOLO_HINT)
 
         return ", ".join(self._dedupe(parts))
 
