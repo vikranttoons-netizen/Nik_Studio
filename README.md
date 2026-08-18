@@ -55,11 +55,17 @@ Which image backend runs depends on `backend` in the episode's
 ### Rendering on a free Colab GPU
 
 Colab can only see Google Drive, so the two sides need one folder in
-common. You do not have to move the project there — add `sync_folder` to
-`episode.json` and only job files go up and finished images come down:
+common. You do not have to move the project there — name a `sync_folder`
+and only job files go up and finished images come down.
+
+Put it in `nikstudio.local.json` at the project root. That file is not in
+git, so a path that only exists on your machine never collides with an
+update:
 
 ```json
-"sync_folder": "G:\\My Drive\\NikStudio\\Exchange"
+{
+    "sync_folder": "G:\\My Drive\\NikStudio\\Exchange"
+}
 ```
 
 Everything else — images, clips, the final video — stays on your local
@@ -80,7 +86,10 @@ rather than trusting the saved status.
 
 ## Episode settings
 
-Everything below is optional and lives in the episode's `episode.json`:
+Everything below is optional and lives in the episode's `episode.json`.
+Anything machine specific — `sync_folder`, `ffmpeg`, `low_vram` — is
+better placed in `nikstudio.local.json` at the project root, which is
+not in git and overrides `episode.json`:
 
 | Setting          | Default     | What it does |
 | ---------------- | ----------- | ------------ |

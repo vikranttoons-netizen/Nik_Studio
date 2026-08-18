@@ -57,6 +57,16 @@ def main():
     print(f"\n       project root : {project.root}")
     print(f"       episodes     : {project.episodes}")
 
+    local = project.local_settings()
+
+    if local:
+        print(f"{OK} nikstudio.local.json (this machine's settings)")
+        for key, value in local.items():
+            print(f"       {key} = {value}")
+    elif project.local_settings_file.exists():
+        print(f"{BAD} nikstudio.local.json could not be read")
+        problems.append("nikstudio.local.json is not valid JSON.")
+
     if not project.episodes.exists():
         print(f"\n{BAD} That Episodes folder does not exist.")
         problems.append("The Episodes folder is missing.")

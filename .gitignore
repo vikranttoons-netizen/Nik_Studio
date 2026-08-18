@@ -34,3 +34,6 @@ Episodes/**/Exports/
 Episodes/**/Jobs/
 Episodes/**/Results/
 Episodes/**/Episode.zip
+
+# Machine specific settings (Drive sync folder, ffmpeg path)
+nikstudio.local.json

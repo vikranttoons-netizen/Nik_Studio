@@ -106,6 +106,33 @@ class Project:
     # ------------------------------------------------------------------
 
     @property
+    def local_settings_file(self):
+        """
+        Machine specific settings, kept out of git.
+
+        Things like the Google Drive sync folder and the path to ffmpeg
+        differ on every machine. Keeping them in episode.json - which is
+        shared - makes every `git pull` collide. They live here instead.
+        """
+
+        return self.root / "nikstudio.local.json"
+
+    def local_settings(self):
+
+        import json
+
+        if not self.local_settings_file.exists():
+            return {}
+
+        try:
+            with open(self.local_settings_file, "r", encoding="utf-8-sig") as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            return {}
+
+        return data if isinstance(data, dict) else {}
+
+    @property
     def characters_file(self):
         return Path(__file__).resolve().parents[1] / "data" / "characters.json"
 
