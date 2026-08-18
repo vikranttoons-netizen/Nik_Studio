@@ -54,11 +54,23 @@ Which image backend runs depends on `backend` in the episode's
 
 ### Rendering on a free Colab GPU
 
-1. Put your `Episodes` folder in Google Drive.
+Colab can only see Google Drive, so the two sides need one folder in
+common. You do not have to move the project there — add `sync_folder` to
+`episode.json` and only job files go up and finished images come down:
+
+```json
+"sync_folder": "G:\\My Drive\\NikStudio\\Exchange"
+```
+
+Everything else — images, clips, the final video — stays on your local
+disk. (Leave `sync_folder` out only if the whole episode already lives in
+Drive.)
+
+1. Create that folder in Google Drive.
 2. Open a Colab notebook, set **Runtime → Change runtime type → GPU**.
 3. Run `!pip install -q diffusers transformers accelerate safetensors`.
-4. Paste in `colab/nik_studio_worker.py`, set `EPISODE` to your episode
-   folder in Drive, and run it.
+4. Open `colab/NikStudio_Colab.ipynb`, set `EPISODE` to the episode's
+   folder inside your sync folder, and run the cells.
 5. Back in Nik Studio, press **📥 Import Results**. The images land in
    `Images/` and the previews update.
 
@@ -81,6 +93,7 @@ Everything below is optional and lives in the episode's `episode.json`:
 | `model`          | `sdxl-turbo`| Image model |
 | `style`          | —           | Appended to every prompt |
 | `character`      | —           | Character sheet injected into every prompt |
+| `sync_folder`    | —           | Folder shared with Colab, so the project can stay on a local disk |
 | `ffmpeg`         | —           | Full path to `ffmpeg.exe` if it isn't on PATH |
 
 To hold one shot longer than the rest, put `"duration": 8` in that

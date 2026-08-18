@@ -159,6 +159,59 @@ def main():
     print("\n   [OK] disk is checked, not just the saved status")
 
     # ------------------------------------------------------------------
+    heading("4b  sync_folder keeps the project off Google Drive")
+
+    exchange = work / "GDrive" / "Exchange"
+    exchange.mkdir(parents=True)
+
+    split_settings = json.loads(
+        (episode / "episode.json").read_text("utf-8")
+    )
+    split_settings["sync_folder"] = str(exchange)
+
+    split = EpisodeRenderer(episode, settings=split_settings)
+
+    for scene in scenes:
+        scene.pipeline.reset()
+
+    # Steps 1-4 ran without sync_folder, so the episode already has its own
+    # Jobs folder. What matters is that nothing new is added to it now.
+    before = sorted(p.name for p in (episode / "Jobs").glob("*.json"))
+
+    split.render_episode(scenes=scenes, save=False)
+
+    shared = exchange / episode.name
+
+    jobs = sorted(p.name for p in (shared / "Jobs").glob("*.json"))
+
+    print(f"   shared folder : {shared}")
+    print(f"   jobs there    : {jobs}")
+
+    assert jobs == ["Scene01.json", "Scene02.json"], jobs
+
+    # The point of the setting: the work is queued in the shared folder
+    # and the episode folder is left alone.
+    after = sorted(p.name for p in (episode / "Jobs").glob("*.json"))
+
+    assert after == before, f"jobs leaked into the episode folder: {after}"
+
+    crossed = [p.suffix for p in shared.rglob("*") if p.is_file()]
+
+    assert set(crossed) == {".json"}, crossed
+
+    print("   only .json files crossed over — no images, clips or video")
+
+    # A result comes back and lands on the local disk, not in Drive.
+    make_image(shared / "Results" / "Scene01.png")
+
+    split.collect_results(scenes, save=False)
+
+    assert (episode / "Images/Scene01.png").exists()
+    assert not (shared / "Results/Scene01.png").exists()
+
+    print("   [OK] image came back to the local episode folder")
+
+    # ------------------------------------------------------------------
     heading("5  The local backend explains itself when it cannot run")
 
     settings = json.loads((episode / "episode.json").read_text("utf-8"))

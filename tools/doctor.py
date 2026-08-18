@@ -173,17 +173,52 @@ def main():
                     ) or "none")
                 )
 
+        # --- where jobs are exchanged with Colab ---
+        #
+        # This is the episode folder unless "sync_folder" is set, in which
+        # case only jobs and results cross into Google Drive. Reading it
+        # from the backend means this cannot disagree with the app.
+        jobs_folder = folder / "Jobs"
+        results_folder = folder / "Results"
+
+        if str(backend).lower() == "colab":
+
+            from backends.colab_backend import ColabBackend
+
+            colab = ColabBackend(folder, settings)
+
+            jobs_folder = colab.jobs_folder
+            results_folder = colab.results_folder
+
+            if settings.get("sync_folder"):
+                print(f"{OK} sync folder (shared with Colab)")
+                print(f"       {colab.exchange_folder}")
+
+                if not colab.exchange_folder.parent.exists():
+                    print(f"{BAD} that folder's parent does not exist")
+                    problems.append(
+                        f"{name}: sync_folder points somewhere that is not "
+                        "there."
+                    )
+            else:
+                print(f"{WARN} no sync_folder set — the whole episode must "
+                      "live in Google Drive for Colab to see it")
+                advice.append(
+                    f"{name}: to keep the project on your local disk, add "
+                    'to episode.json:  "sync_folder": '
+                    '"G:\\My Drive\\NikStudio\\Exchange"'
+                )
+
         # --- what has been produced ---
         counts = {}
 
-        for label, folder_name, pattern in (
-            ("jobs waiting", "Jobs", "*.json"),
-            ("results to import", "Results", "*.*"),
-            ("images", "Images", "*.png"),
-            ("clips", "Videos", "*.mp4"),
-            ("final videos", "Exports", "*.mp4"),
+        for label, path, pattern in (
+            ("jobs waiting", jobs_folder, "*.json"),
+            ("results to import", results_folder, "*.*"),
+            ("images", folder / "Images", "*.png"),
+            ("clips", folder / "Videos", "*.mp4"),
+            ("final videos", folder / "Exports", "*.mp4"),
         ):
-            path = folder / folder_name
             counts[label] = (
                 len(list(path.glob(pattern))) if path.exists() else 0
             )

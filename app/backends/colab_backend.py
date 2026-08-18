@@ -36,14 +36,42 @@ class ColabBackend(BaseBackend):
     RESULTS_FOLDER = "Results"
 
     # ------------------------------------------------------------------
+    # Where the two sides meet
+    # ------------------------------------------------------------------
+
+    @property
+    def exchange_folder(self):
+        """
+        The folder Nik Studio and Colab both see.
+
+        By default that is the episode folder itself, which means the
+        whole episode has to live in Google Drive.
+
+        Set "sync_folder" in episode.json to keep the project on a local
+        disk and share only the handful of files Colab actually needs:
+
+            "sync_folder": "G:\\My Drive\\NikStudio\\Exchange"
+
+        Only job files go up and finished images come down. Generated
+        images, clips and the final video all stay in the episode folder
+        on the local disk.
+        """
+
+        folder = self.setting("sync_folder")
+
+        if not folder:
+            return self.episode_folder
+
+        # Keyed by episode name so several episodes can share one folder.
+        return Path(folder).expanduser() / self.episode_folder.name
 
     @property
     def jobs_folder(self):
-        return self.episode_folder / self.JOBS_FOLDER
+        return self.exchange_folder / self.JOBS_FOLDER
 
     @property
     def results_folder(self):
-        return self.episode_folder / self.RESULTS_FOLDER
+        return self.exchange_folder / self.RESULTS_FOLDER
 
     # ------------------------------------------------------------------
     # Queueing work
