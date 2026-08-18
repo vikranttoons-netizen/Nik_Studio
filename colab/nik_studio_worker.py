@@ -136,8 +136,15 @@ class Worker:
         ):
             return self.pipe
 
+        import gc
+
         import torch
         from diffusers import AutoPipelineForText2Image
+
+        # Let go of the previous pipeline BEFORE building a new one.
+        # Without this the old model is still on the card while the new
+        # one loads, which needs twice the memory and fails on a T4.
+        self.release()
 
         print(f"\nLoading model : {model}")
 
@@ -149,8 +156,8 @@ class Worker:
             variant="fp16" if use_gpu else None,
         )
 
-        pipe = pipe.to("cuda" if use_gpu else "cpu")
-
+        # IP-Adapter is loaded before the model is placed, because CPU
+        # offload has to be the last thing set up.
         if with_reference:
             try:
                 pipe.load_ip_adapter(
@@ -164,6 +171,24 @@ class Worker:
                 print("  Carrying on with the text description only.")
                 with_reference = False
 
+        if use_gpu and self.low_vram():
+            # SDXL plus IP-Adapter's image encoder does not comfortably
+            # fit a 16GB T4. Offloading keeps most of the model in system
+            # RAM and moves each piece onto the card as it is needed:
+            # slower per image, but it finishes instead of running out.
+            pipe.enable_model_cpu_offload()
+            print("Low VRAM mode - slower, but it fits.")
+        else:
+            pipe = pipe.to("cuda" if use_gpu else "cpu")
+
+        # Both cut the peak memory of the decode step and cost almost
+        # nothing in speed.
+        for method in ("enable_vae_slicing", "enable_attention_slicing"):
+            try:
+                getattr(pipe, method)()
+            except (AttributeError, TypeError):
+                pass
+
         self.pipe = pipe
         self.loaded_model = model
         self.has_adapter = with_reference
@@ -171,6 +196,44 @@ class Worker:
         print("Model ready.\n")
 
         return pipe
+
+    # ------------------------------------------------------------------
+
+    def low_vram(self):
+        """
+        True when the card is too small to hold the whole model.
+
+        A free Colab T4 has about 15GB, which SDXL and IP-Adapter together
+        overrun. Anything from 24GB up runs them outright.
+        """
+
+        import torch
+
+        if not torch.cuda.is_available():
+            return False
+
+        total = torch.cuda.get_device_properties(0).total_memory
+
+        return total < 20 * 1024 ** 3
+
+    def release(self):
+        """Give the card its memory back."""
+
+        if self.pipe is None:
+            return
+
+        import gc
+
+        import torch
+
+        self.pipe = None
+        self.loaded_model = None
+        self.has_adapter = False
+
+        gc.collect()
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     # ------------------------------------------------------------------
 
@@ -349,6 +412,12 @@ class Worker:
                     print(f"❌ {job_file.stem} failed: {error}")
                     print("   not retrying it in this run")
                     failed.add(job_file.name)
+
+                    # An out of memory failure leaves the card in a bad
+                    # state; clear it so the next job starts clean.
+                    if "out of memory" in str(error).lower():
+                        self.release()
+                        print("   released the GPU before the next job")
 
             if time.time() >= deadline:
                 break
