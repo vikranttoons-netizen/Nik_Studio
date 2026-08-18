@@ -222,7 +222,16 @@ class Worker:
         # this folder, and must never pick up a half written image.
         temp = output.with_suffix(output.suffix + ".part")
 
-        image.save(temp)
+        # PIL picks the format from the file extension, and this temporary
+        # name ends in ".part", so the format has to be named outright.
+        image_format = {
+            ".png": "PNG",
+            ".jpg": "JPEG",
+            ".jpeg": "JPEG",
+            ".webp": "WEBP",
+        }.get(output.suffix.lower(), "PNG")
+
+        image.save(temp, format=image_format)
         temp.replace(output)
 
         print(
@@ -244,9 +253,17 @@ class Worker:
         deadline = time.time() + watch_minutes * 60
         done = 0
 
+        # A job that fails is not retried on the next pass. Without this
+        # the watch loop regenerates the same broken job every few
+        # seconds, burning GPU time for nothing.
+        failed = set()
+
         while True:
 
-            jobs = self.pending_jobs()
+            jobs = [
+                (f, j) for f, j in self.pending_jobs()
+                if f.name not in failed
+            ]
 
             for job_file, job in jobs:
 
@@ -256,6 +273,8 @@ class Worker:
 
                 except Exception as error:
                     print(f"❌ {job_file.stem} failed: {error}")
+                    print("   not retrying it in this run")
+                    failed.add(job_file.name)
 
             if time.time() >= deadline:
                 break
@@ -266,7 +285,13 @@ class Worker:
             time.sleep(poll_seconds)
 
         print(f"\nFinished. {done} image(s) generated.")
-        print("Now press 📥 Import Results in Nik Studio.")
+
+        if failed:
+            print(f"{len(failed)} job(s) failed: "
+                  + ", ".join(sorted(f.replace('.json', '') for f in failed)))
+
+        if done:
+            print("Now press 📥 Import Results in Nik Studio.")
 
 
 # ----------------------------------------------------------------------
