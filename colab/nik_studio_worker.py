@@ -331,9 +331,17 @@ class Worker:
             }.get(model, model)
 
         # Character reference pictures, if the job carries any.
+        #
+        # "use_reference": false in the job turns them off. IP-Adapter is
+        # the least stable part of this pipeline; being able to switch it
+        # off without editing anything is worth having.
         references = []
 
-        for name in job.get("reference_images", []) or []:
+        for name in (
+            job.get("reference_images", [])
+            if job.get("use_reference", True)
+            else []
+        ) or []:
 
             path = self.episode / name
 
@@ -406,6 +414,18 @@ class Worker:
             print("   generating from the description alone instead")
 
             kwargs.pop("ip_adapter_image")
+
+            # Dropping the argument is not enough. Loading the adapter
+            # rewires the UNet - it sets encoder_hid_dim_type to
+            # 'ip_image_proj' and then demands image embeds on every call.
+            # The adapter has to come back out, or the retry fails with
+            # "requires the keyword argument `image_embeds`".
+            try:
+                pipe.unload_ip_adapter()
+                self.has_adapter = False
+                print("   character reference unloaded")
+            except Exception as unload_error:
+                print(f"   could not unload the adapter: {unload_error}")
 
             image = pipe(**kwargs).images[0]
 

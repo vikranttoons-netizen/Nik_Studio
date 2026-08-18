@@ -115,7 +115,12 @@ class ColabBackend(BaseBackend):
             "scene": scene.name,
             "prompt": prompt,
             "negative_prompt": negative,
-            "reference_images": self.copy_references(references),
+            "reference_images": (
+                self.copy_references(references)
+                if self.setting("use_reference", True)
+                else []
+            ),
+            "use_reference": bool(self.setting("use_reference", True)),
             "reference_strength": float(
                 self.setting("reference_strength", 0.5)
             ),

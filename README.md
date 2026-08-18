@@ -105,7 +105,8 @@ not in git and overrides `episode.json`:
 | `steps`          | `4`         | Denoising steps: 4 for turbo models, ~30 for full SDXL |
 | `guidance`       | `0`         | 0 for turbo models, ~7 for full SDXL |
 | `character`      | —           | Character sheet injected into every prompt |
-| `reference_strength` | `0.6`   | How strongly a character's reference picture steers the image |
+| `use_reference`  | `true`      | Send the character picture at all. Turn off if IP-Adapter misbehaves |
+| `reference_strength` | `0.5`   | How strongly a character's reference picture steers the image |
 | `music`          | `Audio/*`   | The song. Found automatically in the episode's `Audio` folder |
 | `fit_to_music`   | `true`      | Stretch the scenes so the video is as long as the song |
 | `sync_folder`    | —           | Folder shared with Colab, so the project can stay on a local disk |
@@ -161,7 +162,7 @@ instead:
 
 The path is relative to the project folder. That picture is sent with
 every job and applied through IP-Adapter, so the same face carries across
-scenes. `reference_strength` (default `0.6`) controls how hard it pulls —
+scenes. `reference_strength` (default `0.5`) controls how hard it pulls —
 raise it towards 0.8 for a closer likeness, lower it if scenes start
 looking like copies of the reference.
 
