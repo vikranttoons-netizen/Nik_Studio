@@ -182,6 +182,10 @@ class WorkspacePage(QWidget):
 
         self.toolbar.title.setText(f"🎬 {name}   ·   {backend}")
 
+        # Hover to see exactly which folder on disk this is.
+        self.toolbar.episodes.setToolTip(str(self.episode_folder))
+        self.toolbar.title.setToolTip(str(self.episode_folder))
+
         self.load_scenes()
 
     # ------------------------------------------------------------------

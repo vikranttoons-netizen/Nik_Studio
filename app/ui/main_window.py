@@ -7,13 +7,18 @@ from PySide6.QtWidgets import (
 from ui.sidebar import Sidebar
 from ui.content import Content
 
+from core.project import Project
+
 
 class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Nik Studio")
+        # The folder is in the title because Nik Studio can be pointed at
+        # a different one (Google Drive, say) with NIKSTUDIO_ROOT, and it
+        # is otherwise impossible to tell which copy you are looking at.
+        self.setWindowTitle(f"Nik Studio  —  {Project().root}")
 
         self.resize(1600, 900)
 
