@@ -169,6 +169,40 @@ Write the sheet to match the picture. A sheet saying "10 month old, blue
 romper" alongside a reference of a toddler in a yellow t-shirt pulls the
 model in two directions at once.
 
+## Keeping the disk and the GPU tidy
+
+```powershell
+python tools\cleanup.py            # show what could go
+python tools\cleanup.py --delete   # delete it
+```
+
+Only work that can be regenerated is ever offered: scene clips, the
+finished video, export archives, and job files whose image already came
+back. Your prompts, images and character references are never touched —
+images cost GPU time, so they stay, while clips and the final video are
+rebuilt in seconds by pressing 🚀 RENDER EPISODE.
+
+On the Colab side the worker loads the model once for the whole run,
+prints how much VRAM is left after each image, and hands the GPU back
+when it finishes.
+
+## Everything here is free
+
+Nothing in this pipeline needs a paid account, and nothing used is
+licensed non-commercially:
+
+| Part | Tool | Licence |
+| ---- | ---- | ------- |
+| Images | SDXL on a free Colab T4 | open, commercial use allowed |
+| Character likeness | IP-Adapter | Apache 2.0 |
+| Video and audio muxing | FFmpeg | LGPL |
+| Music | YouTube Audio Library, or your own recording | free, cleared for monetisation |
+
+Two things to be careful of if you monetise: **MusicGen** weights are
+CC-BY-NC, so its output is not for commercial use, and AI song services
+generally reserve commercial rights for paid plans. Recording the rhyme
+yourself, or using the YouTube Audio Library, avoids both.
+
 ## Something not where you expect it?
 
 ```powershell

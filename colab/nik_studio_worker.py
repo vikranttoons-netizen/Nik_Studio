@@ -111,6 +111,7 @@ class Worker:
 
         if torch.cuda.is_available():
             print("GPU            :", torch.cuda.get_device_name(0))
+            print("VRAM           :", self.vram_report())
         else:
             print(
                 "\n⚠ No GPU. In Colab choose "
@@ -198,6 +199,20 @@ class Worker:
         return pipe
 
     # ------------------------------------------------------------------
+
+    def vram_report(self):
+        """Free and total VRAM, so memory trouble is visible early."""
+
+        import torch
+
+        if not torch.cuda.is_available():
+            return "no GPU"
+
+        free, total = torch.cuda.mem_get_info()
+
+        gb = 1024 ** 3
+
+        return f"{free / gb:.1f}GB free of {total / gb:.1f}GB"
 
     def low_vram(self):
         """
@@ -373,6 +388,7 @@ class Worker:
             f"✅ {scene} done in {time.time() - started:.1f}s "
             f"-> {output.relative_to(self.episode)}"
         )
+        print(f"   VRAM: {self.vram_report()}")
 
         return True
 
@@ -427,7 +443,12 @@ class Worker:
 
             time.sleep(poll_seconds)
 
+        # The notebook often stays open afterwards. Holding several GB of
+        # a free GPU for nothing is rude to the next cell and to Colab.
+        self.release()
+
         print(f"\nFinished. {done} image(s) generated.")
+        print(f"GPU released. {self.vram_report()}")
 
         if failed:
             print(f"{len(failed)} job(s) failed: "
