@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 
+from services.audio_track import find_track
 from services.ffmpeg_locator import find_ffmpeg, ffmpeg_help
 
 
@@ -21,6 +22,9 @@ class EpisodeComposer:
     The clips are joined in scene order - the order shown in the scene
     list - not in filename order, so moving a scene up or down in the UI
     really does change the edit.
+
+    If the episode has a song - named as "music" in episode.json, or just
+    dropped into its Audio folder - it is mixed in here.
     """
 
     OUTPUT_FOLDER = "Exports"
@@ -128,6 +132,8 @@ class EpisodeComposer:
                 safe = str(clip.resolve()).replace("'", r"'\''")
                 f.write(f"file '{safe}'\n")
 
+        song = find_track(self.episode_folder, self.settings)
+
         command = [
             self.executable(),
             "-y",
@@ -135,12 +141,32 @@ class EpisodeComposer:
             "-f", "concat",
             "-safe", "0",
             "-i", str(list_file),
+        ]
+
+        if song:
+            command += ["-i", str(song)]
+
+        command += [
             # The clips were all written by the same backend with the same
-            # settings, so they can be joined without re-encoding.
-            "-c", "copy",
+            # settings, so the video can be joined without re-encoding.
+            "-c:v", "copy",
+        ]
+
+        if song:
+            command += [
+                "-c:a", "aac",
+                "-b:a", "192k",
+                # Stop at whichever runs out first, so a song longer than
+                # the pictures does not leave a black tail on the end.
+                "-shortest",
+            ]
+
+        command += [
             "-movflags", "+faststart",
             str(output),
         ]
+
+        self.song = song
 
         try:
             result = subprocess.run(

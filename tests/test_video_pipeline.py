@@ -236,6 +236,60 @@ def main():
     print("\n   [OK] clear message, no broken video file")
 
     # ------------------------------------------------------------------
+    heading("5b  A song sets the length and lands in the video")
+
+    from services.audio_track import find_track, duration as track_length
+
+    song = episode / "Audio" / "bath time song.mp3"
+    song.parent.mkdir(parents=True, exist_ok=True)
+
+    # A 19 second tone standing in for the nursery rhyme.
+    subprocess.run(
+        [
+            "ffmpeg", "-v", "error", "-y",
+            "-f", "lavfi",
+            "-i", "sine=frequency=440:duration=19",
+            "-c:a", "libmp3lame",
+            str(song),
+        ],
+        check=True,
+    )
+
+    found = find_track(episode)
+
+    assert found is not None, "the song in Audio/ was not found"
+
+    seconds = track_length(found)
+
+    print(f"   song    : {found.name}, {seconds:.1f}s")
+
+    # Read with ffmpeg, not ffprobe - the pip-installed ffmpeg has no
+    # ffprobe, and that is what most people here will be running.
+    assert seconds and abs(seconds - 19) < 1, seconds
+
+    for scene in scenes:
+        scene.pipeline.video.reset()
+
+    result = EpisodeRenderer(episode).render_episode(scenes=scenes)
+
+    assert result.success, result.errors
+
+    final = episode / result.final_video
+
+    streams = probe(final, "stream=codec_type")
+    length = float(probe(final, "format=duration")[0])
+
+    print(f"   video   : {length:.1f}s, streams {streams}")
+
+    assert "audio" in streams, "the song did not reach the video"
+
+    # The pictures were 2 seconds each before; they should now stretch to
+    # cover the song rather than ending early.
+    assert abs(length - 19) < 1.5, length
+
+    print("\n   [OK] scenes fitted to the song, audio muxed in")
+
+    # ------------------------------------------------------------------
     heading("6  9:16 for Shorts and Reels")
 
     portrait = FFmpegBackend(

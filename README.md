@@ -106,6 +106,8 @@ not in git and overrides `episode.json`:
 | `guidance`       | `0`         | 0 for turbo models, ~7 for full SDXL |
 | `character`      | —           | Character sheet injected into every prompt |
 | `reference_strength` | `0.6`   | How strongly a character's reference picture steers the image |
+| `music`          | `Audio/*`   | The song. Found automatically in the episode's `Audio` folder |
+| `fit_to_music`   | `true`      | Stretch the scenes so the video is as long as the song |
 | `sync_folder`    | —           | Folder shared with Colab, so the project can stay on a local disk |
 | `ffmpeg`         | —           | Full path to `ffmpeg.exe` if it isn't on PATH |
 
@@ -123,6 +125,29 @@ scene's `metadata` in `scenes.json`.
 generated near 1024px to match what SDXL-class models are trained on —
 asking a diffusion model for 1920x1080 is slow, hungry, and composes
 badly — and the video stage scales them up to full HD.
+
+## Adding the song
+
+Drop an audio file into the episode's `Audio` folder:
+
+```
+Episodes\Bath Time Song\Audio\bath time song.mp3
+```
+
+Press 🚀 RENDER EPISODE and it is mixed into the final MP4, and the scenes
+are stretched so the pictures last exactly as long as the song — three
+scenes over a 19 second song become 6.3 seconds each, instead of the video
+ending while the music plays on.
+
+A scene with its own `"duration"` in `metadata` keeps it, and the rest
+share what is left. Set `"fit_to_music": false` to keep fixed durations
+and let the audio simply stop with `-shortest`.
+
+Nik Studio does not write the song. Bring one from wherever you like — a
+service such as Suno, your own recording, or a licensed track. There is no
+free open model that sings nursery rhymes well; the ones that generate
+music (MusicGen and friends) do instrumentals, and their vocals are
+mumbled.
 
 ## Keeping a character the same
 
@@ -173,14 +198,15 @@ they never touch your real episodes.
 - Prompt editor with character sheets injected into every prompt
 - Image generation — local GPU or free Colab GPU
 - Video from stills with pan and zoom, via FFmpeg
-- Final episode MP4 in 16:9, 9:16 or 1:1
+- Final episode MP4 in 16:9, 9:16 or 1:1, with the song mixed in
 - Render one scene or a whole episode, resumable
 - Production panel showing the real state of every stage
 - Export
 
 ## Not built yet
 
-Voice and music are modelled in the pipeline but have no backend yet, so
-those stages stay **Not Started**, and the final MP4 has no sound. An AI
-video model (WAN, LTX) can replace the pan-and-zoom stage later by
-implementing the same `generate_video` — nothing in the UI would change.
+Voice has no backend yet, so that stage stays **Not Started** — there is
+no spoken narration, only whatever song you supply. An AI video model
+(WAN, LTX) can replace the pan-and-zoom stage later by implementing the
+same `generate_video`, and a music generator can fill the `music` stage —
+nothing in the UI would change either time.

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from backends.backend_manager import BackendManager
 
+from services.audio_track import find_track, duration, fit_scene_durations
 from services.character_manager import CharacterManager
 from services.episode_loader import EpisodeLoader
 from services.prompt_builder import PromptBuilder
@@ -81,6 +82,75 @@ class EpisodeRenderer:
             )
 
         return self._backends[stage]
+
+    def fit_to_song(self, scenes):
+        """
+        Make the pictures last exactly as long as the song.
+
+        Without this a three scene episode is 12 seconds whatever the
+        music does, and the video ends while the song is still going. The
+        computed length is written into the backend's settings, so the
+        video stage picks it up like any other duration.
+
+        Scenes with their own "duration" in metadata keep it, and turning
+        "fit_to_music": false off in episode.json disables this entirely.
+        """
+
+        if not scenes:
+            return None
+
+        if self.settings.get("fit_to_music") is False:
+            return None
+
+        song = find_track(self.episode_folder, self.settings)
+
+        if song is None:
+            return None
+
+        seconds = duration(song, self.settings.get("ffmpeg"))
+
+        if not seconds:
+            return None
+
+        shares = fit_scene_durations(scenes, seconds)
+
+        if not shares:
+            return None
+
+        # Everything that has no per-scene override gets the same share,
+        # which is what scene_duration means to the video backend.
+        flexible = [
+            value for name, value in shares.items()
+            if scenes and not self._has_own_duration(scenes, name)
+        ]
+
+        if flexible:
+            self.settings["scene_duration"] = flexible[0]
+
+            # The backend for the video stage may already exist with the
+            # old settings, so rebuild it.
+            self._backends.pop("video", None)
+
+        return seconds
+
+    @staticmethod
+    def _has_own_duration(scenes, name):
+
+        for scene in scenes:
+
+            if scene.name != name:
+                continue
+
+            value = scene.metadata.get("duration")
+
+            try:
+                return value is not None and float(value) > 0
+            except (ValueError, TypeError):
+                return False
+
+        return False
+
+    # ------------------------------------------------------------------
 
     def renderer_for(self, stage):
         """A SceneRenderer wired to the right backend for this stage."""
@@ -178,6 +248,21 @@ class EpisodeRenderer:
             )
 
             return result
+
+        if "video" in stages:
+
+            song_seconds = self.fit_to_song(scenes)
+
+            if song_seconds:
+                self._report(
+                    on_progress,
+                    stage="video",
+                    status="running",
+                    message=(
+                        f"fitting {len(scenes)} scene(s) to a "
+                        f"{song_seconds:.0f}s song"
+                    ),
+                )
 
         total = len(scenes) * len(stages)
         step = 0
