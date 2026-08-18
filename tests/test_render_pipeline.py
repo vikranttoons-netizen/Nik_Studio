@@ -225,6 +225,54 @@ def main():
     print("   [OK] image came back to the local episode folder")
 
     # ------------------------------------------------------------------
+    heading("4c  Rendering one scene must not delete the others")
+
+    # This is a regression test for real data loss: Render Scene passed a
+    # one-scene list to the renderer, which then wrote that list to
+    # scenes.json - and the other scenes were gone.
+
+    on_disk = SceneLoader(episode).load()
+
+    print(f"   before : {[s.name for s in on_disk]}")
+
+    assert len(on_disk) == 3, on_disk
+
+    single = EpisodeRenderer(episode)
+
+    single.render_scene(
+        scenes[1],
+        scenes=scenes,
+        stages=("image",),
+        force=True,
+    )
+
+    after = SceneLoader(episode).load()
+
+    print(f"   after  : {[s.name for s in after]}")
+
+    assert [s.name for s in after] == [s.name for s in on_disk], (
+        "rendering one scene lost the others"
+    )
+
+    # The same through render_episode, which is the path the UI takes.
+    EpisodeRenderer(episode).render_episode(
+        scenes=[scenes[0]],
+        all_scenes=scenes,
+        stages=("image",),
+        force=True,
+        compose=False,
+    )
+
+    after = SceneLoader(episode).load()
+
+    assert len(after) == 3, [s.name for s in after]
+
+    # And the prompts of the scenes that were not rendered survive.
+    assert after[2].prompt == scenes[2].prompt
+
+    print("\n   [OK] the whole episode is written back, not just the subset")
+
+    # ------------------------------------------------------------------
     heading("5  The local backend explains itself when it cannot run")
 
     settings = json.loads((episode / "episode.json").read_text("utf-8"))

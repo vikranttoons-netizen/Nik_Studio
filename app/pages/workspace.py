@@ -458,6 +458,8 @@ class WorkspacePage(QWidget):
             force=force,
             job=job,
             compose=compose,
+            # Render Scene renders one scene but must still save them all.
+            all_scenes=self.scene_list.scenes,
             parent=self,
         )
 

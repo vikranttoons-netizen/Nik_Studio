@@ -207,19 +207,34 @@ class EpisodeRenderer:
         on_progress=None,
         save=True,
         compose=True,
+        all_scenes=None,
     ):
         """
         Render `stages` for every scene, then join the clips into the
         final episode video.
 
-        scenes  - the in-memory scenes from the UI, so unsaved prompt
-                  edits are used. Loaded from disk when None.
-        force   - re-render even stages that are already complete.
-        compose - build the final MP4 once the scenes are done.
+        scenes     - the scenes to render. These are the in-memory objects
+                     from the UI, so unsaved prompt edits are used.
+                     Loaded from disk when None.
+        all_scenes - every scene in the episode. Rendering one scene must
+                     still write the whole episode back to scenes.json;
+                     saving only the rendered subset would delete the
+                     others. Defaults to `scenes`.
+        force      - re-render even stages that are already complete.
+        compose    - build the final MP4 once the scenes are done.
         """
 
         if scenes is None:
             scenes = SceneLoader(self.episode_folder).load()
+
+        # What gets written to scenes.json. Never just the subset being
+        # rendered - that is how scenes go missing.
+        #
+        # A caller that forgets to pass all_scenes would reintroduce that
+        # bug, so rather than trusting it, the rest of the episode is read
+        # back off disk and the rendered scenes are merged into it.
+        if all_scenes is None:
+            all_scenes = self._merge_with_disk(scenes)
 
         result = RenderResult()
 
@@ -326,14 +341,14 @@ class EpisodeRenderer:
 
                 # Save after each scene so progress survives a crash.
                 if save:
-                    SceneSaver(self.episode_folder).save(scenes)
+                    SceneSaver(self.episode_folder).save(all_scenes)
 
         finally:
             # Always release the GPU / loaded models.
             self.close_backends()
 
             if save:
-                SceneSaver(self.episode_folder).save(scenes)
+                SceneSaver(self.episode_folder).save(all_scenes)
 
         # Join the clips into one playable episode.
         #
@@ -361,6 +376,40 @@ class EpisodeRenderer:
         result.message = self._episode_message(result)
 
         return result
+
+    # ------------------------------------------------------------------
+
+    def _merge_with_disk(self, scenes):
+        """
+        The episode as saved, with `scenes` put back in place of their
+        older selves.
+
+        Scenes only in memory are appended, scenes only on disk are kept.
+        Either way nothing is lost by writing the result out.
+        """
+
+        try:
+            stored = SceneLoader(self.episode_folder).load()
+        except (OSError, ValueError):
+            return list(scenes)
+
+        if not stored:
+            return list(scenes)
+
+        rendered = {scene.name: scene for scene in scenes}
+
+        merged = [
+            rendered.pop(scene.name, scene)
+            for scene in stored
+        ]
+
+        # Anything that was not on disk yet goes on the end.
+        merged.extend(
+            scene for scene in scenes
+            if scene.name in rendered
+        )
+
+        return merged
 
     # ------------------------------------------------------------------
 
@@ -411,15 +460,12 @@ class EpisodeRenderer:
 
         result = self.render_episode(
             scenes=[scene],
+            all_scenes=scenes,
             stages=stages,
             force=force,
             on_progress=on_progress,
-            save=False,
+            save=True,
             compose=False,
-        )
-
-        SceneSaver(self.episode_folder).save(
-            scenes if scenes is not None else [scene]
         )
 
         return result

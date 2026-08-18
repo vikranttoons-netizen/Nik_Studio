@@ -4,7 +4,7 @@
             "id": 1,
             "name": "Scene01",
             "prompt": "Nik happily splashes in the bathtub while crying",
-            "image": "Images/Scene01.png",
+            "image": "",
             "video": "",
             "status": "pending"
         },
@@ -12,7 +12,7 @@
             "id": 2,
             "name": "Scene02",
             "prompt": "Nik plays with a yellow duck in the bathtub.",
-            "image": "Images/Scene02.png",
+            "image": "",
             "video": "",
             "status": "pending"
         },
@@ -20,7 +20,7 @@
             "id": 3,
             "name": "Scene03",
             "prompt": "Nik laughs as bubbles float around him.",
-            "image": "Images/Scene03.png",
+            "image": "",
             "video": "",
             "status": "pending"
         }

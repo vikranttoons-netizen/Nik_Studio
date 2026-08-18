@@ -22,6 +22,7 @@ class RenderTask(QObject):
         force=False,
         job=RenderWorker.RENDER,
         compose=True,
+        all_scenes=None,
         parent=None,
     ):
 
@@ -36,6 +37,7 @@ class RenderTask(QObject):
             force=force,
             job=job,
             compose=compose,
+            all_scenes=all_scenes,
         )
 
         self.worker.moveToThread(self.thread)

@@ -31,12 +31,16 @@ class RenderWorker(QObject):
         force=False,
         job=RENDER,
         compose=True,
+        all_scenes=None,
     ):
 
         super().__init__()
 
         self.episode_folder = episode_folder
         self.scenes = scenes
+
+        # Rendering one scene must still save the whole episode.
+        self.all_scenes = all_scenes if all_scenes is not None else scenes
         self.stages = tuple(stages)
         self.force = force
         self.job = job
@@ -70,7 +74,7 @@ class RenderWorker(QObject):
             )
 
             if self.job == self.COLLECT:
-                result = renderer.collect_results(self.scenes)
+                result = renderer.collect_results(self.all_scenes)
             else:
                 result = renderer.render_episode(
                     scenes=self.scenes,
@@ -78,6 +82,7 @@ class RenderWorker(QObject):
                     force=self.force,
                     on_progress=self.progress.emit,
                     compose=self.compose,
+                    all_scenes=self.all_scenes,
                 )
 
         except Exception as error:
