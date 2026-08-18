@@ -102,6 +102,8 @@ class WorkspacePage(QWidget):
 
         self.toolbar.renderEpisode.clicked.connect(self.render_episode)
 
+        self.toolbar.redoEpisode.clicked.connect(self.redo_episode)
+
         self.toolbar.importResults.clicked.connect(self.import_results)
 
         self.toolbar.export.clicked.connect(self.export_episode)
@@ -405,6 +407,42 @@ class WorkspacePage(QWidget):
             scenes=self.scene_list.scenes,
             force=False,
             label="Rendering episode",
+        )
+
+    # ------------------------------------------------------------------
+
+    def redo_episode(self):
+        """
+        Render every scene again, finished ones included.
+
+        Needed whenever the settings behind the images change - a new
+        style, a new character reference - because Render Episode quite
+        rightly leaves completed work alone.
+        """
+
+        scenes = self.scene_list.scenes
+
+        if not scenes:
+            self.warn("This episode has no scenes yet.")
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Nik Studio",
+            f"Render all {len(scenes)} scene(s) again?\n\n"
+            "The images you have now will be replaced once the new ones "
+            "come back.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        self.start_render(
+            scenes=scenes,
+            force=True,
+            label="Re-rendering every scene",
         )
 
     # ------------------------------------------------------------------

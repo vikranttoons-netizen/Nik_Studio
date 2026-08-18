@@ -68,6 +68,13 @@ class TopToolbar(QWidget):
 
         self.renderEpisode = QPushButton("🚀 RENDER EPISODE")
 
+        # Render Episode deliberately skips finished work. This is for
+        # when the settings changed and everything should be made again.
+        self.redoEpisode = QPushButton("↻")
+        self.redoEpisode.setToolTip(
+            "Render every scene again, including the ones already done"
+        )
+
         self.importResults = QPushButton("📥 Import Results")
 
         self.export = QPushButton("📤 Export")
@@ -78,6 +85,10 @@ class TopToolbar(QWidget):
         for button in self.buttons():
             button.setMinimumHeight(46)
             button.setMinimumWidth(120)
+
+        # A deliberate re-render is not the main action; keep it small.
+        self.redoEpisode.setMinimumWidth(46)
+        self.redoEpisode.setStyleSheet("text-align:center; font-size:16px;")
 
         # The main action gets to look like the main action.
         self.renderEpisode.setMinimumWidth(190)
@@ -109,6 +120,7 @@ class TopToolbar(QWidget):
             self.save,
             self.renderScene,
             self.renderEpisode,
+            self.redoEpisode,
             self.importResults,
             self.export,
             self.cancel,

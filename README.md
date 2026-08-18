@@ -84,6 +84,10 @@ Rendering is resumable. Pressing **🚀 RENDER EPISODE** again only renders
 what is still missing, and it checks that each file is really on disk
 rather than trusting the saved status.
 
+To make everything again — after changing the style, the model, or the
+character reference — press **↻** beside it. It asks first, then renders
+every scene regardless of what is already done.
+
 ## Episode settings
 
 Everything below is optional and lives in the episode's `episode.json`.
