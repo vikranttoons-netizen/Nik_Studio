@@ -195,13 +195,23 @@ class Worker:
 
         print(f"🎨 {scene} : {prompt[:70]}...")
 
+        guidance = float(job.get("guidance", 0.0))
+
         kwargs = {
             "prompt": prompt,
             "num_inference_steps": int(job.get("steps", 4)),
-            "guidance_scale": float(job.get("guidance", 0.0)),
+            "guidance_scale": guidance,
             "width": int(job.get("width", 1024)),
             "height": int(job.get("height", 1024)),
         }
+
+        # A negative prompt needs classifier free guidance to do anything.
+        # Distilled models such as SDXL-Turbo run at guidance 0, where it
+        # is ignored at best and an error at worst.
+        negative = job.get("negative_prompt", "")
+
+        if negative and guidance > 1:
+            kwargs["negative_prompt"] = negative
 
         seed = int(job.get("seed", -1))
 

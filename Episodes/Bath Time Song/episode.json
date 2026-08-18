@@ -1,9 +1,11 @@
 {
     "title": "Bath Time Song",
     "character": "vikrant",
-    "style": "Pixar",
+    "style": "Pixar 3D animated movie style, stylised cartoon character, soft studio lighting",
     "backend": "Colab",
-    "model": "sdxl-turbo",
+    "model": "sdxl",
+    "steps": 30,
+    "guidance": 7.0,
     "aspect": "16:9",
     "fps": 24,
     "scene_duration": 4,

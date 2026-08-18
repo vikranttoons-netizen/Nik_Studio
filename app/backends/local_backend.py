@@ -148,7 +148,7 @@ class LocalBackend(BaseBackend):
     # Image generation
     # ------------------------------------------------------------------
 
-    def generate_image(self, scene, prompt):
+    def generate_image(self, scene, prompt, negative=""):
 
         if not self.is_available():
             raise BackendUnavailable(self.unavailable_reason())
@@ -173,6 +173,12 @@ class LocalBackend(BaseBackend):
             "width": width,
             "height": height,
         }
+
+        # A negative prompt only does anything when classifier free
+        # guidance is on. Distilled models such as SDXL-Turbo run at
+        # guidance 0 and would raise if it were passed.
+        if negative and guidance > 1:
+            kwargs["negative_prompt"] = negative
 
         if seed >= 0:
             import torch

@@ -79,31 +79,51 @@ class Character:
     # Prompt building
     # ------------------------------------------------------------------
 
-    # Parts of the character sheet that describe how it looks.
-    PROMPT_FIELDS = (
-        "description",
-        "age",
-        "gender",
-        "appearance",
-        "hairstyle",
-        "clothes",
-        "expression",
-        "style",
-    )
-
     def build_prompt(self):
         """
-        Return the character description used inside image prompts.
-        Empty fields are skipped so the prompt never contains blanks.
+        Describe the character as ONE subject.
+
+        This used to be a plain comma separated list of the sheet's
+        fields: "Nik, cute baby, 10 month old, Indian baby boy, round
+        face, ...". An image model reads each of those noun phrases as a
+        separate thing to draw, which is how a prompt for one baby ends
+        up producing two.
+
+        Writing it as a single phrase - "a 10 month old Indian baby boy
+        with a round face, ... wearing a blue romper" - keeps it to one
+        subject.
+
+        The style is deliberately left out; it belongs at the front of
+        the prompt, not buried at the end. See style_prompt().
         """
 
-        parts = [self.name]
+        subject = " ".join(
+            part for part in (self.age, self.gender) if part
+        ) or self.description
 
-        for name in self.PROMPT_FIELDS:
+        if not subject:
+            return ""
 
-            value = getattr(self, name, "")
+        phrase = f"a {subject}" if subject[0].isalnum() else subject
 
-            if value:
-                parts.append(value)
+        details = [
+            value
+            for value in (self.appearance, self.hairstyle)
+            if value
+        ]
 
-        return ", ".join(parts)
+        if details:
+            phrase += " with " + ", ".join(details)
+
+        if self.clothes:
+            phrase += f", wearing {self.clothes}"
+
+        if self.expression:
+            phrase += f", {self.expression}"
+
+        return phrase
+
+    def style_prompt(self):
+        """The look, which goes at the front of the prompt."""
+
+        return self.style or ""

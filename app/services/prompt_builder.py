@@ -11,6 +11,16 @@ class PromptBuilder:
     real character consistency - reference images and LoRAs come later.
     """
 
+    # Used when episode.json does not set its own negative_prompt.
+    # Aimed at the two failures this pipeline actually hits: duplicate
+    # subjects, and a photographic look where animation was asked for.
+    DEFAULT_NEGATIVE = (
+        "two babies, twins, duplicate person, extra person, crowd, "
+        "extra limbs, extra fingers, deformed hands, disfigured, "
+        "photo, photorealistic, realistic skin pores, "
+        "blurry, low quality, text, watermark, signature"
+    )
+
     def __init__(self, episode_settings=None, characters=None):
 
         self.episode_settings = dict(episode_settings or {})
@@ -57,29 +67,72 @@ class PromptBuilder:
     # ------------------------------------------------------------------
 
     def build(self, scene):
+        """
+        Assemble the prompt, style first.
 
-        parts = []
+        Order matters. Image models weight the opening of a prompt most
+        heavily, so a style tacked on the end - which is what this used to
+        do - gets largely ignored and the result comes out photographic.
+        Leading with it is what makes the style stick.
 
-        if scene.prompt:
-            parts.append(scene.prompt.strip())
+            <style>, <what happens in the scene>, <who is in it>
+        """
+
+        styles = []
+        subjects = []
 
         for key in self.scene_characters(scene):
 
             character = self.find_character(key)
 
-            if character:
-                parts.append(character.build_prompt())
-            else:
-                # Character sheet not found - still name them, so the
-                # prompt is never silently missing the main character.
-                parts.append(str(key))
+            if character is None:
+                # No sheet for this name; still mention them.
+                subjects.append(str(key))
+                continue
 
-        style = self.episode_settings.get("style")
+            if character.style_prompt():
+                styles.append(character.style_prompt())
 
-        if style:
-            parts.append(style)
+            if character.build_prompt():
+                subjects.append(character.build_prompt())
+
+        episode_style = self.episode_settings.get("style")
+
+        if episode_style:
+            styles.append(episode_style)
+
+        parts = []
+
+        parts.extend(styles)
+
+        if scene.prompt:
+            parts.append(scene.prompt.strip())
+
+        parts.extend(subjects)
 
         return ", ".join(self._dedupe(parts))
+
+    # ------------------------------------------------------------------
+
+    def build_negative(self, scene=None):
+        """
+        What the image must not contain.
+
+        A negative prompt is the reliable way to stop the two most common
+        failures here: a second child appearing, and a photographic look
+        when the episode asked for animation.
+
+        Note it only has an effect when guidance is above 1. Distilled
+        models such as SDXL-Turbo run at guidance 0 and ignore it, which
+        is a reason to use the full SDXL model for stylised work.
+        """
+
+        negative = self.episode_settings.get("negative_prompt")
+
+        if negative is not None:
+            return str(negative)
+
+        return self.DEFAULT_NEGATIVE
 
     # ------------------------------------------------------------------
 

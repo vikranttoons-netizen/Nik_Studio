@@ -1,29 +1,17 @@
 [
     {
         "id": "vikrant",
-
         "name": "Nik",
-
         "description": "cute baby",
-
         "age": "10 month old",
-
         "gender": "Indian baby boy",
-
         "appearance": "round face, expressive eyes, fair skin, adorable smile",
-
         "clothes": "blue romper",
-
         "hairstyle": "short black hair",
-
         "expression": "happy smile",
-
-        "style": "Pixar 3D animation, cinematic lighting",
-
+        "style": "",
         "reference_image": "",
-
         "voice": "",
-
         "lora": ""
     }
 ]

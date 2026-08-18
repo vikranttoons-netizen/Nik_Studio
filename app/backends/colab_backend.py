@@ -77,7 +77,7 @@ class ColabBackend(BaseBackend):
     # Queueing work
     # ------------------------------------------------------------------
 
-    def generate_image(self, scene, prompt):
+    def generate_image(self, scene, prompt, negative=""):
 
         if not prompt.strip():
             raise BackendError(
@@ -91,7 +91,7 @@ class ColabBackend(BaseBackend):
         if imported:
             return imported
 
-        self.write_job(scene, prompt)
+        self.write_job(scene, prompt, negative)
 
         raise BackendDeferred(
             f"{scene.name} queued for Colab.",
@@ -100,7 +100,7 @@ class ColabBackend(BaseBackend):
 
     # ------------------------------------------------------------------
 
-    def write_job(self, scene, prompt):
+    def write_job(self, scene, prompt, negative=""):
 
         self.jobs_folder.mkdir(parents=True, exist_ok=True)
         self.results_folder.mkdir(parents=True, exist_ok=True)
@@ -112,6 +112,7 @@ class ColabBackend(BaseBackend):
             "type": "image",
             "scene": scene.name,
             "prompt": prompt,
+            "negative_prompt": negative,
             "model": self.setting("model", "stabilityai/sdxl-turbo"),
             "steps": int(self.setting("steps", 4)),
             "guidance": float(self.setting("guidance", 0.0)),

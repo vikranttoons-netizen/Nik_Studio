@@ -91,10 +91,20 @@ Everything below is optional and lives in the episode's `episode.json`:
 | `image_size`     | from `aspect` | Size images are generated at, e.g. `1024x576` |
 | `low_vram`       | `false`     | For a 6–8GB GPU: slower, far less VRAM |
 | `model`          | `sdxl-turbo`| Image model |
-| `style`          | —           | Appended to every prompt |
+| `style`          | —           | Leads every prompt, so it actually takes effect |
+| `negative_prompt`| duplicates, photo look | What the image must not contain (needs `guidance` > 1) |
+| `steps`          | `4`         | Denoising steps: 4 for turbo models, ~30 for full SDXL |
+| `guidance`       | `0`         | 0 for turbo models, ~7 for full SDXL |
 | `character`      | —           | Character sheet injected into every prompt |
 | `sync_folder`    | —           | Folder shared with Colab, so the project can stay on a local disk |
 | `ffmpeg`         | —           | Full path to `ffmpeg.exe` if it isn't on PATH |
+
+**Getting the style you asked for.** `sdxl-turbo` is fast (about 2 seconds
+an image) but runs at `guidance` 0, where it ignores the negative prompt
+and tends towards photorealism whatever style you name. For stylised work
+use the full model — `"model": "sdxl", "steps": 30, "guidance": 7` — which
+is slower (~20s an image on a free T4) but actually follows the style and
+the negative prompt.
 
 To hold one shot longer than the rest, put `"duration": 8` in that
 scene's `metadata` in `scenes.json`.
