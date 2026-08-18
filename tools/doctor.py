@@ -46,12 +46,11 @@ def main():
         print(f"{OK} NIKSTUDIO_ROOT is set")
         print(f"       {override}")
     else:
-        print(f"{WARN} NIKSTUDIO_ROOT is not set")
-        print("       Using the folder the code lives in.")
-        print("       If your episodes are in Google Drive, set it:")
-        print('       [Environment]::SetEnvironmentVariable('
-              '"NIKSTUDIO_ROOT", "G:\\My Drive\\NikStudio", "User")')
-        print("       Then close PowerShell and open a new one.")
+        # Not a problem in itself: the usual setup keeps the project on a
+        # local disk and shares only a small folder with Colab, via
+        # sync_folder. NIKSTUDIO_ROOT is only for moving the whole project.
+        print(f"{OK} NIKSTUDIO_ROOT is not set")
+        print("       Using the folder the code lives in, which is normal.")
 
     project = Project()
 
