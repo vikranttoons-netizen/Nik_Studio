@@ -28,7 +28,12 @@ class PromptBuilder:
     # picture that itself contains the character makes it worse - the model
     # draws the one from the prompt and the one from the picture. Saying
     # outright that there is only one is the cheapest defence.
-    SOLO_HINT = "solo, a single child alone in the frame"
+    SOLO_HINT = "solo, one child only"
+
+    # CLIP reads 77 tokens and silently throws away the rest, so
+    # anything past this never reaches the model. Kept a little
+    # under the limit because the estimate is approximate.
+    MAX_TOKENS = 68
 
     def __init__(self, episode_settings=None, characters=None,
                  project_root=None):
@@ -107,27 +112,75 @@ class PromptBuilder:
             if character.style_prompt():
                 styles.append(character.style_prompt())
 
-            if character.build_prompt():
-                subjects.append(character.build_prompt())
+            # With a reference picture the words only need to say who it
+            # is; the picture says what they look like.
+            short = bool(character.reference_image)
+
+            described = character.build_prompt(short=short)
+
+            if described:
+                subjects.append(described)
 
         episode_style = self.episode_settings.get("style")
 
         if episode_style:
             styles.append(episode_style)
 
-        parts = []
+        # Ordered by what must survive if the prompt has to be cut: the
+        # look, then how many children, then what happens, then who.
+        # Trimming takes from the end, and the character's face is
+        # carried by the reference picture anyway.
+        parts = list(styles)
 
-        parts.extend(styles)
+        if len(subjects) == 1:
+            parts.append(self.SOLO_HINT)
 
         if scene.prompt:
             parts.append(scene.prompt.strip())
 
         parts.extend(subjects)
 
-        if len(subjects) == 1:
-            parts.append(self.SOLO_HINT)
+        return ", ".join(self._trim(self._dedupe(parts)))
 
-        return ", ".join(self._dedupe(parts))
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def _trim(cls, fragments):
+        """
+        Drop fragments from the end until the prompt fits CLIP's window.
+
+        Silent truncation by the tokenizer is worse than trimming here:
+        this way what survives is chosen, and the caller can see what was
+        dropped.
+        """
+
+        kept = []
+
+        for fragment in fragments:
+
+            candidate = kept + [fragment]
+
+            if cls.estimate_tokens(", ".join(candidate)) > cls.MAX_TOKENS:
+                break
+
+            kept = candidate
+
+        return kept
+
+    @staticmethod
+    def estimate_tokens(text):
+        """
+        Roughly how many CLIP tokens a prompt uses.
+
+        CLIP's BPE splits some words into several tokens and counts
+        punctuation, so words alone undercount. The multiplier is
+        deliberately generous - overestimating costs a few words, while
+        underestimating means the tokenizer drops them without saying so.
+        """
+
+        words = str(text).replace(",", " , ").split()
+
+        return int(len(words) * 1.2) + 2
 
     # ------------------------------------------------------------------
 

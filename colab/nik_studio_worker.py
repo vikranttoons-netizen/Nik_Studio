@@ -182,13 +182,20 @@ class Worker:
         else:
             pipe = pipe.to("cuda" if use_gpu else "cpu")
 
-        # Both cut the peak memory of the decode step and cost almost
-        # nothing in speed.
-        for method in ("enable_vae_slicing", "enable_attention_slicing"):
+        # Cuts the peak memory of the decode step for almost no cost.
+        # Newer diffusers moved slicing onto the vae itself.
+        try:
+            pipe.vae.enable_slicing()
+        except AttributeError:
             try:
-                getattr(pipe, method)()
+                pipe.enable_vae_slicing()
             except (AttributeError, TypeError):
                 pass
+
+        try:
+            pipe.enable_attention_slicing()
+        except (AttributeError, TypeError):
+            pass
 
         self.pipe = pipe
         self.loaded_model = model
@@ -201,18 +208,28 @@ class Worker:
     # ------------------------------------------------------------------
 
     def vram_report(self):
-        """Free and total VRAM, so memory trouble is visible early."""
+        """
+        Free and total VRAM, so memory trouble is visible early.
 
-        import torch
+        This is a status line and nothing more, so it never raises. It
+        once turned a finished image into a reported failure, which is
+        exactly what a diagnostic must not do.
+        """
 
-        if not torch.cuda.is_available():
-            return "no GPU"
+        try:
+            import torch
 
-        free, total = torch.cuda.mem_get_info()
+            if not torch.cuda.is_available():
+                return "no GPU"
 
-        gb = 1024 ** 3
+            free, total = torch.cuda.mem_get_info()
 
-        return f"{free / gb:.1f}GB free of {total / gb:.1f}GB"
+            gb = 1024 ** 3
+
+            return f"{free / gb:.1f}GB free of {total / gb:.1f}GB"
+
+        except Exception:
+            return "unknown"
 
     def low_vram(self):
         """
@@ -222,24 +239,31 @@ class Worker:
         overrun. Anything from 24GB up runs them outright.
         """
 
-        import torch
+        try:
+            import torch
 
-        if not torch.cuda.is_available():
+            if not torch.cuda.is_available():
+                return False
+
+            total = torch.cuda.get_device_properties(0).total_memory
+
+            return total < 20 * 1024 ** 3
+
+        except Exception:
             return False
 
-        total = torch.cuda.get_device_properties(0).total_memory
-
-        return total < 20 * 1024 ** 3
-
     def release(self):
-        """Give the card its memory back."""
+        """Give the card its memory back. Never raises."""
 
         if self.pipe is None:
             return
 
         import gc
 
-        import torch
+        try:
+            import torch
+        except ImportError:
+            torch = None
 
         self.pipe = None
         self.loaded_model = None
@@ -247,8 +271,11 @@ class Worker:
 
         gc.collect()
 
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        try:
+            if torch is not None and torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
 
@@ -363,7 +390,24 @@ class Worker:
 
         started = time.time()
 
-        image = pipe(**kwargs).images[0]
+        try:
+            image = pipe(**kwargs).images[0]
+
+        except Exception as error:
+
+            # IP-Adapter and diffusers fall out of step from time to time
+            # ("'tuple' object has no attribute 'shape'" is the usual
+            # shape of it). Losing the likeness is much better than
+            # losing the image, so try once more without the reference.
+            if "ip_adapter_image" not in kwargs:
+                raise
+
+            print(f"⚠ the character reference failed: {error}")
+            print("   generating from the description alone instead")
+
+            kwargs.pop("ip_adapter_image")
+
+            image = pipe(**kwargs).images[0]
 
         output = self.episode / job.get("output", f"Results/{scene}.png")
         output.parent.mkdir(parents=True, exist_ok=True)

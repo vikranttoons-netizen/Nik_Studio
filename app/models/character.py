@@ -79,9 +79,15 @@ class Character:
     # Prompt building
     # ------------------------------------------------------------------
 
-    def build_prompt(self):
+    def build_prompt(self, short=False):
         """
         Describe the character as ONE subject.
+
+        `short` gives the bare essentials - age, who they are, the most
+        recognisable clothing. Use it when a reference picture is being
+        sent too: the picture carries the face far better than words, and
+        CLIP only reads the first 77 tokens of a prompt, so a long
+        description pushes the rest of the prompt out entirely.
 
         This used to be a plain comma separated list of the sheet's
         fields: "Nik, cute baby, 10 month old, Indian baby boy, round
@@ -105,6 +111,14 @@ class Character:
             return ""
 
         phrase = f"a {subject}" if subject[0].isalnum() else subject
+
+        if short:
+
+            # Just the first clothing item, which is the strongest visual
+            # cue after the face.
+            outfit = (self.clothes or "").split(",")[0].strip()
+
+            return f"{phrase} in {outfit}" if outfit else phrase
 
         details = [
             value
