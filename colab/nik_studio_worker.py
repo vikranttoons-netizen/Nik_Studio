@@ -189,8 +189,9 @@ class Worker:
         else:
             pipe = pipe.to("cuda" if use_gpu else "cpu")
 
-        # Cuts the peak memory of the decode step for almost no cost.
-        # Newer diffusers moved slicing onto the vae itself.
+        # VAE slicing cuts the peak memory of the decode step for almost
+        # no cost, and does not touch attention. Newer diffusers moved it
+        # onto the vae itself.
         try:
             pipe.vae.enable_slicing()
         except AttributeError:
@@ -199,10 +200,18 @@ class Worker:
             except (AttributeError, TypeError):
                 pass
 
-        try:
-            pipe.enable_attention_slicing()
-        except (AttributeError, TypeError):
-            pass
+        # Attention slicing, however, replaces the UNet's attention
+        # processors - and IP-Adapter needs its own. Enabling both is what
+        # produced "'tuple' object has no attribute 'shape'" during
+        # generation, and then "SlicedAttnProcessor.__init__() missing
+        # slice_size" when the adapter tried to come back out.
+        #
+        # So it is only used when no character reference is involved.
+        if not with_reference:
+            try:
+                pipe.enable_attention_slicing()
+            except (AttributeError, TypeError):
+                pass
 
         self.pipe = pipe
         self.loaded_model = model
@@ -437,8 +446,19 @@ class Worker:
                 pipe.unload_ip_adapter()
                 self.has_adapter = False
                 print("   character reference unloaded")
+
             except Exception as unload_error:
+
+                # A half removed adapter leaves the UNet in a state that
+                # fails every later job with "'NoneType' object has no
+                # attribute 'image_projection_layers'". Rebuilding is
+                # slower than carrying on, and the only thing that works.
                 print(f"   could not unload the adapter: {unload_error}")
+                print("   rebuilding the pipeline without it")
+
+                self.release()
+
+                pipe = self.load_model(model, with_reference=False)
 
             image = pipe(**kwargs).images[0]
 
