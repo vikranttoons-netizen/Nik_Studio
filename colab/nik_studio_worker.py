@@ -33,10 +33,16 @@ import time
 from pathlib import Path
 
 # ----------------------------------------------------------------------
-# SETTINGS - change this to your episode folder in Google Drive
+# SETTINGS
 # ----------------------------------------------------------------------
 
-EPISODE = "/content/drive/MyDrive/NikStudio/Episodes/Bath Time Song"
+# The folder Nik Studio and Colab share. In the notebook the previous cell
+# finds this for you and sets it, so there is usually nothing to change
+# here - globals() is checked first precisely so that value is not
+# overwritten when this cell runs.
+EPISODE = globals().get("EPISODE") or (
+    "/content/drive/MyDrive/NikStudio/Exchange/Bath Time Song"
+)
 
 # How long to keep watching for new jobs, in minutes.
 # Set to 0 to process the jobs that exist right now and then stop.
@@ -84,9 +90,11 @@ class Worker:
 
         if not self.episode.exists():
             raise SystemExit(
-                f"Episode folder not found:\n  {self.episode}\n\n"
-                "Check the EPISODE setting at the top of this script, and "
-                "that Google Drive is mounted."
+                f"Folder not found:\n  {self.episode}\n\n"
+                "Run the previous cell again - it lists the folders that "
+                "have jobs waiting and sets this one for you.\n"
+                "If you are running this script on its own, edit EPISODE "
+                "at the top."
             )
 
         self.jobs.mkdir(parents=True, exist_ok=True)
@@ -308,6 +316,8 @@ class Worker:
     # ------------------------------------------------------------------
 
     def run(self, watch_minutes=WATCH_MINUTES, poll_seconds=POLL_SECONDS):
+
+        print(f"Folder : {self.episode}")
 
         self.check_folders()
         self.report_gpu()
