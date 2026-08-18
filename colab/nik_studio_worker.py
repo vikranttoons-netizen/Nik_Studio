@@ -84,6 +84,11 @@ class Worker:
         self.loaded_model = None
         self.has_adapter = False
 
+        # Turned on only after an out of memory failure. CPU offload and
+        # IP-Adapter together are what produced "'tuple' object has no
+        # attribute 'shape'", so it is no longer the default.
+        self.force_offload = False
+
     # ------------------------------------------------------------------
 
     def check_folders(self):
@@ -172,11 +177,13 @@ class Worker:
                 print("  Carrying on with the text description only.")
                 with_reference = False
 
-        if use_gpu and self.low_vram():
-            # SDXL plus IP-Adapter's image encoder does not comfortably
-            # fit a 16GB T4. Offloading keeps most of the model in system
-            # RAM and moves each piece onto the card as it is needed:
-            # slower per image, but it finishes instead of running out.
+        if use_gpu and self.force_offload:
+            # Offloading keeps most of the model in system RAM and moves
+            # each piece onto the card as it is needed: slower per image,
+            # but it finishes instead of running out.
+            #
+            # Only used after an out of memory failure, because offload
+            # and IP-Adapter together break generation on a T4.
             pipe.enable_model_cpu_offload()
             print("Low VRAM mode - slower, but it fits.")
         else:
@@ -410,6 +417,12 @@ class Worker:
             if "ip_adapter_image" not in kwargs:
                 raise
 
+            # Running out of memory is not the reference's fault. Dropping
+            # it here would cost the likeness for nothing - let the caller
+            # retry with offloading instead.
+            if "out of memory" in str(error).lower():
+                raise
+
             print(f"⚠ the character reference failed: {error}")
             print("   generating from the description alone instead")
 
@@ -489,12 +502,32 @@ class Worker:
                         done += 1
 
                 except Exception as error:
+
+                    # Out of memory is worth one more go: drop everything,
+                    # switch offloading on, and rebuild. It is slower, but
+                    # it is the difference between an image and nothing.
+                    if (
+                        "out of memory" in str(error).lower()
+                        and not self.force_offload
+                    ):
+                        print(f"⚠ {job_file.stem}: out of GPU memory")
+                        print("   retrying with low VRAM mode")
+
+                        self.release()
+                        self.force_offload = True
+
+                        try:
+                            if self.run_job(job_file, job):
+                                done += 1
+                            continue
+
+                        except Exception as retry_error:
+                            error = retry_error
+
                     print(f"❌ {job_file.stem} failed: {error}")
                     print("   not retrying it in this run")
                     failed.add(job_file.name)
 
-                    # An out of memory failure leaves the card in a bad
-                    # state; clear it so the next job starts clean.
                     if "out of memory" in str(error).lower():
                         self.release()
                         print("   released the GPU before the next job")
