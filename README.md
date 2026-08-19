@@ -259,9 +259,15 @@ Nik Studio there is one question worth answering first: does a free Colab
 GPU animate *your* character well enough to be worth it?
 
 `colab/NikStudio_Video_Test.ipynb` answers it. Open it in Colab, set
-**Runtime → Change runtime type → T4 GPU**, upload one finished image,
-and run the four cells. It makes a single three second clip and plays it
+**Runtime → Change runtime type → T4 GPU**, and run its two cells. It
+asks for one finished image, makes a three second clip, and plays it
 back. It writes nothing into your project.
+
+Two cells rather than six, on purpose: the second one does the whole job
+and depends on nothing before it, so running the cells out of order — or
+Colab restarting the runtime after the install, which it does — cannot
+break it. Run it again to try a different prompt and it reuses the
+loaded model, which turns twelve minutes into three.
 
 Which model, and why:
 
