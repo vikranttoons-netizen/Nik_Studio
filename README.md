@@ -251,25 +251,47 @@ they never touch your real episodes.
 - Production panel showing the real state of every stage
 - Export
 
-## Trying a real video model
+## Animating the pictures with a song
 
-Pan and zoom moves the camera, not the child. Making the child actually
-move needs an image-to-video model, and before any of that is built into
-Nik Studio there is one question worth answering first: does a free Colab
-GPU animate *your* character well enough to be worth it?
+`colab/NikStudio_Animate.ipynb` is the finished job in one notebook: you
+give it pictures and a song, it gives you back one MP4 with the character
+actually moving.
 
-`colab/NikStudio_Video_Test.ipynb` answers it. Open it in Colab, set
-**Runtime → Change runtime type → T4 GPU**, and run its two cells. It
-asks for one finished image, makes a three second clip, and plays it
-back. It writes nothing into your project.
+Put the files in Google Drive:
 
-Two cells rather than six, on purpose: the second one does the whole job
-and depends on nothing before it, so running the cells out of order — or
-Colab restarting the runtime after the install, which it does — cannot
-break it. Run it again to try a different prompt and it reuses the
-loaded model, which turns twelve minutes into three.
+```
+My Drive / NikStudio / Input /
+      Scene01.png
+      Scene02.png
+      Scene03.png
+      song.mp3
+```
 
-Which model, and why:
+Names do not matter — pictures are used in alphabetical order, so number
+them, and any one audio file is taken as the song. Open the notebook in
+Colab, set **Runtime → Change runtime type** to a GPU, and run its two
+cells. The result lands in `My Drive / NikStudio / Output / Episode.mp4`.
+
+Every picture becomes a moving clip, the clips are cut so they share the
+song's length exactly, and the song is laid over the top. Each clip is
+saved to Drive as it finishes, so a session that dies costs you one clip
+rather than all of them — run it again and it carries on.
+
+To make one picture do something different, add it to `PROMPTS` at the
+top of cell 2, delete that clip from `Output/Clips`, and run the cell
+again. The clips you kept are not made twice.
+
+The notebook reads the card and picks its own settings — 1024×576 and
+full precision on a 24GB card, smaller and with the text encoder squeezed
+to 8-bit on a 16GB one. There is nothing to tune.
+
+**Two honest limits.** The mouth moves but it is not lip-synced to the
+words; nothing free does real lip-sync yet. And the model will only make
+a clip about eight seconds long, so a long song split over two or three
+pictures has to be slowed down to fill the time and will look wrong — the
+notebook says so, and says how many pictures to use instead.
+
+### Which model, and why
 
 | Model | Image to video | Free Colab | Licence |
 | ----- | -------------- | ---------- | ------- |
@@ -279,25 +301,21 @@ Which model, and why:
 | CogVideoX-2B | **no**, text only | yes | Apache 2.0 |
 
 CogVideoX-5B-I2V was tried first, on licence grounds, and it does not
-work here. The wall is not the GPU: a free Colab has **12.7GB of ordinary
-RAM**, and that model needs more than that just to be loaded, so the
-session dies before it generates anything. Model size against system RAM
-is the constraint that decides this, not VRAM.
+work on a free Colab. The wall is not the GPU: a free Colab has **12.7GB
+of ordinary RAM**, and that model needs more than that just to be loaded,
+so the session dies before it generates anything. Model size against
+system RAM is the constraint that decides this, not VRAM.
 
-LTX-Video is a tenth of the size and was built for cards like the T4.
-Even so, its T5 text encoder is 9GB on its own, so the notebook loads
-that part in 8-bit straight onto the GPU rather than through RAM. That is
-what keeps the session alive.
-
-One honest warning: a T4 has no real `bfloat16`, which is the precision
-these models want, so the test falls back to `float16`. If the clip comes
-back smeary or flickering, suspect the card and the clip length before
-the prompt.
-
-The notebook decides that from the GPU's compute capability rather than
-from `torch.cuda.is_bf16_supported()`, which answers `True` on a T4 —
-torch emulates bfloat16 in software there instead of refusing, and the
+A T4 also has no real `bfloat16`, which is the precision these models
+want, so on one the notebook falls back to `float16`. It decides that
+from the GPU's compute capability rather than from
+`torch.cuda.is_bf16_supported()`, which answers `True` on a T4 — torch
+emulates bfloat16 in software there instead of refusing, and the
 emulation is slow enough to turn a twenty minute run into an afternoon.
+
+`colab/NikStudio_Video_Test.ipynb` remains as the one-picture version of
+the same thing, for trying a prompt without committing to a whole
+episode.
 
 ## Not built yet
 
