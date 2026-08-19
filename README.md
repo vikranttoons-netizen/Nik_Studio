@@ -263,28 +263,30 @@ GPU animate *your* character well enough to be worth it?
 and run the four cells. It makes a single three second clip and plays it
 back. It writes nothing into your project.
 
-Cell 3 takes 10–20 minutes, because the model is far too big for a free
-T4 and has to be streamed through the card a piece at a time.
-
 Which model, and why:
 
-| Model | Image to video | Free T4 | Licence |
-| ----- | -------------- | ------- | ------- |
-| **CogVideoX-5B-I2V** | yes | yes, streamed | commercial use free after a free registration; the clips it makes are yours |
-| Wan 2.2 TI2V-5B | yes | no — wants ~24GB | Apache 2.0, nothing to sign |
-| Wan 2.2 I2V-A14B | yes | no — 14B | Apache 2.0 |
+| Model | Image to video | Free Colab | Licence |
+| ----- | -------------- | ---------- | ------- |
+| **LTX-Video (2B)** | yes | yes | commercial use free under $10M revenue |
+| CogVideoX-5B-I2V | yes | **no — crashes** | free after a free registration |
+| Wan 2.2 TI2V-5B | yes | no — wants ~24GB | Apache 2.0 |
 | CogVideoX-2B | **no**, text only | yes | Apache 2.0 |
 
-CogVideoX-5B-I2V is the only one of those that both does image-to-video
-and fits, so it is what the test uses. Its licence is not Apache — it
-allows commercial use free of charge, but asks you to register first, and
-caps free use at a million visits a month. Wan 2.2 is the cleaner licence
-and the better model, and is what this should move to on a rented GPU or
-a 24GB card at home.
+CogVideoX-5B-I2V was tried first, on licence grounds, and it does not
+work here. The wall is not the GPU: a free Colab has **12.7GB of ordinary
+RAM**, and that model needs more than that just to be loaded, so the
+session dies before it generates anything. Model size against system RAM
+is the constraint that decides this, not VRAM.
 
-One honest warning: a T4 cannot do `bfloat16`, which is the precision
-this model wants, so the test falls back to `float16`. If the clip comes
-back washed out or streaky, that is the card, not the prompt.
+LTX-Video is a tenth of the size and was built for cards like the T4.
+Even so, its T5 text encoder is 9GB on its own, so the notebook loads
+that part in 8-bit straight onto the GPU rather than through RAM. That is
+what keeps the session alive.
+
+One honest warning: a T4 has no real `bfloat16`, which is the precision
+these models want, so the test falls back to `float16`. If the clip comes
+back smeary or flickering, suspect the card and the clip length before
+the prompt.
 
 The notebook decides that from the GPU's compute capability rather than
 from `torch.cuda.is_bf16_supported()`, which answers `True` on a T4 —
