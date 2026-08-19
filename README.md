@@ -313,10 +313,6 @@ from the GPU's compute capability rather than from
 emulates bfloat16 in software there instead of refusing, and the
 emulation is slow enough to turn a twenty minute run into an afternoon.
 
-`colab/NikStudio_Video_Test.ipynb` remains as the one-picture version of
-the same thing, for trying a prompt without committing to a whole
-episode.
-
 ## Not built yet
 
 Voice has no backend yet, so that stage stays **Not Started** — there is
