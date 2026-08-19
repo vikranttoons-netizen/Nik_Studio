@@ -251,10 +251,45 @@ they never touch your real episodes.
 - Production panel showing the real state of every stage
 - Export
 
+## Trying a real video model
+
+Pan and zoom moves the camera, not the child. Making the child actually
+move needs an image-to-video model, and before any of that is built into
+Nik Studio there is one question worth answering first: does a free Colab
+GPU animate *your* character well enough to be worth it?
+
+`colab/NikStudio_Video_Test.ipynb` answers it. Open it in Colab, set
+**Runtime → Change runtime type → T4 GPU**, upload one finished image,
+and run the four cells. It makes a single three second clip and plays it
+back. It writes nothing into your project.
+
+Cell 3 takes 10–20 minutes, because the model is far too big for a free
+T4 and has to be streamed through the card a piece at a time.
+
+Which model, and why:
+
+| Model | Image to video | Free T4 | Licence |
+| ----- | -------------- | ------- | ------- |
+| **CogVideoX-5B-I2V** | yes | yes, streamed | commercial use free after a free registration; the clips it makes are yours |
+| Wan 2.2 TI2V-5B | yes | no — wants ~24GB | Apache 2.0, nothing to sign |
+| Wan 2.2 I2V-A14B | yes | no — 14B | Apache 2.0 |
+| CogVideoX-2B | **no**, text only | yes | Apache 2.0 |
+
+CogVideoX-5B-I2V is the only one of those that both does image-to-video
+and fits, so it is what the test uses. Its licence is not Apache — it
+allows commercial use free of charge, but asks you to register first, and
+caps free use at a million visits a month. Wan 2.2 is the cleaner licence
+and the better model, and is what this should move to on a rented GPU or
+a 24GB card at home.
+
+One honest warning: a T4 cannot do `bfloat16`, which is the precision
+this model wants, so the test falls back to `float16`. If the clip comes
+back washed out or streaky, that is the card, not the prompt.
+
 ## Not built yet
 
 Voice has no backend yet, so that stage stays **Not Started** — there is
-no spoken narration, only whatever song you supply. An AI video model
-(WAN, LTX) can replace the pan-and-zoom stage later by implementing the
-same `generate_video`, and a music generator can fill the `music` stage —
-nothing in the UI would change either time.
+no spoken narration, only whatever song you supply. An AI video model can
+replace the pan-and-zoom stage by implementing the same `generate_video`,
+and a music generator can fill the `music` stage — nothing in the UI
+would change either time.
