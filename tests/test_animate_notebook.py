@@ -1,0 +1,474 @@
+"""
+Runs cell 2 of colab/NikStudio_Animate.ipynb for real, with a stand-in
+for the model.
+
+Everything except the GPU is the notebook's own code: the ordering, the
+pre-flight checks, the song split, the frame counts, the stretch and
+trim, the concat, the audio mux, and the stamps that decide whether a
+clip can be reused. Only the model is pretended.
+
+This matters more than a usual test. The notebook runs on a GPU that is
+charged by the minute, so a mistake in it is not just a failure - it is a
+failure someone paid for.
+
+Needs FFmpeg on PATH (or imageio-ffmpeg installed). No GPU.
+
+Run from the project root:
+
+    python tests/test_animate_notebook.py
+"""
+
+import builtins
+import io
+import json
+import subprocess
+import sys
+import tempfile
+import types
+from contextlib import redirect_stdout
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(PROJECT_ROOT / "app"))
+
+NOTEBOOK = PROJECT_ROOT / "colab" / "NikStudio_Animate.ipynb"
+
+from PIL import Image                                 # noqa: E402
+from services.ffmpeg_locator import find_ffmpeg       # noqa: E402
+
+
+def heading(text):
+    print()
+    print("=" * 68)
+    print(text)
+    print("=" * 68)
+
+
+# ======================================================================
+# The stand-in GPU
+# ======================================================================
+
+class OutOfMemory(Exception):
+    """Stands in for torch.cuda.OutOfMemoryError."""
+
+
+CALLS = []
+
+FAIL_FIRST_CALL = [False]
+
+
+class StandInPipeline:
+    """
+    Answers the calls the notebook makes on the real pipeline, and
+    records what it was asked for so the test can check it.
+    """
+
+    def __init__(self):
+        self.transformer = types.SimpleNamespace(to=lambda device: None)
+        self.vae = types.SimpleNamespace(
+            to=lambda device: None,
+            enable_tiling=lambda: None,
+        )
+
+    def to(self, device):
+        return self
+
+    def __call__(self, **asked):
+
+        CALLS.append(asked)
+
+        if FAIL_FIRST_CALL[0] and len(CALLS) == 1:
+            raise OutOfMemory("pretending the card is full")
+
+        width, height = asked["width"], asked["height"]
+
+        frames = [
+            Image.new("RGB", (width, height), (number * 3 % 255, 80, 160))
+            for number in range(asked["num_frames"])
+        ]
+
+        return types.SimpleNamespace(frames=[frames])
+
+
+def export_to_video(frames, path, fps=24):
+    """What diffusers.utils.export_to_video does, via ffmpeg."""
+
+    folder = Path(path).parent / "_frames"
+    folder.mkdir(parents=True, exist_ok=True)
+
+    for number, frame in enumerate(frames):
+        frame.save(folder / f"{number:05d}.png")
+
+    subprocess.run(
+        [
+            find_ffmpeg(), "-y", "-loglevel", "error",
+            "-framerate", str(fps),
+            "-i", str(folder / "%05d.png"),
+            "-pix_fmt", "yuv420p", str(path),
+        ],
+        check=True,
+    )
+
+    for leftover in folder.iterdir():
+        leftover.unlink()
+
+    folder.rmdir()
+
+
+def install_stand_ins(vram, ram, capability):
+
+    torch = types.ModuleType("torch")
+    torch.bfloat16, torch.float16 = "bfloat16", "float16"
+    torch.OutOfMemoryError = OutOfMemory
+    torch.Generator = lambda *a, **k: types.SimpleNamespace(
+        manual_seed=lambda seed: None
+    )
+    torch.cuda = types.SimpleNamespace(
+        is_available=lambda: True,
+        get_device_name=lambda index=0: "Stand-in GPU",
+        get_device_properties=lambda index=0: types.SimpleNamespace(
+            total_memory=vram * 1e9
+        ),
+        get_device_capability=lambda: (capability, 0),
+        memory_allocated=lambda: 9.4e9,
+        empty_cache=lambda: None,
+        OutOfMemoryError=OutOfMemory,
+    )
+    sys.modules["torch"] = torch
+
+    diffusers = types.ModuleType("diffusers")
+    diffusers.LTXImageToVideoPipeline = types.SimpleNamespace(
+        from_pretrained=lambda model, **kw: StandInPipeline()
+    )
+    utilities = types.ModuleType("diffusers.utils")
+    utilities.export_to_video = export_to_video
+    diffusers.utils = utilities
+    sys.modules["diffusers"] = diffusers
+    sys.modules["diffusers.utils"] = utilities
+
+    transformers = types.ModuleType("transformers")
+    transformers.BitsAndBytesConfig = lambda **kw: None
+    transformers.T5EncoderModel = types.SimpleNamespace(
+        from_pretrained=lambda *a, **kw: object()
+    )
+    sys.modules["transformers"] = transformers
+
+    display = types.ModuleType("IPython.display")
+    display.Video = lambda *a, **kw: "<video>"
+    display.display = lambda *a, **kw: None
+    package = types.ModuleType("IPython")
+    package.display = display
+    sys.modules["IPython"] = package
+    sys.modules["IPython.display"] = display
+
+    builtins.display = lambda *a, **kw: None
+
+    psutil = types.ModuleType("psutil")
+    psutil.virtual_memory = lambda: types.SimpleNamespace(total=ram * 1e9)
+    sys.modules["psutil"] = psutil
+
+
+# ======================================================================
+
+def cell_two():
+
+    notebook = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+
+    return "".join(notebook["cells"][2]["source"])
+
+
+def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False):
+    """
+    Run the notebook against a folder. Returns (printed, refusal, calls)
+    where refusal is the message it stopped with, or "".
+    """
+
+    CALLS.clear()
+
+    FAIL_FIRST_CALL[0] = out_of_memory
+
+    install_stand_ins(vram, ram, capability)
+
+    source = cell_two().replace(
+        'FOLDER = "/content/drive/MyDrive/NikStudio"',
+        f"FOLDER = {str(drive)!r}",
+    )
+
+    printed = io.StringIO()
+
+    refusal = ""
+
+    try:
+        with redirect_stdout(printed):
+            exec(compile(source, "NikStudio_Animate cell 2", "exec"),
+                 {"__name__": "__main__"})
+
+    except SystemExit as stop:
+        refusal = str(stop)
+
+    return printed.getvalue(), refusal, list(CALLS)
+
+
+# ----------------------------------------------------------------------
+
+def make_input(folder, names, song_seconds=19, colour=(40, 120, 200)):
+
+    inside = folder / "Input"
+    inside.mkdir(parents=True, exist_ok=True)
+
+    for name in names:
+        Image.new("RGB", (1408, 768), colour).save(inside / name)
+
+    if song_seconds:
+        subprocess.run(
+            [
+                find_ffmpeg(), "-y", "-loglevel", "error",
+                "-f", "lavfi",
+                "-i", f"sine=frequency=440:duration={song_seconds}",
+                str(inside / "song.mp3"),
+            ],
+            check=True,
+        )
+
+    return folder
+
+
+def probe(path, entries):
+
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error",
+            "-show_entries", entries,
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True, text=True,
+    )
+
+    return result.stdout.split()
+
+
+# ======================================================================
+
+def test_end_to_end(root):
+
+    heading("1  Pictures and a song become one MP4")
+
+    drive = make_input(root / "Whole", ["shot1.png", "shot2.png",
+                                        "shot10.png"])
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    order = [
+        line.split()[1].rstrip(":") for line in printed.splitlines()
+        if line.startswith("[") and "animating" in line
+    ]
+
+    print("   order  :", order)
+
+    # "shot2" must not land after "shot10" just because 1 sorts before 2.
+    assert order == ["shot1.png", "shot2.png", "shot10.png"], order
+    assert len(calls) == 3, calls
+
+    final = drive / "Output" / "Episode.mp4"
+
+    assert final.exists(), "no Episode.mp4"
+
+    length = float(probe(final, "format=duration")[0])
+    streams = probe(final, "stream=codec_type")
+
+    print(f"   output : {length:.1f}s, streams {streams}")
+
+    assert "video" in streams and "audio" in streams, streams
+    assert abs(length - 19) < 0.5, length
+
+    print("\n   [OK] right order, right length, song attached")
+
+
+def test_resume(root):
+
+    heading("2  A second run remakes nothing")
+
+    drive = make_input(root / "Resume", ["Scene01.png", "Scene02.png"])
+
+    run(drive)
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    print(f"   model asked for {len(calls)} clip(s)")
+
+    assert calls == [], calls
+    assert printed.count("already made, skipping") == 2, printed
+
+    print("\n   [OK] a dead session costs one clip, not all of them")
+
+
+def test_changed_picture_is_not_skipped(root):
+
+    heading("3  A replaced picture does not keep its old clip")
+
+    drive = make_input(root / "Changed", ["Scene01.png", "Scene02.png"])
+
+    run(drive)
+
+    # The name is the same; the picture is not.
+    Image.new("RGB", (1408, 768), (200, 40, 40)).save(
+        drive / "Input" / "Scene02.png"
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "Scene0" in line and ("skip" in line or "again" in line)])
+
+    assert len(calls) == 1, calls
+    assert "Scene02.png: picture or prompt changed" in printed
+
+    print("\n   [OK] only the picture that changed was made again")
+
+
+def test_refuses_too_few_pictures(root):
+
+    heading("4  Too few pictures for the song stops before the GPU")
+
+    drive = make_input(root / "Thin", ["Scene01.png"], song_seconds=19)
+
+    printed, refusal, calls = run(drive)
+
+    print("  ", refusal.strip().splitlines()[2].strip()[:64], "...")
+
+    assert calls == [], "the model was loaded anyway"
+    assert "Stopping before the GPU is used" in refusal
+    assert "about 3 pictures" in refusal, refusal
+
+    print("\n   [OK] refused, and said how many pictures it needs")
+
+
+def test_refuses_broken_picture(root):
+
+    heading("5  A file that is not really a picture stops the run")
+
+    drive = make_input(root / "Broken", ["Scene01.png", "Scene02.png",
+                                         "Scene03.png"])
+
+    (drive / "Input" / "Scene02.png").write_text("not a picture")
+
+    printed, refusal, calls = run(drive)
+
+    print("  ", refusal.strip().splitlines()[-3].strip())
+
+    assert calls == [], "the model was loaded anyway"
+    assert "Scene02.png will not open" in refusal, refusal
+
+    print("\n   [OK] caught before a minute of GPU time was spent")
+
+
+def test_settings_follow_the_machine(root):
+
+    heading("6  The card and the RAM choose the settings")
+
+    drive = make_input(root / "Tiers", ["Scene01.png", "Scene02.png",
+                                        "Scene03.png"])
+
+    for label, vram, ram, capability, expect in [
+        ("A100, plenty of RAM", 40, 83, 8, ("1024x576", "bfloat16", False)),
+        ("L4, small RAM      ", 24, 12.7, 8, ("1024x576", "bfloat16", True)),
+        ("T4                 ", 15.6, 12.7, 7, ("704x384", "float16", True)),
+    ]:
+        printed, refusal, _ = run(drive, vram, ram, capability)
+
+        assert not refusal, refusal
+
+        size, precision, quantised = expect
+
+        assert f"Video size  : {size}" in printed, printed
+        assert precision in printed, printed
+        assert ("text encoder in 8-bit" in printed) is quantised, printed
+
+        print(f"   {label}: {size}, {precision}"
+              f"{', 8-bit' if quantised else ''}")
+
+        # Each tier starts from clean clips, or the second would skip.
+        for clip in (drive / "Output" / "Clips").glob("*"):
+            clip.unlink()
+
+    print("\n   [OK] nothing to tune by hand")
+
+
+def test_out_of_memory_is_survived(root):
+
+    heading("7  A full card gives a shorter clip, not a dead run")
+
+    drive = make_input(root / "Oom", ["Scene01.png", "Scene02.png"])
+
+    printed, refusal, calls = run(drive, out_of_memory=True)
+
+    assert not refusal, refusal
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "ran out" in line])
+
+    assert "card ran out of room" in printed, printed
+    assert len(calls) == 3, calls          # one failed, then two clips
+
+    assert (drive / "Output" / "Episode.mp4").exists()
+
+    print("\n   [OK] recovered and still produced the video")
+
+
+def test_without_a_song(root):
+
+    heading("8  No song is a warning, not a failure")
+
+    drive = make_input(root / "Silent", ["Scene01.png", "Scene02.png"],
+                       song_seconds=0)
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+    assert "none found" in printed, printed
+
+    final = drive / "Output" / "Episode.mp4"
+
+    length = float(probe(final, "format=duration")[0])
+
+    print(f"   {len(calls)} pictures at 5s each -> {length:.1f}s, "
+          f"streams {probe(final, 'stream=codec_type')}")
+
+    assert abs(length - 10) < 0.5, length
+
+    print("\n   [OK] falls back to a fixed length per picture")
+
+
+# ======================================================================
+
+def main():
+
+    if not NOTEBOOK.exists():
+        raise SystemExit(f"Notebook not found: {NOTEBOOK}")
+
+    with tempfile.TemporaryDirectory() as temporary:
+
+        root = Path(temporary)
+
+        test_end_to_end(root)
+        test_resume(root)
+        test_changed_picture_is_not_skipped(root)
+        test_refuses_too_few_pictures(root)
+        test_refuses_broken_picture(root)
+        test_settings_follow_the_machine(root)
+        test_out_of_memory_is_survived(root)
+        test_without_a_song(root)
+
+    print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
+
+
+if __name__ == "__main__":
+    main()

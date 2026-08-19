@@ -234,10 +234,21 @@ next thing to do.
 python tests\test_render_pipeline.py
 python tests\test_video_pipeline.py
 python tests\test_workspace_ui.py
+python tests\test_prepare.py
+python tests\test_animate_notebook.py
 ```
 
 None of them need a GPU, and each uses a throwaway project folder, so
 they never touch your real episodes.
+
+`test_animate_notebook.py` runs cell 2 of the Colab notebook itself, with
+a stand-in for the model and everything else real — the ordering, the
+checks, the song split, the frame counts, the stretch, the concat, the
+audio, and the stamps that decide whether a clip may be reused. It covers
+the second run remaking nothing, a replaced picture not keeping its old
+clip, a full card giving a shorter clip instead of dying, and the two
+refusals. That notebook runs on a GPU charged by the minute, so a fault
+in it is one somebody paid for.
 
 ## Features
 
@@ -250,6 +261,46 @@ they never touch your real episodes.
 - Render one scene or a whole episode, resumable
 - Production panel showing the real state of every stage
 - Export
+
+## Getting ready before you pay for a GPU
+
+A GPU is charged by the minute, so nothing that can be checked without
+one should be discovered halfway through a run:
+
+```powershell
+python tools\prepare.py            # check, and change nothing
+python tools\prepare.py --copy     # build the Colab folder
+```
+
+It gathers your pictures and your song — from an episode's `Images` and
+`Audio` folders, or from any folder where you put them side by side — and
+copies them into the Drive folder the notebook expects, numbered
+`Scene01`, `Scene02`, … in order. Numbers are compared as numbers, so
+`shot2` lands before `shot10` rather than after it.
+
+Before copying anything it checks, and refuses to say ready otherwise:
+
+- every picture actually opens, and says so by name if one does not
+- the song can be read, and how long it is
+- there are enough pictures for the song — three pictures under a
+  four minute song would each be slowed to a crawl, and it says how many
+  to use instead
+- nothing is left in the folder from a longer episode, which the notebook
+  would otherwise pick up as extra scenes
+- clips already in `Output/Clips` are pointed out, so a changed picture
+  is not quietly given its old clip
+
+Tell it where Drive is once, in `nikstudio.local.json`:
+
+```json
+{
+    "input_folder": "G:\\My Drive\\NikStudio\\Input"
+}
+```
+
+The notebook repeats every one of these checks on the Colab side before
+it loads the model, and stops with `Nothing has been charged for.` rather
+than spend a minute of GPU time on a run that cannot work.
 
 ## Animating the pictures with a song
 
