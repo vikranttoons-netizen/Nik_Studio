@@ -286,6 +286,11 @@ One honest warning: a T4 cannot do `bfloat16`, which is the precision
 this model wants, so the test falls back to `float16`. If the clip comes
 back washed out or streaky, that is the card, not the prompt.
 
+The notebook decides that from the GPU's compute capability rather than
+from `torch.cuda.is_bf16_supported()`, which answers `True` on a T4 —
+torch emulates bfloat16 in software there instead of refusing, and the
+emulation is slow enough to turn a twenty minute run into an afternoon.
+
 ## Not built yet
 
 Voice has no backend yet, so that stage stays **Not Started** — there is
