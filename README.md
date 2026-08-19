@@ -348,11 +348,20 @@ RAM as well as the card, because the 9GB text encoder is unpacked in RAM
 before it ever reaches the GPU, so a big card on a small-RAM runtime dies
 just the same. There is nothing to tune.
 
-**Two honest limits.** The mouth moves but it is not lip-synced to the
-words; nothing free does real lip-sync yet. And the model will only make
-a clip about eight seconds long, so a long song split over two or three
-pictures has to be slowed down to fill the time and will look wrong — the
-notebook says so, and says how many pictures to use instead.
+**How long one picture can hold.** The model makes a fixed number of
+frames. At 24 a second they cover about 8 seconds; asked to hold longer,
+the notebook generates at a lower frame rate instead, so the movement
+itself is slower and no frame is repeated — 12 frames a second is what
+hand drawn animation has always run at, so it reads as animation rather
+than as judder. That carries a picture to about 16 seconds. Past that the
+finished clip has to be stretched, which does judder, and the notebook
+says so and how many pictures to use instead.
+
+Roughly: **one picture per 8 seconds** looks best, one per 16 is still
+fine, and beyond that it will tell you to add more.
+
+**One honest limit.** The mouth moves but it is not lip-synced to the
+words. Nothing free does real lip-sync yet.
 
 ### Which model, and why
 

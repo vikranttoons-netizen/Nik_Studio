@@ -338,17 +338,54 @@ def test_refuses_too_few_pictures(root):
 
     heading("4  Too few pictures for the song stops before the GPU")
 
-    drive = make_input(root / "Thin", ["Scene01.png"], song_seconds=19)
+    # One picture asked to carry a minute. Even at the lowest frame rate
+    # a clip covers about 16s, so this one would have to be stretched
+    # nearly four times over.
+    drive = make_input(root / "Thin", ["Scene01.png"], song_seconds=60)
 
     printed, refusal, calls = run(drive)
 
-    print("  ", refusal.strip().splitlines()[2].strip()[:64], "...")
+    print("  ", refusal.strip().splitlines()[2].strip()[:66], "...")
 
     assert calls == [], "the model was loaded anyway"
     assert "Stopping before the GPU is used" in refusal
-    assert "about 3 pictures" in refusal, refusal
+    assert "about 4 pictures" in refusal, refusal
 
     print("\n   [OK] refused, and said how many pictures it needs")
+
+
+def test_long_holds_lower_the_frame_rate(root):
+
+    heading("4b  A long hold slows the movement, it does not judder")
+
+    # 11 pictures over a two minute song: 11.4s each, which is past the
+    # 8s the model covers at 24fps but well inside the 16s it covers at
+    # 12. This is the real case that prompted it.
+    drive = make_input(
+        root / "Long",
+        [f"Scene{n:02d}.png" for n in range(1, 12)],
+        song_seconds=125,
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "fps instead" in line][0])
+
+    assert "generated at" in printed, printed
+    assert "stretched" not in printed, printed
+
+    final = drive / "Output" / "Episode.mp4"
+
+    length = float(probe(final, "format=duration")[0])
+
+    print(f"   {len(calls)} clips -> {length:.1f}s against a 125s song")
+
+    assert abs(length - 125) < 1.5, length
+
+    print("\n   [OK] no stretching at all, and the song still fits")
 
 
 def test_refuses_broken_picture(root):
@@ -462,6 +499,7 @@ def main():
         test_resume(root)
         test_changed_picture_is_not_skipped(root)
         test_refuses_too_few_pictures(root)
+        test_long_holds_lower_the_frame_rate(root)
         test_refuses_broken_picture(root)
         test_settings_follow_the_machine(root)
         test_out_of_memory_is_survived(root)

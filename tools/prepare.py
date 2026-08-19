@@ -35,10 +35,18 @@ WARN = "[WARN]"
 PICTURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
 AUDIO_SUFFIXES = (".mp3", ".m4a", ".wav", ".aac", ".ogg", ".flac")
 
-# The longest clip the model will make, in seconds. Everything past this
-# has to be filled by slowing the clip down, which looks wrong past about
-# double. Used here only to say how many pictures a song needs.
-LONGEST_CLIP = 8.0
+# How long one clip can hold the screen, in seconds.
+#
+# The model makes a fixed number of frames. At the full 24 a second they
+# cover SMOOTH_SECONDS; generated slower, the same frames cover up to
+# LONGEST_CLIP, which is movement that is genuinely slower rather than
+# frames repeated. Only past that does the finished clip have to be
+# stretched, and stretching is what judders.
+#
+# These match the notebook on a 24GB card. A smaller card makes fewer
+# frames, and says so itself before it starts.
+SMOOTH_SECONDS = 8.0
+LONGEST_CLIP = 16.0
 
 
 # ----------------------------------------------------------------------
@@ -349,25 +357,37 @@ def report(source, destination):
 
         needed = max(1, int(seconds / LONGEST_CLIP + 0.999))
 
-        if share > LONGEST_CLIP * 2:
+        if share > LONGEST_CLIP * 1.5:
             problems.append(
-                f"{share:.0f}s per picture, but the longest clip the model "
-                f"makes is {LONGEST_CLIP:.0f}s, so each would be slowed "
-                f"{share / LONGEST_CLIP:.1f}x and look wrong.\n"
+                f"{share:.0f}s per picture, but one clip covers at most "
+                f"{LONGEST_CLIP:.0f}s, so each would have to be\n"
+                f"           stretched {share / LONGEST_CLIP:.1f}x and "
+                f"would judder.\n"
                 f"           Use about {needed} pictures for a "
                 f"{seconds:.0f}s song."
             )
 
         elif share > LONGEST_CLIP:
             notes.append(
-                f"Each picture is on screen {share:.1f}s but clips are at "
-                f"most {LONGEST_CLIP:.0f}s, so they will be slowed "
-                f"{share / LONGEST_CLIP:.2f}x. That reads as slow motion. "
-                f"{needed} pictures would need no slowing at all."
+                f"{share:.1f}s a picture is past the {LONGEST_CLIP:.0f}s one "
+                f"clip covers, so each will be stretched "
+                f"{share / LONGEST_CLIP:.2f}x on top of running at its "
+                f"slowest. {needed} pictures would need none of that."
+            )
+
+        elif share > SMOOTH_SECONDS:
+            print(
+                f"{OK} clips will be generated slower rather than stretched"
+            )
+            print(
+                f"       {share:.1f}s a picture is past the "
+                f"{SMOOTH_SECONDS:.0f}s covered at 24fps, so the movement\n"
+                f"       itself is made slower. No frames are repeated and "
+                f"nothing judders."
             )
 
         else:
-            print(f"{OK} clips will not need slowing down")
+            print(f"{OK} clips will run at the full frame rate")
 
     return problems, notes, pictures, song, seconds
 
