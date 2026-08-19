@@ -272,11 +272,20 @@ python tools\prepare.py            # check, and change nothing
 python tools\prepare.py --copy     # build the Colab folder
 ```
 
-It gathers your pictures and your song — from an episode's `Images` and
-`Audio` folders, or from any folder where you put them side by side — and
-copies them into the Drive folder the notebook expects, numbered
-`Scene01`, `Scene02`, … in order. Numbers are compared as numbers, so
-`shot2` lands before `shot10` rather than after it.
+It gathers your pictures and your song and copies them into the Drive
+folder the notebook expects, numbered `Scene01`, `Scene02`, … in order.
+Numbers are compared as numbers, so `shot2` lands before `shot10` rather
+than after it.
+
+Where it looks, in order:
+
+1. the Drive folder itself, if you have already put pictures in there —
+   that is plainly what you meant, and it tidies them where they stand,
+   renumbering in place and clearing away the old names
+2. otherwise an episode's `Images` and `Audio` folders
+3. or wherever `--from` points
+
+It says which one it used, so old renders never get prepared by mistake.
 
 Before copying anything it checks, and refuses to say ready otherwise:
 

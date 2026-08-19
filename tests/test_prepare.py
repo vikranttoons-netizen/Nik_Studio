@@ -291,6 +291,85 @@ def test_warns_about_old_clips(root):
     print("\n   [OK] reported so a changed picture is not skipped")
 
 
+
+def test_prefers_the_folder_you_filled(root):
+
+    heading("8  Your own Input folder wins over an old episode")
+
+    # An episode full of last week's renders ...
+    episode = root / "Pref" / "Episodes" / "Old"
+    for n in range(1, 9):
+        make_image(episode / "Images" / f"Scene{n:02d}.png")
+
+    # ... and the Colab folder the user filled themselves.
+    destination = root / "Pref" / "Drive" / "Input"
+    for name in ("a.png", "b.png", "c.png"):
+        make_image(destination / name)
+    make_song(destination / "song.mp3", 19)
+
+    chosen = prepare.default_source(destination)
+
+    print(f"   episode has 8 pictures, Input has 3")
+    print(f"   chosen: {chosen}")
+
+    assert chosen == destination, chosen
+
+    # With nothing in it, an episode is used instead.
+    empty = root / "Pref" / "Drive" / "Empty"
+    empty.mkdir(parents=True)
+
+    assert prepare.default_source(empty) != empty
+
+    print("\n   [OK] reaches for an episode only when Input is empty")
+
+
+def test_tidies_in_place(root):
+
+    heading("9  The folder you filled is renumbered where it stands")
+
+    destination = root / "InPlace" / "Input"
+
+    # Names that must not keep their order, and one that already holds
+    # the number another picture is about to be given.
+    for name, colour in [
+        ("Scene01.png", (10, 10, 10)),
+        ("zebra.png", (20, 20, 20)),
+        ("apple.png", (30, 30, 30)),
+    ]:
+        make_image(destination / name)
+        (destination / name).write_bytes(
+            (destination / name).read_bytes() + bytes(colour)
+        )
+
+    make_song(destination / "my tune.mp3", 19)
+
+    _, _, pictures, song, _ = prepare.report(destination, destination)
+
+    before = {p.name: p.read_bytes() for p in pictures}
+
+    order = [p.name for p in pictures]
+
+    prepare.build(destination, pictures, song)
+
+    landed = sorted(p.name for p in destination.iterdir())
+
+    print("   before:", order)
+    print("   after :", landed)
+
+    assert landed == [
+        "Scene01.png", "Scene02.png", "Scene03.png", "song.mp3"
+    ], landed
+
+    # Nothing may be lost or overwritten by another picture on the way.
+    for number, name in enumerate(order, start=1):
+        landed_bytes = (destination / f"Scene{number:02d}.png").read_bytes()
+        assert landed_bytes == before[name], (name, number)
+
+    assert not (destination / ".prepare").exists(), "staging left behind"
+
+    print("\n   [OK] every picture kept, in the order it was in")
+
+
 # ======================================================================
 
 def main():
@@ -306,6 +385,8 @@ def main():
         test_builds_the_folder(root)
         test_clears_stale_scenes(root)
         test_warns_about_old_clips(root)
+        test_prefers_the_folder_you_filled(root)
+        test_tidies_in_place(root)
 
     print("\nALL PREPARE TESTS PASSED")
 

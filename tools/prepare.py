@@ -115,8 +115,20 @@ def gather(source):
     return pictures, songs
 
 
-def default_source():
-    """The episode to take pictures from, when none was named."""
+def default_source(destination=None):
+    """
+    Where to take the pictures from, when --from was not given.
+
+    The Colab folder itself comes first. Once someone has put their own
+    pictures and song in there, that is plainly what they mean - reaching
+    past it for an episode's old renders is how you end up preparing a
+    folder full of pictures you replaced last week.
+
+    Only when that folder has nothing in it does an episode get used.
+    """
+
+    if destination and destination.is_dir() and pictures_in(destination):
+        return destination
 
     from core.project import Project
 
@@ -196,7 +208,19 @@ def report(source, destination):
 
     problems, notes = [], []
 
+    same = (
+        destination is not None
+        and source.is_dir()
+        and destination.is_dir()
+        and source.resolve() == destination.resolve()
+    )
+
     print(f"\nPictures and song from : {source}")
+
+    if same:
+        print("                         (the Colab folder itself - "
+              "tidying it in place)")
+
     print(f"Colab folder to build  : {destination or '(not set)'}")
 
     if destination is None:
@@ -331,29 +355,65 @@ def build(destination, pictures, song):
 
     destination.mkdir(parents=True, exist_ok=True)
 
-    written = []
+    # Everything is copied to one side first and moved into place after.
+    # The source is often the destination - someone fills the Colab
+    # folder themselves and runs this to tidy it - and renaming in place
+    # would have one picture land on another before it had been read.
+    staging = destination / ".prepare"
+
+    if staging.exists():
+        shutil.rmtree(staging)
+
+    staging.mkdir()
+
+    planned = []
 
     for number, picture in enumerate(pictures, start=1):
-
-        target = destination / f"Scene{number:02d}{picture.suffix.lower()}"
-
-        shutil.copy2(picture, target)
-
-        written.append(target)
-
-        arrow = "" if picture.name == target.name else f"   <- {picture.name}"
-
-        print(f"       {target.name}{arrow}")
+        planned.append(
+            (picture, f"Scene{number:02d}{picture.suffix.lower()}")
+        )
 
     if song:
+        planned.append((song, f"song{song.suffix.lower()}"))
 
-        target = destination / f"song{song.suffix.lower()}"
+    for original, name in planned:
+        shutil.copy2(original, staging / name)
 
-        shutil.copy2(song, target)
+    written = []
+
+    for original, name in planned:
+
+        target = destination / name
+
+        shutil.move(str(staging / name), str(target))
 
         written.append(target)
 
-        print(f"       {target.name}   <- {song.name}")
+        arrow = "" if original.name == name else f"   <- {original.name}"
+
+        print(f"       {name}{arrow}")
+
+    shutil.rmtree(staging, ignore_errors=True)
+
+    # ------------------------------------------------- the old names
+
+    # When the Colab folder was also the source, the files that were
+    # just renumbered are still sitting there under their old names -
+    # and the notebook would read them as extra scenes. Only the files
+    # this run actually consumed are removed.
+    kept = {name for _, name in planned}
+
+    for original, _ in planned:
+
+        if original.name in kept or not original.exists():
+            continue
+
+        if original.parent.resolve() != destination.resolve():
+            continue
+
+        original.unlink()
+
+        print(f"       removed {original.name} (renamed above)")
 
     # ------------------------------------------------------- stale files
 
@@ -426,19 +486,19 @@ def main():
 
     arguments = parser.parse_args()
 
-    source = (
-        Path(arguments.source).expanduser()
-        if arguments.source else default_source()
-    )
-
-    if source is None:
-        print(f"{BAD} No episodes found, and no --from folder given.")
-        return 1
-
     destination = (
         Path(arguments.destination).expanduser()
         if arguments.destination else default_destination()
     )
+
+    source = (
+        Path(arguments.source).expanduser()
+        if arguments.source else default_source(destination)
+    )
+
+    if source is None:
+        print(f"{BAD} No pictures anywhere, and no --from folder given.")
+        return 1
 
     problems, notes, pictures, song, seconds = report(source, destination)
 
