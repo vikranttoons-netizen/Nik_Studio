@@ -281,9 +281,12 @@ To make one picture do something different, add it to `PROMPTS` at the
 top of cell 2, delete that clip from `Output/Clips`, and run the cell
 again. The clips you kept are not made twice.
 
-The notebook reads the card and picks its own settings — 1024×576 and
-full precision on a 24GB card, smaller and with the text encoder squeezed
-to 8-bit on a 16GB one. There is nothing to tune.
+The notebook reads the machine and picks its own settings — 1024×576 and
+full precision on a 24GB card with RAM to match, smaller and with the
+text encoder squeezed to 8-bit where either is short. It weighs ordinary
+RAM as well as the card, because the 9GB text encoder is unpacked in RAM
+before it ever reaches the GPU, so a big card on a small-RAM runtime dies
+just the same. There is nothing to tune.
 
 **Two honest limits.** The mouth moves but it is not lip-synced to the
 words; nothing free does real lip-sync yet. And the model will only make
