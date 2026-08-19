@@ -34,9 +34,29 @@ class FFmpegBackend(BaseBackend):
     DEFAULT_DURATION = 4.0
     DEFAULT_FPS = 24
 
-    # How far the zoom travels over the clip. 1.12 is a gentle drift -
-    # enough to feel alive, not enough to look like a zoom.
-    ZOOM = 1.12
+    # How far the camera travels over a clip, by "motion" setting.
+    # 1.12 was the old value and is barely perceptible over four seconds;
+    # "lively" is the default now because a still picture that does not
+    # visibly move reads as a broken video, not a calm one.
+    MOTION = {
+        "none": 1.0,
+        "gentle": 1.12,
+        "lively": 1.28,
+        "strong": 1.45,
+    }
+
+    DEFAULT_MOTION = "lively"
+
+    # The camera moves differently in each shot, cycling through these.
+    # Every scene drifting the same way looks like a slideshow template.
+    MOVES = (
+        "zoom_in",
+        "pan_right",
+        "zoom_out",
+        "pan_left",
+        "zoom_in_up",
+        "pan_down",
+    )
 
     # ------------------------------------------------------------------
     # Availability
@@ -144,7 +164,9 @@ class FFmpegBackend(BaseBackend):
             "-loop", "1",
             "-i", str(source),
             "-t", f"{seconds}",
-            "-filter_complex", self.filter_chain(width, height, fps, frames),
+            "-filter_complex", self.filter_chain(
+                width, height, fps, frames, self.move_for(scene),
+            ),
             "-c:v", "libx264",
             "-pix_fmt", "yuv420p",
             "-preset", "medium",
@@ -164,7 +186,47 @@ class FFmpegBackend(BaseBackend):
 
     # ------------------------------------------------------------------
 
-    def filter_chain(self, width, height, fps, frames):
+    def zoom(self):
+        """How far the camera travels, from the episode's motion setting."""
+
+        setting = self.setting("motion", self.DEFAULT_MOTION)
+
+        # A number is taken literally, so an exact amount can be dialled in.
+        try:
+            value = float(setting)
+            return max(1.0, min(value, 2.0))
+        except (ValueError, TypeError):
+            pass
+
+        return self.MOTION.get(
+            str(setting).strip().lower(),
+            self.MOTION[self.DEFAULT_MOTION],
+        )
+
+    def move_for(self, scene):
+        """
+        Which way the camera goes in this shot.
+
+        Taken from the scene's own "move" if it has one, otherwise cycled
+        by scene number so consecutive shots differ.
+        """
+
+        chosen = scene.metadata.get("move")
+
+        if chosen in self.MOVES:
+            return chosen
+
+        try:
+            index = int(scene.id) - 1
+        except (ValueError, TypeError):
+            index = 0
+
+        return self.MOVES[index % len(self.MOVES)]
+
+    # ------------------------------------------------------------------
+
+    def filter_chain(self, width, height, fps, frames, move="zoom_in",
+                     zoom=None):
         """
         Build the pan/zoom filter.
 
@@ -176,19 +238,58 @@ class FFmpegBackend(BaseBackend):
         The upscale before zoompan is what keeps the movement smooth:
         zoompan works on whole source pixels, so zooming a frame-sized
         image makes the motion visibly step.
+
+        The zoom is written against `on`, the output frame number, rather
+        than accumulated from the previous frame. Accumulating drifts and
+        cannot express a zoom that ends where it should.
         """
 
         big_width = width * 4
         big_height = height * 4
+
+        z = self.zoom() if zoom is None else zoom
+
+        # Nothing to animate: hold the frame, still scaled and cropped.
+        if z <= 1.0 or frames <= 1:
+            return (
+                f"scale={big_width}:{big_height}"
+                f":force_original_aspect_ratio=increase,"
+                f"crop={big_width}:{big_height},"
+                f"scale={width}:{height},format=yuv420p"
+            )
+
+        last = frames - 1
+
+        # How far the frame can travel at full zoom, as a fraction of the
+        # source, and the centred position to hold otherwise.
+        centre_x = "iw/2-(iw/zoom/2)"
+        centre_y = "ih/2-(ih/zoom/2)"
+        span_x = "(iw-iw/zoom)"
+        span_y = "(ih-ih/zoom)"
+
+        growing = f"1+{z - 1:.6f}*on/{last}"
+        shrinking = f"{z:.6f}-{z - 1:.6f}*on/{last}"
+        held = f"{z:.6f}"
+
+        moves = {
+            "zoom_in":    (growing,   centre_x, centre_y),
+            "zoom_out":   (shrinking, centre_x, centre_y),
+            "pan_right":  (held, f"{span_x}*on/{last}", centre_y),
+            "pan_left":   (held, f"{span_x}*(1-on/{last})", centre_y),
+            "pan_down":   (held, centre_x, f"{span_y}*on/{last}"),
+            "zoom_in_up": (growing, centre_x, f"{span_y}*(1-on/{last})"),
+        }
+
+        expression, x, y = moves.get(move, moves["zoom_in"])
 
         return (
             f"scale={big_width}:{big_height}"
             f":force_original_aspect_ratio=increase,"
             f"crop={big_width}:{big_height},"
             f"zoompan="
-            f"z='min(zoom+{(self.ZOOM - 1) / frames:.8f},{self.ZOOM})'"
-            f":x='iw/2-(iw/zoom/2)'"
-            f":y='ih/2-(ih/zoom/2)'"
+            f"z='{expression}'"
+            f":x='{x}'"
+            f":y='{y}'"
             f":d={frames}:s={width}x{height}:fps={fps},"
             f"format=yuv420p"
         )

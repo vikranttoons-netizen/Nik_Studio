@@ -35,8 +35,16 @@ That runs the whole pipeline:
 prompts -> Images/SceneNN.png -> Videos/SceneNN.mp4 -> Exports/<Episode>.mp4
 ```
 
-Each still becomes a clip with a slow pan and zoom, and the clips are
-joined into one playable MP4 in the episode's `Exports` folder.
+Each still becomes a clip with a moving camera, and the clips are joined
+into one playable MP4 in the episode's `Exports` folder. Consecutive
+scenes move differently — zoom in, pan right, zoom out, pan left — so
+the episode does not read as one repeated effect. Turn it up or down
+with `motion`, or pin one shot with `"move": "pan_left"` in that
+scene's `metadata`.
+
+This is camera movement over a still picture, not animation: the
+character does not move. Animating the character needs a video model,
+which is not built yet — see **Not built yet** below.
 
 **FFmpeg is required** for the video stages, and `pip install -r
 requirements.txt` already brings a copy of it, so there is usually nothing
@@ -101,6 +109,7 @@ not in git and overrides `episode.json`:
 | `aspect`         | `16:9`      | `16:9`, `9:16`, `1:1`, or `1920x1080` |
 | `fps`            | `24`        | Frames per second of the output |
 | `scene_duration` | `4`         | Seconds each scene is on screen |
+| `motion`         | `lively`    | Camera movement: `none`, `gentle`, `lively`, `strong` |
 | `image_size`     | from `aspect` | Size images are generated at, e.g. `1024x576` |
 | `low_vram`       | `false`     | For a 6–8GB GPU: slower, far less VRAM |
 | `model`          | `sdxl-turbo`| Image model |
