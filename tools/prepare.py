@@ -247,7 +247,7 @@ def report(source, destination):
     else:
         print(f"{OK} {len(pictures)} picture(s)")
 
-    shapes = set()
+    shapes = {}
 
     for picture in pictures:
 
@@ -262,14 +262,46 @@ def report(source, destination):
 
         width, height = size
 
-        shapes.add(round(width / height, 2))
+        shapes.setdefault(round(width / height, 2), []).append(picture.name)
 
         print(f"       {picture.name:<28} {width}x{height}")
 
     if len(shapes) > 1:
+
+        # Name the odd ones out. "Some pictures are a different shape" is
+        # true and useless; which ones, and how much gets cut off, is
+        # what lets someone decide whether to re-crop or leave it.
+        usual = max(shapes, key=lambda ratio: len(shapes[ratio]))
+
+        odd = [
+            (ratio, names) for ratio, names in shapes.items()
+            if ratio != usual
+        ]
+
+        lines = []
+
+        for ratio, names in sorted(odd, key=lambda pair: -len(pair[1])):
+
+            # Everything is cropped to cover a 16:9 frame, so a squarer
+            # picture loses the top and bottom.
+            lost = max(0, round((1 - ratio / usual) * 100))
+
+            shown = ", ".join(names[:4])
+
+            if len(names) > 4:
+                shown += f" and {len(names) - 4} more"
+
+            lines.append(
+                f"           {shown} — about {lost}% taller than the rest, "
+                "so more is cropped off the top and bottom"
+            )
+
         notes.append(
-            "The pictures are not all the same shape, so some will be "
-            "cropped more than others. Not fatal, but they will not match."
+            f"{sum(len(names) for _, names in odd)} of {len(pictures)} "
+            "pictures are a different shape:\n"
+            + "\n".join(lines)
+            + "\n           Not fatal - they will simply be framed "
+              "differently from the others."
         )
 
     # --------------------------------------------------------------- song

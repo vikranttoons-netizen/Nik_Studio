@@ -173,6 +173,13 @@ class EpisodeComposer:
                 command,
                 capture_output=True,
                 text=True,
+                # ffmpeg echoes a file's own tags back at us, and those
+                # can hold bytes the system codec has no letter for -
+                # cp1252 on Windows. Decoding is only for the error
+                # message, so replace what will not read rather than let
+                # it take the whole run down.
+                encoding="utf-8",
+                errors="replace",
                 timeout=int(self.settings.get("ffmpeg_timeout", 1800)),
             )
 

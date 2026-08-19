@@ -82,6 +82,15 @@ def duration(path, ffmpeg=None):
             [executable, "-hide_banner", "-i", str(path)],
             capture_output=True,
             text=True,
+            # Say how to read it. Without this, Python decodes ffmpeg's
+            # output with whatever the system prefers - cp1252 on a
+            # Windows machine - and a song whose tags carry a byte that
+            # codec has no letter for kills the reader thread. The file
+            # is fine; only the reading of ffmpeg's chatter about it was
+            # not. Nothing here needs those bytes to be right, so a
+            # replacement character in a log line is no loss.
+            encoding="utf-8",
+            errors="replace",
             timeout=60,
         )
     except (OSError, subprocess.TimeoutExpired):

@@ -11,6 +11,7 @@ Run from the project root:
     python tests/test_prepare.py
 """
 
+import os
 import subprocess
 import sys
 import tempfile
@@ -370,6 +371,78 @@ def test_tidies_in_place(root):
     print("\n   [OK] every picture kept, in the order it was in")
 
 
+
+def test_song_with_awkward_tags(root):
+
+    heading("10  A song whose tags are not plain ASCII can still be read")
+
+    # Smart quotes are what a downloaded track's title usually carries,
+    # and "\u201d" is the bytes e2 80 9d in UTF-8. ffmpeg echoes the tags
+    # back, Python decodes that with whatever the system prefers - and
+    # cp1252 on Windows has no letter for 9d, so the reader thread died
+    # and a perfectly good song was reported as unreadable.
+    song = root / "Tags" / "Animal Sound Parade (1).mp3"
+
+    song.parent.mkdir(parents=True, exist_ok=True)
+
+    subprocess.run(
+        [
+            find_ffmpeg(), "-y", "-loglevel", "error",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=19",
+            "-metadata", "title=Animal Sound Parade\u201d",
+            "-metadata", "artist=Nik\u2019s Kids",
+            str(song),
+        ],
+        check=True,
+    )
+
+    # Read it the way the tool does, in a process whose preferred
+    # encoding cannot represent those bytes - which is the Windows
+    # machine this went wrong on, near enough.
+    reader = root / "Tags" / "read.py"
+
+    reader.write_text(
+        "import sys\n"
+        f"sys.path.insert(0, {str(PROJECT_ROOT / 'app')!r})\n"
+        "from services.audio_track import duration\n"
+        "print(duration(sys.argv[1]))\n",
+        encoding="utf-8",
+    )
+
+    environment = dict(os.environ)
+    environment.update(
+        LC_ALL="C", LANG="C", PYTHONUTF8="0", PYTHONCOERCECLOCALE="0",
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(reader), str(song)],
+        capture_output=True, text=True, env=environment,
+    )
+
+    print("   read under an ASCII locale ->", result.stdout.strip()
+          or result.stderr.strip().splitlines()[-1])
+
+    assert result.returncode == 0, result.stderr
+    assert abs(float(result.stdout.strip()) - 19) < 1, result.stdout
+
+    # The same mistake is one line away in the other two places that
+    # read ffmpeg, so hold all three to it. This check does not depend
+    # on the locale, so it guards Windows as well.
+    for module in (
+        "app/services/audio_track.py",
+        "app/render/episode_composer.py",
+        "app/backends/ffmpeg_backend.py",
+    ):
+        source = (PROJECT_ROOT / module).read_text(encoding="utf-8")
+
+        assert 'encoding="utf-8"' in source, module
+        assert 'errors="replace"' in source, module
+
+        print(f"   {module} decodes explicitly")
+
+    print("\n   [OK] the file was always fine; the reading of it was not")
+
+
 # ======================================================================
 
 def main():
@@ -387,6 +460,7 @@ def main():
         test_warns_about_old_clips(root)
         test_prefers_the_folder_you_filled(root)
         test_tidies_in_place(root)
+        test_song_with_awkward_tags(root)
 
     print("\nALL PREPARE TESTS PASSED")
 
