@@ -120,10 +120,10 @@ def test_catches_problems(root):
     empty = root / "Empty"
     empty.mkdir()
 
-    problems, _, _, _, _ = prepare.report(empty, root / "Out")
+    problems, _, _, _, _, _ = prepare.report(empty, root / "Out")
 
     print("   empty folder      :", problems[0][:52], "...")
-    assert any("No pictures" in p for p in problems), problems
+    assert any("No pictures and no script" in p for p in problems), problems
 
     # ------------------------------------------------ a broken picture
     broken = root / "Broken"
@@ -131,7 +131,7 @@ def test_catches_problems(root):
     (broken / "Scene02.png").write_text("this is not a picture")
     make_song(broken / "song.mp3", 10)
 
-    problems, _, _, _, _ = prepare.report(broken, root / "Out")
+    problems, _, _, _, _, _ = prepare.report(broken, root / "Out")
 
     print("   corrupt picture   :", problems[0][:52], "...")
     assert any("Scene02.png" in p for p in problems), problems
@@ -141,11 +141,11 @@ def test_catches_problems(root):
     make_image(thin / "Scene01.png")
     make_song(thin / "song.mp3", 60)
 
-    problems, _, _, _, seconds = prepare.report(thin, root / "Out")
+    problems, _, _, _, seconds, _ = prepare.report(thin, root / "Out")
 
     print("   1 picture / 60s   :", problems[0][:52], "...")
     assert any("come round" in p for p in problems), problems
-    assert any("about 8 pictures" in p for p in problems), problems
+    assert any("about 8 shots" in p for p in problems), problems
 
     # ------------------------------------------- no destination set at all
     fine = root / "Fine"
@@ -153,7 +153,7 @@ def test_catches_problems(root):
     make_image(fine / "Scene02.png")
     make_song(fine / "song.mp3", 12)
 
-    problems, _, _, _, _ = prepare.report(fine, None)
+    problems, _, _, _, _, _ = prepare.report(fine, None)
 
     assert any("No Colab folder" in p for p in problems), problems
     print("   no destination    :", problems[0][:52], "...")
@@ -172,7 +172,7 @@ def test_healthy_project_passes(root):
 
     make_song(good / "song.mp3", 19)
 
-    problems, notes, pictures, song, seconds = prepare.report(
+    problems, notes, pictures, song, seconds, _ = prepare.report(
         good, root / "Drive" / "Input"
     )
 
@@ -201,7 +201,7 @@ def test_builds_the_folder(root):
 
     destination = root / "Drive" / "Input"
 
-    _, _, pictures, song, _ = prepare.report(source, destination)
+    _, _, pictures, song, _, _ = prepare.report(source, destination)
 
     prepare.build(destination, pictures, song)
 
@@ -248,7 +248,7 @@ def test_clears_stale_scenes(root):
 
     make_song(source / "new.mp3", 12)
 
-    _, _, pictures, song, _ = prepare.report(source, destination)
+    _, _, pictures, song, _, _ = prepare.report(source, destination)
 
     prepare.build(destination, pictures, song)
 
@@ -344,7 +344,7 @@ def test_tidies_in_place(root):
 
     make_song(destination / "my tune.mp3", 19)
 
-    _, _, pictures, song, _ = prepare.report(destination, destination)
+    _, _, pictures, song, _, _ = prepare.report(destination, destination)
 
     before = {p.name: p.read_bytes() for p in pictures}
 
@@ -443,6 +443,57 @@ def test_song_with_awkward_tags(root):
     print("\n   [OK] the file was always fine; the reading of it was not")
 
 
+
+def test_a_written_script(root):
+
+    heading("11  A script.txt is checked and carried across")
+
+    source = root / "Script"
+    source.mkdir()
+
+    (source / "script.txt").write_text(
+        "# parked for now\n"
+        "\n"
+        "Nik waves at the puppy while the flowers sway\n"
+        "Nik runs down the path, the kitten chasing him\n"
+        "Nik claps as butterflies circle overhead\n",
+        encoding="utf-8",
+    )
+
+    make_song(source / "song.mp3", 19)
+
+    # A picture in the same folder must not confuse it.
+    make_image(source / "leftover.png")
+
+    destination = root / "ScriptDrive" / "Input"
+
+    problems, notes, pictures, song, seconds, script = prepare.report(
+        source, destination
+    )
+
+    print(f"   problems {len(problems)}, script {script.name if script else None}")
+
+    assert not problems, problems
+    assert script and script.name == "script.txt"
+    assert pictures == [], pictures
+    assert any("will be ignored" in note for note in notes), notes
+
+    prepare.build(destination, pictures, song, script)
+
+    landed = sorted(p.name for p in destination.iterdir())
+
+    print("  ", landed)
+
+    assert landed == ["script.txt", "song.mp3"], landed
+
+    carried = (destination / "script.txt").read_text(encoding="utf-8")
+
+    assert "chasing him" in carried
+    assert "# parked for now" in carried
+
+    print("\n   [OK] three scenes, the song, and the comment kept intact")
+
+
 # ======================================================================
 
 def main():
@@ -461,6 +512,7 @@ def main():
         test_prefers_the_folder_you_filled(root)
         test_tidies_in_place(root)
         test_song_with_awkward_tags(root)
+        test_a_written_script(root)
 
     print("\nALL PREPARE TESTS PASSED")
 

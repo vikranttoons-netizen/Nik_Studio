@@ -100,6 +100,24 @@ def songs_in(folder):
     )
 
 
+def script_in(folder):
+    """A script.txt, if there is one, and the scenes written in it."""
+
+    script = folder / "script.txt"
+
+    if not script.is_file():
+        return None, []
+
+    scenes = [
+        line.strip()
+        for line in script.read_text(encoding="utf-8").splitlines()
+    ]
+
+    # Blank lines space a script out; a # parks a scene without
+    # deleting it. Both are skipped, here and in the notebook.
+    return script, [s for s in scenes if s and not s.startswith("#")]
+
+
 def gather(source):
     """
     The pictures and songs to use.
@@ -221,7 +239,8 @@ def report(source, destination):
     """
     Look at everything and say what is wrong.
 
-    Returns (problems, notes, pictures, song, seconds). A problem stops
+    Returns (problems, notes, pictures, song, seconds, script). A
+    problem stops
     the run; a note is worth knowing but not fatal.
     """
 
@@ -255,13 +274,41 @@ def report(source, destination):
 
     pictures, songs = gather(source)
 
-    # ----------------------------------------------------------- pictures
+    script, scenes = script_in(source)
+
+    # ------------------------------------------------------------ script
 
     print()
 
-    if not pictures:
+    if script:
+
+        if not scenes:
+            problems.append(
+                f"{script.name} has no scenes in it. Write one a line."
+            )
+        else:
+            print(f"{OK} {script.name}, {len(scenes)} scene(s) written")
+
+            for number, scene in enumerate(scenes, start=1):
+                print(f"       {number:>2}. {scene[:60]}")
+
+        if pictures:
+            notes.append(
+                f"{len(pictures)} picture(s) are in there too and will be "
+                "ignored - a script.txt is taken to be what you meant. "
+                "Delete it to go back to the pictures."
+            )
+
+        # From here the scenes are the shots, and there is nothing to
+        # open or check about them beyond their being there.
+        pictures = []
+
+    # ----------------------------------------------------------- pictures
+
+    elif not pictures:
         problems.append(
-            f"No pictures found in {source} (looked in Images\\ too)."
+            f"No pictures and no script.txt in {source} "
+            "(looked in Images\\ too)."
         )
     else:
         print(f"{OK} {len(pictures)} picture(s)")
@@ -359,11 +406,13 @@ def report(source, destination):
 
     # ------------------------------------------------- enough pictures?
 
-    if pictures and seconds:
+    shots = len(scenes) if script else len(pictures)
 
-        share = seconds / len(pictures)
+    if shots and seconds:
 
-        print(f"\n       {len(pictures)} picture(s) over {seconds:.0f}s "
+        share = seconds / shots
+
+        print(f"\n       {shots} shot(s) over {seconds:.0f}s "
               f"= {share:.1f}s each")
 
         needed = max(1, int(seconds / COMFORTABLE + 0.999))
@@ -376,7 +425,7 @@ def report(source, destination):
                 f"{BOUNCE_SECONDS:.1f}s, so the same movement\n"
                 f"           would come round {times:.0f} times over and be "
                 f"obvious.\n"
-                f"           Use about {needed} pictures for a "
+                f"           Use about {needed} shots for a "
                 f"{seconds:.0f}s song."
             )
 
@@ -384,7 +433,7 @@ def report(source, destination):
             notes.append(
                 f"{share:.1f}s a picture against a {BOUNCE_SECONDS:.1f}s "
                 f"clip means the movement comes round {times:.1f} times. "
-                f"Watchable, but {needed} pictures would be better."
+                f"Watchable, but {needed} shots would be better."
             )
 
         elif share > CLIP_SECONDS:
@@ -397,14 +446,14 @@ def report(source, destination):
         else:
             print(f"{OK} one clip covers each picture outright")
 
-    return problems, notes, pictures, song, seconds
+    return problems, notes, pictures, song, seconds, script
 
 
 # ----------------------------------------------------------------------
 # Building the folder
 # ----------------------------------------------------------------------
 
-def build(destination, pictures, song):
+def build(destination, pictures, song, script=None):
     """
     Copy everything in, numbered in order, and say what happened.
 
@@ -435,6 +484,10 @@ def build(destination, pictures, song):
 
     if song:
         planned.append((song, f"song{song.suffix.lower()}"))
+
+    # The script keeps its name - the notebook looks for exactly this.
+    if script:
+        planned.append((script, "script.txt"))
 
     for original, name in planned:
         shutil.copy2(original, staging / name)
@@ -560,7 +613,9 @@ def main():
         print(f"{BAD} No pictures anywhere, and no --from folder given.")
         return 1
 
-    problems, notes, pictures, song, seconds = report(source, destination)
+    problems, notes, pictures, song, seconds, script = report(
+        source, destination
+    )
 
     # ----------------------------------------------------------- verdict
 
@@ -595,7 +650,7 @@ def main():
 
     print(f"\nCopying into {destination}\n")
 
-    build(destination, pictures, song)
+    build(destination, pictures, song, script)
 
     print(
         f"\n{OK} Ready. Open colab\\NikStudio_Animate.ipynb in Colab,\n"

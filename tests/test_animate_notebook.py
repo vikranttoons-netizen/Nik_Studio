@@ -353,7 +353,7 @@ def test_end_to_end(root):
     print("   order  :", order)
 
     # "shot2" must not land after "shot10" just because 1 sorts before 2.
-    assert order == ["shot1.png", "shot2.png", "shot10.png"], order
+    assert order == ["shot1", "shot2", "shot10"], order
     assert len(calls) == 3, calls
 
     final = drive / "Output" / "Episode.mp4"
@@ -412,7 +412,7 @@ def test_changed_picture_is_not_skipped(root):
                  if "Scene0" in line and ("skip" in line or "again" in line)])
 
     assert len(calls) == 1, calls
-    assert "Scene02.png: picture or prompt changed" in printed
+    assert "Scene02: changed since last time" in printed
 
     print("\n   [OK] only the picture that changed was made again")
 
@@ -432,7 +432,7 @@ def test_refuses_too_few_pictures(root):
 
     assert calls == [], "the model was loaded anyway"
     assert "Stopping before the GPU is used" in refusal
-    assert "about 8 pictures" in refusal, refusal
+    assert "about 8 shots" in refusal, refusal
 
     print("\n   [OK] refused, and said how many pictures it needs")
 
@@ -811,6 +811,94 @@ def test_the_machine_picks_the_model(root):
     print("\n   [OK] the big model where it fits, the small one where not")
 
 
+
+def test_written_scenes(root):
+
+    heading("17  Scenes written as text, with no pictures at all")
+
+    drive = root / "Written"
+
+    inside = drive / "Input"
+    inside.mkdir(parents=True)
+
+    (inside / "script.txt").write_text(
+        "\n".join([
+            "# the opening, parked for now",
+            "",
+            "Nik waves at the puppy while the flowers sway around them",
+            "Nik runs down the garden path, the kitten chasing him",
+            "Nik claps his hands as butterflies circle overhead",
+        ]),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            find_ffmpeg(), "-y", "-loglevel", "error",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=19",
+            str(inside / "song.mp3"),
+        ],
+        check=True,
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if line.startswith("From")][0])
+
+    # The commented line and the blank one are not scenes.
+    assert len(calls) == 3, calls
+
+    # Nothing is sent but words - there is no picture to condition on.
+    assert all("image" not in call for call in calls), calls
+
+    # The character and the style lead every one, or the boy is a
+    # different boy in every clip.
+    assert all(call["prompt"].startswith("Nik, a cheerful 3 year old")
+               for call in calls), calls[0]["prompt"][:80]
+    assert all("Pixar style" in call["prompt"] for call in calls)
+    assert "chasing him" in calls[1]["prompt"], calls[1]["prompt"]
+
+    final = drive / "Output" / "Episode.mp4"
+
+    length = float(probe(final, "format=duration")[0])
+
+    print(f"   3 written scenes -> {length:.1f}s with the song")
+
+    assert abs(length - 19) < 0.6, length
+
+    print("\n   [OK] words in, video out, no pictures involved")
+
+
+def test_a_script_wins_over_pictures(root):
+
+    heading("18  A script.txt is what you meant, not the old pictures")
+
+    drive = make_input(root / "Both", ["Scene01.png", "Scene02.png"])
+
+    (drive / "Input" / "script.txt").write_text(
+        "Nik jumps in a puddle\n"
+        "Nik shakes the water off his hands\n"
+        "Nik laughs at the puppy\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "being ignored" in line][0][:70], "...")
+
+    assert len(calls) == 3, calls
+    assert all("image" not in call for call in calls), calls
+    assert "being ignored" in printed, printed
+
+    print("\n   [OK] the written scenes ran, and it said the pictures are idle")
+
+
 # ======================================================================
 
 def main():
@@ -839,6 +927,8 @@ def main():
         test_the_refusal_offers_the_test(root)
         test_drive_refusing_to_connect(root)
         test_the_machine_picks_the_model(root)
+        test_written_scenes(root)
+        test_a_script_wins_over_pictures(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 

@@ -317,7 +317,22 @@ than spend a minute of GPU time on a run that cannot work.
 give it pictures and a song, it gives you back one MP4 with the character
 actually moving.
 
-Put the files in Google Drive:
+There are two ways in. **Write the scenes**, one to a line:
+
+```
+My Drive / NikStudio / Input /
+      script.txt
+      song.mp3
+```
+
+```
+# script.txt - one scene a line. A # parks a line without deleting it.
+Nik waves at the puppy while the flowers sway around them
+Nik runs down the garden path, the kitten chasing him
+Nik claps his hands as butterflies circle overhead
+```
+
+Or **give it pictures** and it animates those:
 
 ```
 My Drive / NikStudio / Input /
@@ -327,9 +342,25 @@ My Drive / NikStudio / Input /
       song.mp3
 ```
 
+A `script.txt` wins if both are there, and it says so rather than
+quietly picking one.
+
+**What you give up by writing them.** A picture is what holds the look
+still: with one, the same boy, the same garden and the same puppy carry
+from clip to clip. Written scenes have nothing to anchor them, so the
+`CHARACTER` and `STYLE` lines at the top of cell 2 do the work instead —
+they lead every prompt so the description is word-for-word identical
+every time, and the seed is fixed too. It is not the same as a
+reference picture, and it will drift between shots. Write the character
+once, keep it exact, and change it for nothing.
+
 Names do not matter — pictures are used in order, so number them, and any
 one audio file is taken as the song. The result lands in
 `My Drive / NikStudio / Output / Episode.mp4`.
+
+`python tools\prepare.py --copy` builds and checks either folder before
+you open Colab: it counts the scenes in a script the same way the
+notebook does, and carries the script across with the song.
 
 **Check on a CPU runtime first.** Colab charges for a GPU from the moment
 it connects, whatever you run on it, so the notebook does everything that
