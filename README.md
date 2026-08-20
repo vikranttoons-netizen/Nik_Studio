@@ -376,6 +376,13 @@ frame is dropped at each seam so nothing is ever held twice.
 Roughly: **one picture per 12 seconds** and the movement never repeats
 noticeably; beyond about 24 the notebook will tell you to add more.
 
+**Try one picture first.** Set `TEST_ONE_PICTURE = True` at the top of
+cell 2 and it makes a single clip from the first picture, ignores the
+song, and stops — about two minutes of GPU. Worth doing before every real
+run, and certainly before a new character or a new prompt: it tells you
+what the model does with your picture instead of letting you find out
+eleven clips later.
+
 **One honest limit.** The mouth moves but it is not lip-synced to the
 words. Nothing free does real lip-sync yet.
 

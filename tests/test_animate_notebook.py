@@ -181,7 +181,7 @@ def cell_two():
 
 
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
-        mounted=None, gpu=True):
+        mounted=None, gpu=True, test_one=False):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -204,6 +204,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         'DRIVE = "/content/drive/MyDrive"',
         f"DRIVE = {str(mounted or '/content/drive/MyDrive')!r}",
+    ).replace(
+        "TEST_ONE_PICTURE = False",
+        f"TEST_ONE_PICTURE = {test_one}",
     )
 
     printed = io.StringIO()
@@ -611,6 +614,60 @@ def test_checks_before_a_gpu_is_needed(root):
     print("\n   [OK] nothing is spent finding out the files are wrong")
 
 
+
+def test_one_picture_on_its_own(root):
+
+    heading("13  Trying one picture out, without the song in the way")
+
+    drive = make_input(
+        root / "TestOne",
+        [f"Scene{n:02d}.png" for n in range(1, 12)],
+        song_seconds=125,
+    )
+
+    printed, refusal, calls = run(drive, test_one=True)
+
+    assert not refusal, refusal
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if line.startswith("TEST")][0])
+
+    # One clip, from the first picture, at its own length - not looped
+    # to fill a slot and not cut to a share of the song.
+    assert len(calls) == 1, calls
+    assert calls[0]["num_frames"] == 73, calls
+    assert "back and forth" not in printed, printed
+
+    final = drive / "Output" / "Episode.mp4"
+
+    length = float(probe(final, "format=duration")[0])
+    streams = probe(final, "stream=codec_type")
+
+    print(f"   {length:.1f}s, streams {streams}")
+
+    assert abs(length - 73 / 24) < 0.3, length
+    assert "audio" not in streams, "the song was laid over a test clip"
+
+    print("\n   [OK] one clip, its own length, nothing over the top")
+
+
+def test_the_refusal_offers_the_test(root):
+
+    heading("14  Being refused tells you how to try one picture")
+
+    drive = make_input(root / "Hint", ["Scene01.png"], song_seconds=125)
+
+    _, refusal, calls = run(drive)
+
+    print("  ", [line.strip() for line in refusal.splitlines()
+                 if "TEST_ONE_PICTURE" in line][0][:70], "...")
+
+    assert calls == [], calls
+    assert "TEST_ONE_PICTURE = True" in refusal, refusal
+
+    print("\n   [OK] the way out is in the message, not in my head")
+
+
 # ======================================================================
 
 def main():
@@ -635,6 +692,8 @@ def main():
         test_says_what_it_can_see(root)
         test_offers_the_choices(root)
         test_checks_before_a_gpu_is_needed(root)
+        test_one_picture_on_its_own(root)
+        test_the_refusal_offers_the_test(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 
