@@ -67,6 +67,8 @@ HAS_GPU = [True]
 
 MOUNT_FAILS = [False]
 
+BEATS = [None]
+
 
 class StandInPipeline:
     """
@@ -208,6 +210,17 @@ def install_stand_ins(vram, ram, capability):
 
     builtins.display = lambda *a, **kw: None
 
+    if BEATS[0] is not None:
+        librosa = types.ModuleType("librosa")
+        librosa.load = lambda path, sr=None, mono=True: ([], 22050)
+        librosa.beat = types.SimpleNamespace(
+            beat_track=lambda y, sr: (120.0, BEATS[0])
+        )
+        librosa.frames_to_time = lambda frames, sr: frames
+        sys.modules["librosa"] = librosa
+    else:
+        sys.modules.pop("librosa", None)
+
     psutil = types.ModuleType("psutil")
     psutil.virtual_memory = lambda: types.SimpleNamespace(total=ram * 1e9)
     sys.modules["psutil"] = psutil
@@ -242,7 +255,8 @@ def cell_two():
 
 
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
-        mounted=None, gpu=True, test_one=False, mount_fails=False):
+        mounted=None, gpu=True, test_one=False, mount_fails=False,
+        beats=None, short=False, full_size=False):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -265,6 +279,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
 
     MOUNT_FAILS[0] = mount_fails
 
+    BEATS[0] = beats
+
     install_stand_ins(vram, ram, capability)
 
     source = cell_two().replace(
@@ -276,7 +292,19 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         "TEST_ONE_PICTURE = False",
         f"TEST_ONE_PICTURE = {test_one}",
+    ).replace(
+        "MAKE_SHORT = True",
+        f"MAKE_SHORT = {short}",
     )
+
+    if not full_size:
+        # The edit does the same work at any size, and at 1920x1080
+        # every test spends minutes inside ffmpeg. A ninth of the pixels,
+        # unless the finished size is what the test is about.
+        source = source.replace(
+            "OUTPUT_WIDTH, OUTPUT_HEIGHT = 1920, 1080",
+            "OUTPUT_WIDTH, OUTPUT_HEIGHT = 640, 360",
+        )
 
     printed = io.StringIO()
 
@@ -432,52 +460,116 @@ def test_refuses_too_few_pictures(root):
 
     assert calls == [], "the model was loaded anyway"
     assert "Stopping before the GPU is used" in refusal
-    assert "about 8 shots" in refusal, refusal
+    assert "about 5 shots" in refusal, refusal
 
     print("\n   [OK] refused, and said how many pictures it needs")
 
 
-def test_long_holds_are_filled_by_looping(root):
+def test_the_edit_cuts_it_up(root):
 
-    heading("4b  A long hold loops a short clip, it does not stretch one")
+    heading("4b  Eleven clips become an edit of many short shots")
 
-    # 11 pictures over a two minute song: 11.4s each. The model is still
-    # only asked for three seconds - what it can hold - and the rest is
-    # filled forwards and back. This is the real case that prompted it.
+    # 11 pictures over a two minute song. The old answer was eleven
+    # eleven-second holds, which is a slideshow. The answer now is to
+    # cut every few seconds and come back to each clip more than once.
     drive = make_input(
         root / "Long",
         [f"Scene{n:02d}.png" for n in range(1, 12)],
         song_seconds=125,
     )
 
-    printed, refusal, calls = run(drive)
+    printed, refusal, calls = run(drive, full_size=True)
 
     assert not refusal, refusal
 
-    # The model must never be asked for a long clip, whatever the slot.
+    # The model is never asked for more than its two seconds, whatever
+    # the song is doing.
     asked = {call["num_frames"] for call in calls}
 
-    print(f"   frames asked for: {asked}  (never more, whatever the slot)")
-
     assert asked == {49}, asked
+    assert len(calls) == 11, len(calls)
 
-    print("  ", [line.strip() for line in printed.splitlines()
-                 if "back and forth" in line][0][:76], "...")
+    editing = [line for line in printed.splitlines()
+               if line.startswith("Editing:")][0]
 
-    assert "back and forth" in printed, printed
+    print("  ", editing.strip())
+
+    shots = int(editing.split()[1])
+
+    # 125 seconds cut every ~2.8s is around forty shots, and certainly
+    # a lot more than the eleven clips they are drawn from.
+    assert shots > 30, shots
 
     final = drive / "Output" / "Episode.mp4"
 
     length = float(probe(final, "format=duration")[0])
     size = probe(final, "stream=width,height")
 
-    print(f"   {len(calls)} clips -> {length:.1f}s at {size[0]}x{size[1]} "
-          "against a 125s song")
+    print(f"   {len(calls)} clips -> {shots} shots -> {length:.1f}s "
+          f"at {size[0]}x{size[1]}")
 
     assert abs(length - 125) < 1.5, length
-    assert size[:2] == ["1280", "720"], size
+    assert size[:2] == ["1920", "1080"], size
 
-    print("\n   [OK] short clips, looped, and the song still fits")
+    print("\n   [OK] eleven clips, forty-odd shots, and it fits the song")
+
+
+def test_cuts_land_on_the_beat(root):
+
+    heading("4c  The cuts land on the beat, not on a stopwatch")
+
+    drive = make_input(root / "Beat", ["Scene01.png", "Scene02.png"],
+                       song_seconds=19)
+
+    # A slow, deliberately uneven beat, so a grid cannot fake it.
+    beat = [1.3, 2.6, 3.9, 5.2, 6.5, 7.8, 9.1, 10.4, 11.7, 13.0,
+            14.3, 15.6, 16.9, 18.2]
+
+    printed, refusal, _ = run(drive, beats=beat)
+
+    assert not refusal, refusal
+    assert "cut on the beat" in printed, printed
+    assert "could not find the beat" not in printed, printed
+    assert "even grid" not in printed, printed
+
+    # Rebuilt the way the notebook does, to check where the cuts fell.
+    points, target = [0.0], 2.8
+
+    for moment in beat:
+        if moment - points[-1] >= target:
+            points.append(moment)
+
+    print(f"   {len(beat)} beats -> cuts at "
+          f"{[round(p, 1) for p in points[1:]]}")
+
+    assert all(point in beat for point in points[1:]), points
+
+    print("\n   [OK] every cut is on a beat of the song")
+
+
+def test_without_librosa(root):
+
+    heading("4d  No beat detection is a plainer edit, not a failure")
+
+    drive = make_input(root / "NoBeat", ["Scene01.png", "Scene02.png"],
+                       song_seconds=19)
+
+    printed, refusal, _ = run(drive)
+
+    assert not refusal, refusal
+    assert "could not find the beat" in printed, printed
+    assert "cut on an even grid" in printed, printed
+    assert "cut on the beat" not in printed, printed
+
+    final = drive / "Output" / "Episode.mp4"
+
+    length = float(probe(final, "format=duration")[0])
+
+    print(f"   fell back to an even grid -> {length:.1f}s")
+
+    assert abs(length - 19) < 0.6, length
+
+    print("\n   [OK] still cut up, just on an even grid")
 
 
 def test_refuses_broken_picture(root):
@@ -899,6 +991,38 @@ def test_a_script_wins_over_pictures(root):
     print("\n   [OK] the written scenes ran, and it said the pictures are idle")
 
 
+
+def test_the_vertical_cut(root):
+
+    heading("19  A vertical cut for Shorts, beside the wide one")
+
+    drive = make_input(root / "Short", ["Scene01.png", "Scene02.png",
+                                        "Scene03.png"], song_seconds=19)
+
+    printed, refusal, _ = run(drive, short=True, full_size=True)
+
+    assert not refusal, refusal
+
+    wide = drive / "Output" / "Episode.mp4"
+    tall = drive / "Output" / "Episode_Short.mp4"
+
+    assert tall.exists(), "no Shorts cut"
+
+    wide_size = probe(wide, "stream=width,height")
+    tall_size = probe(tall, "stream=width,height")
+
+    print(f"   {wide_size[0]}x{wide_size[1]} and "
+          f"{tall_size[0]}x{tall_size[1]}")
+
+    assert wide_size[:2] == ["1920", "1080"], wide_size
+    assert tall_size[:2] == ["1080", "1920"], tall_size
+
+    # Under a minute, or YouTube does not treat it as a Short.
+    assert float(probe(tall, "format=duration")[0]) <= 60
+
+    print("\n   [OK] both cuts written, and the tall one is under a minute")
+
+
 # ======================================================================
 
 def main():
@@ -914,7 +1038,9 @@ def main():
         test_resume(root)
         test_changed_picture_is_not_skipped(root)
         test_refuses_too_few_pictures(root)
-        test_long_holds_are_filled_by_looping(root)
+        test_the_edit_cuts_it_up(root)
+        test_cuts_land_on_the_beat(root)
+        test_without_librosa(root)
         test_refuses_broken_picture(root)
         test_settings_follow_the_machine(root)
         test_out_of_memory_is_survived(root)
@@ -929,6 +1055,7 @@ def main():
         test_the_machine_picks_the_model(root)
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
+        test_the_vertical_cut(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 

@@ -35,29 +35,30 @@ WARN = "[WARN]"
 PICTURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
 AUDIO_SUFFIXES = (".mp3", ".m4a", ".wav", ".aac", ".ogg", ".flac")
 
-# How long one picture can hold the screen, in seconds.
+# The edit, as the notebook does it.
 #
 # The model is only ever asked for a short clip, because that is as far
-# as it holds your picture before it starts inventing - at eight seconds
-# the face melted at two and the scene was gone by four. Anything longer
-# is filled by playing that clip forwards, then backwards, then forwards
-# again.
+# as it holds a picture before it starts inventing. The finished video
+# is not one clip per shot held for as long as the song needs - it is
+# cut every few seconds, on the beat, coming back to each clip more than
+# once from a different camera move.
 #
-# So the question is not "how long a clip" but "how many times does the
-# same movement come round". Twice is unnoticeable. Four times is not.
-# Worked out the same way the notebook does it, from the frames the
-# model is actually asked for, so the two never disagree about how many
-# pictures a song needs. (frames - 1) has to divide by 8, and the
-# forwards-and-back pair drops a frame at each end of the reversed half.
+# So the question is not "how long a clip" but "how often does the same
+# clip come back". Twice or three times is how television works. Eight
+# times is the same three seconds over and over.
 FPS = 24
 ASKED_FOR = 2.0
 
 FRAMES = max(25, round((ASKED_FOR * FPS - 1) / 8) * 8 + 1)
 
 CLIP_SECONDS = FRAMES / FPS
-BOUNCE_SECONDS = (2 * FRAMES - 2) / FPS
 
-COMFORTABLE = BOUNCE_SECONDS * 2
+# How long one shot holds before the edit cuts away.
+SHOT_SECONDS = 2.8
+
+# Coming back this often is comfortable; past it, say so.
+COMFORTABLE_TIMES = 4
+TOO_MANY_TIMES = 8
 
 
 # ----------------------------------------------------------------------
@@ -410,41 +411,38 @@ def report(source, destination):
 
     if shots and seconds:
 
-        share = seconds / shots
+        print(f"\n       {shots} shot(s) over a {seconds:.0f}s song")
 
-        print(f"\n       {shots} shot(s) over {seconds:.0f}s "
-              f"= {share:.1f}s each")
+        cuts = max(1, round(seconds / SHOT_SECONDS))
 
-        needed = max(1, int(seconds / COMFORTABLE + 0.999))
+        times = cuts / shots
 
-        times = share / BOUNCE_SECONDS
+        # Never advise someone to have the number they already have.
+        enough = max(shots + 1, round(cuts / COMFORTABLE_TIMES))
 
-        if times > 4:
+        print(f"       cut every {SHOT_SECONDS:.1f}s = about {cuts} cuts")
+
+        if times > TOO_MANY_TIMES:
             problems.append(
-                f"{share:.0f}s per picture, but a clip covers "
-                f"{BOUNCE_SECONDS:.1f}s, so the same movement\n"
-                f"           would come round {times:.0f} times over and be "
-                f"obvious.\n"
-                f"           Use about {needed} shots for a "
-                f"{seconds:.0f}s song."
+                f"{shots} shot(s) against about {cuts} cuts means each "
+                f"clip comes back {times:.0f} times.\n"
+                f"           The edit cannot hide that. Use about "
+                f"{enough} shots for a {seconds:.0f}s song."
             )
 
-        elif times > 2:
+        elif times > COMFORTABLE_TIMES + 0.5:
             notes.append(
-                f"{share:.1f}s a picture against a {BOUNCE_SECONDS:.1f}s "
-                f"clip means the movement comes round {times:.1f} times. "
-                f"Watchable, but {needed} shots would be better."
+                f"Each clip comes back about {times:.0f} times across the "
+                f"song. Watchable - the camera move differs each time - "
+                f"but {enough} shots would be better."
             )
 
-        elif share > CLIP_SECONDS:
-            print(f"{OK} each clip plays forwards and back to fill "
-                  f"{share:.1f}s")
-            print(f"       The model is only asked for "
-                  f"{CLIP_SECONDS:.1f}s, which is as long as it holds\n"
-                  f"       your picture. Nothing is stretched.")
+        elif times > 1.2:
+            print(f"{OK} each clip is seen about {times:.0f} times, from a "
+                  f"different camera move each time")
 
         else:
-            print(f"{OK} one clip covers each picture outright")
+            print(f"{OK} enough shots to never repeat one")
 
     return problems, notes, pictures, song, seconds, script
 

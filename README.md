@@ -311,11 +311,11 @@ The notebook repeats every one of these checks on the Colab side before
 it loads the model, and stops with `Nothing has been charged for.` rather
 than spend a minute of GPU time on a run that cannot work.
 
-## Animating the pictures with a song
+## Making an episode
 
-`colab/NikStudio_Animate.ipynb` is the finished job in one notebook: you
-give it pictures and a song, it gives you back one MP4 with the character
-actually moving.
+`colab/NikStudio_Animate.ipynb` is the finished job in one notebook: give
+it your scenes and a song, and it gives back a cut, mastered, YouTube-
+ready MP4 — plus a vertical one for Shorts.
 
 There are two ways in. **Write the scenes**, one to a line:
 
@@ -375,30 +375,49 @@ A wrong folder or a picture that will not open is worth finding out for
 free. Pick **L4** rather than A100 — the model is small, and A100 spends
 compute units far faster for no better result.
 
-Every picture becomes a moving clip, the clips are cut so they share the
-song's length exactly, and the song is laid over the top. Each clip is
-saved to Drive as it finishes, so a session that dies costs you one clip
-rather than all of them — run it again and it carries on.
+Every shot becomes a short moving clip. Then it is **edited**: cut every
+few seconds, every cut landing on a beat of the song, coming back to each
+clip more than once from a different camera move. Eleven clips become
+forty-odd shots that way. That is how a children's channel is put
+together, and it is also what this model needs — nothing is on screen
+long enough to drift. The editing costs no GPU at all, so it is rebuilt
+from scratch every run.
 
-To make one picture do something different, add it to `PROMPTS` at the
-top of cell 2, delete that clip from `Output/Clips`, and run the cell
-again. The clips you kept are not made twice.
+Each generated clip is saved to Drive as it finishes, so a session that
+dies costs you one clip rather than all of them — run it again and it
+carries on. Change a line of your script, or a picture, and only that one
+is made afresh.
 
-The notebook reads the machine and picks its own settings — 1024×576 and
-full precision on a 24GB card with RAM to match, smaller and with the
-text encoder squeezed to 8-bit where either is short. It weighs ordinary
-RAM as well as the card, because the 9GB text encoder is unpacked in RAM
-before it ever reaches the GPU, so a big card on a small-RAM runtime dies
-just the same. There is nothing to tune.
+The notebook reads the machine and picks its own settings — which model,
+which precision, whether the text encoder has to be squeezed to 8-bit. It
+weighs ordinary RAM as well as the card, because the 9GB text encoder is
+unpacked in RAM before it ever reaches the GPU, so a big card on a
+small-RAM runtime dies just the same. There is nothing to tune.
 
 **How long one picture can hold.** Everything in the picture drifts as
 a clip goes on, smallest things first. Over eight seconds the face melted
 at two and the whole scene was gone by four; over three, the butterflies
 melted at one second and the animals' faces by one and a half. So the
-model is only ever asked for **two seconds**, at 768×448, which is the
-size it was trained near. The finished video is scaled up to 1280×720
-from there: upscaling a clip that held together beats generating one that
-did not.
+model is only ever asked for **two seconds**, and the edit cuts away
+before there is anything to see.
+
+**The edit.** `SHOT_SECONDS` (2.8) is how long one shot holds. Beats come
+from `librosa`; without them it falls back to an even grid and says so,
+rather than claiming a beat it did not find. Every shot gets a slow
+camera move — push in, pan, pull out — cycling, so coming back to a clip
+does not read as a repeat. The whole thing is assembled at 1920×1080,
+h264 high profile with `+faststart`, and the song is brought to −14 LUFS,
+which is what YouTube normalises to; an unmastered upload just sounds
+quiet next to a channel that did it.
+
+A vertical 1080×1920 cut of the first 55 seconds is written alongside it
+for Shorts. Turn it off with `MAKE_SHORT = False`.
+
+**The watermark.** LTX 0.9.8 distilled was trained on captioned video and
+stamps a line of garbled caption text along the bottom of everything it
+makes. No negative prompt shifts it. The bottom 14% is cut off every clip
+and the edit re-frames around what is left.
+
 
 **Name everything that must stay.** Whatever the prompt does not mention
 is free to drift, and it will. A prompt describing only the boy left the
@@ -412,9 +431,10 @@ as it takes. A sway or a clap reads as continuous that way, the turn is
 at the moment the movement reverses where it is least visible, and a
 frame is dropped at each seam so nothing is ever held twice.
 
-Roughly: **one picture per 8 seconds** and the movement never repeats
-noticeably; beyond about 16 the notebook will tell you to add more. More
-pictures is the honest fix for a long song — a longer clip is not.
+Roughly: enough shots that **each is seen about four times** across the
+song — for a two minute song, a dozen or so. Coming back to a setup is
+how television works; coming back eight times is not, and the notebook
+says so before it starts.
 
 **Try one picture first.** Set `TEST_ONE_PICTURE = True` at the top of
 cell 2 and it makes a single clip from the first picture, ignores the

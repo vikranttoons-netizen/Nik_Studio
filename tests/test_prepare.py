@@ -144,8 +144,8 @@ def test_catches_problems(root):
     problems, _, _, _, seconds, _ = prepare.report(thin, root / "Out")
 
     print("   1 picture / 60s   :", problems[0][:52], "...")
-    assert any("come round" in p for p in problems), problems
-    assert any("about 8 shots" in p for p in problems), problems
+    assert any("comes back 21 times" in p for p in problems), problems
+    assert any("about 5 shots" in p for p in problems), problems
 
     # ------------------------------------------- no destination set at all
     fine = root / "Fine"
