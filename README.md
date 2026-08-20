@@ -327,10 +327,22 @@ My Drive / NikStudio / Input /
       song.mp3
 ```
 
-Names do not matter — pictures are used in alphabetical order, so number
-them, and any one audio file is taken as the song. Open the notebook in
-Colab, set **Runtime → Change runtime type** to a GPU, and run its two
-cells. The result lands in `My Drive / NikStudio / Output / Episode.mp4`.
+Names do not matter — pictures are used in order, so number them, and any
+one audio file is taken as the song. The result lands in
+`My Drive / NikStudio / Output / Episode.mp4`.
+
+**Check on a CPU runtime first.** Colab charges for a GPU from the moment
+it connects, whatever you run on it, so the notebook does everything that
+does not need one before it asks for one:
+
+1. **Runtime → Change runtime type → CPU**, then run cell 2. It finds
+   your files, checks every one, and stops with `this cost nothing`.
+2. Only then **Runtime → Change runtime type → L4 GPU**, run cell 1, and
+   run cell 2 again.
+
+A wrong folder or a picture that will not open is worth finding out for
+free. Pick **L4** rather than A100 — the model is small, and A100 spends
+compute units far faster for no better result.
 
 Every picture becomes a moving clip, the clips are cut so they share the
 song's length exactly, and the song is laid over the top. Each clip is

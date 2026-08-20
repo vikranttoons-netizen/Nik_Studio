@@ -57,6 +57,8 @@ CALLS = []
 
 FAIL_FIRST_CALL = [False]
 
+HAS_GPU = [True]
+
 
 class StandInPipeline:
     """
@@ -125,7 +127,7 @@ def install_stand_ins(vram, ram, capability):
         manual_seed=lambda seed: None
     )
     torch.cuda = types.SimpleNamespace(
-        is_available=lambda: True,
+        is_available=lambda: HAS_GPU[0],
         get_device_name=lambda index=0: "Stand-in GPU",
         get_device_properties=lambda index=0: types.SimpleNamespace(
             total_memory=vram * 1e9
@@ -179,7 +181,7 @@ def cell_two():
 
 
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
-        mounted=None):
+        mounted=None, gpu=True):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -191,6 +193,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     CALLS.clear()
 
     FAIL_FIRST_CALL[0] = out_of_memory
+
+    HAS_GPU[0] = gpu
 
     install_stand_ins(vram, ram, capability)
 
@@ -565,6 +569,36 @@ def test_offers_the_choices(root):
     print("\n   [OK] two matches, so it asks instead of choosing")
 
 
+
+def test_checks_before_a_gpu_is_needed(root):
+
+    heading("12  Every check runs with no GPU, so checking is free")
+
+    drive = make_input(root / "Free", ["Scene01.png", "Scene02.png"])
+
+    printed, refusal, calls = run(drive, gpu=False)
+
+    print("  ", refusal.strip().splitlines()[0])
+
+    assert calls == [], "the model was loaded without a GPU"
+    assert "Everything checks out" in printed, printed
+    assert "cost nothing" in refusal, refusal
+    assert "L4 GPU" in refusal, refusal
+
+    # A bad folder must still be caught, and caught the same way.
+    broken = make_input(root / "FreeBad", ["Scene01.png"])
+    (broken / "Input" / "Scene01.png").write_text("not a picture")
+
+    _, refusal, calls = run(broken, gpu=False)
+
+    assert calls == [], calls
+    assert "will not open" in refusal, refusal
+
+    print("   a broken picture is caught without a GPU too")
+
+    print("\n   [OK] nothing is spent finding out the files are wrong")
+
+
 # ======================================================================
 
 def main():
@@ -588,6 +622,7 @@ def main():
         test_finds_a_folder_that_moved(root)
         test_says_what_it_can_see(root)
         test_offers_the_choices(root)
+        test_checks_before_a_gpu_is_needed(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 
