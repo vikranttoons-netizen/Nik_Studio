@@ -386,7 +386,7 @@ def test_refuses_too_few_pictures(root):
 
     assert calls == [], "the model was loaded anyway"
     assert "Stopping before the GPU is used" in refusal
-    assert "about 6 pictures" in refusal, refusal
+    assert "about 8 pictures" in refusal, refusal
 
     print("\n   [OK] refused, and said how many pictures it needs")
 
@@ -413,7 +413,7 @@ def test_long_holds_are_filled_by_looping(root):
 
     print(f"   frames asked for: {asked}  (never more, whatever the slot)")
 
-    assert asked == {73}, asked
+    assert asked == {49}, asked
 
     print("  ", [line.strip() for line in printed.splitlines()
                  if "back and forth" in line][0][:76], "...")
@@ -658,7 +658,7 @@ def test_one_picture_on_its_own(root):
     # One clip, from the first picture, at its own length - not looped
     # to fill a slot and not cut to a share of the song.
     assert len(calls) == 1, calls
-    assert calls[0]["num_frames"] == 73, calls
+    assert calls[0]["num_frames"] == 49, calls
     assert "back and forth" not in printed, printed
 
     final = drive / "Output" / "Episode.mp4"
@@ -668,7 +668,7 @@ def test_one_picture_on_its_own(root):
 
     print(f"   {length:.1f}s, streams {streams}")
 
-    assert abs(length - 73 / 24) < 0.3, length
+    assert abs(length - 49 / 24) < 0.3, length
     assert "audio" not in streams, "the song was laid over a test clip"
 
     print("\n   [OK] one clip, its own length, nothing over the top")

@@ -360,12 +360,20 @@ RAM as well as the card, because the 9GB text encoder is unpacked in RAM
 before it ever reaches the GPU, so a big card on a small-RAM runtime dies
 just the same. There is nothing to tune.
 
-**How long one picture can hold.** The model holds your picture for
-about three seconds and then starts inventing — asked for eight, it
-melted the face at two and had replaced the whole scene by four. So it is
-only ever asked for three, at 768×448, which is the size it was trained
-near. The finished video is scaled up to 1280×720 from there: upscaling a
-clip that held together beats generating one that did not.
+**How long one picture can hold.** Everything in the picture drifts as
+a clip goes on, smallest things first. Over eight seconds the face melted
+at two and the whole scene was gone by four; over three, the butterflies
+melted at one second and the animals' faces by one and a half. So the
+model is only ever asked for **two seconds**, at 768×448, which is the
+size it was trained near. The finished video is scaled up to 1280×720
+from there: upscaling a clip that held together beats generating one that
+did not.
+
+**Name everything that must stay.** Whatever the prompt does not mention
+is free to drift, and it will. A prompt describing only the boy left the
+puppy, the kitten and the duckling to melt. Say who else is in the shot
+and that they stay, and say the camera does not move — without that last
+line the frame slowly pushes in on its own.
 
 A picture that has to be on screen longer is not given a longer clip. The
 clip is played forwards, then backwards, then forwards again, for as long
@@ -373,8 +381,9 @@ as it takes. A sway or a clap reads as continuous that way, the turn is
 at the moment the movement reverses where it is least visible, and a
 frame is dropped at each seam so nothing is ever held twice.
 
-Roughly: **one picture per 12 seconds** and the movement never repeats
-noticeably; beyond about 24 the notebook will tell you to add more.
+Roughly: **one picture per 8 seconds** and the movement never repeats
+noticeably; beyond about 16 the notebook will tell you to add more. More
+pictures is the honest fix for a long song — a longer clip is not.
 
 **Try one picture first.** Set `TEST_ONE_PICTURE = True` at the top of
 cell 2 and it makes a single clip from the first picture, ignores the

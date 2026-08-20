@@ -145,7 +145,7 @@ def test_catches_problems(root):
 
     print("   1 picture / 60s   :", problems[0][:52], "...")
     assert any("come round" in p for p in problems), problems
-    assert any("about 6 pictures" in p for p in problems), problems
+    assert any("about 8 pictures" in p for p in problems), problems
 
     # ------------------------------------------- no destination set at all
     fine = root / "Fine"

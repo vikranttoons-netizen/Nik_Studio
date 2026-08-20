@@ -50,7 +50,7 @@ AUDIO_SUFFIXES = (".mp3", ".m4a", ".wav", ".aac", ".ogg", ".flac")
 # pictures a song needs. (frames - 1) has to divide by 8, and the
 # forwards-and-back pair drops a frame at each end of the reversed half.
 FPS = 24
-ASKED_FOR = 3.0
+ASKED_FOR = 2.0
 
 FRAMES = max(25, round((ASKED_FOR * FPS - 1) / 8) * 8 + 1)
 
