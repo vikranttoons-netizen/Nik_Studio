@@ -409,6 +409,14 @@ the machine — the 13B where there is room, the 2B where there is not.
 | Holding your picture | drifts; small things melt within a second or two | takes `image_cond_noise_scale=0.0`, which the 2B's pipeline does not have — no noise is added to your picture before it starts, and that is the thing that lets a clip wander off it |
 | Generated at | 768×448 | 960×544 |
 
+13B in bfloat16 is 26GB and a 24GB card is a 24GB card, so simply moving
+whole components on and off does not help — the component that does not
+fit is the one you need. It is loaded the way the diffusers docs
+prescribe instead: fp8 layerwise weight-casting halves the storage and
+converts back a layer at a time, and leaf-level group offloading keeps
+only the piece being computed on the card. That is what takes it from
+26GB to something an L4 can run.
+
 Others considered and rejected:
 
 | Model | Image to video | Free Colab | Licence |

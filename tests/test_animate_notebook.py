@@ -57,6 +57,10 @@ CALLS = []
 
 LOADED = []
 
+CASTING = []
+
+OFFLOADED = []
+
 FAIL_FIRST_CALL = [False]
 
 HAS_GPU = [True]
@@ -70,12 +74,15 @@ class StandInPipeline:
     records what it was asked for so the test can check it.
     """
 
-    def __init__(self):
-        self.transformer = types.SimpleNamespace(to=lambda device: None)
+    def __init__(self, transformer=None):
+        self.transformer = transformer or types.SimpleNamespace(
+            to=lambda device: None
+        )
         self.vae = types.SimpleNamespace(
             to=lambda device: None,
             enable_tiling=lambda: None,
         )
+        self.text_encoder = types.SimpleNamespace(to=lambda device: None)
 
     def to(self, device):
         return self
@@ -129,6 +136,8 @@ def install_stand_ins(vram, ram, capability):
 
     torch = types.ModuleType("torch")
     torch.bfloat16, torch.float16 = "bfloat16", "float16"
+    torch.float8_e4m3fn = "fp8"
+    torch.device = lambda name: name
     torch.OutOfMemoryError = OutOfMemory
     torch.Generator = lambda *a, **k: types.SimpleNamespace(
         manual_seed=lambda seed: None
@@ -148,9 +157,28 @@ def install_stand_ins(vram, ram, capability):
 
     def load(model, **kw):
         LOADED.append(model)
-        return StandInPipeline()
+        return StandInPipeline(kw.get("transformer"))
+
+    class StandInTransformer:
+        def to(self, device):
+            return self
+
+        def enable_layerwise_casting(self, **kw):
+            CASTING.append(kw)
+
+        def enable_group_offload(self, **kw):
+            OFFLOADED.append(("transformer", kw))
 
     diffusers = types.ModuleType("diffusers")
+    diffusers.AutoModel = types.SimpleNamespace(
+        from_pretrained=lambda model, **kw: StandInTransformer()
+    )
+    hooks = types.ModuleType("diffusers.hooks")
+    hooks.apply_group_offloading = lambda module, **kw: OFFLOADED.append(
+        ("component", kw)
+    )
+    diffusers.hooks = hooks
+    sys.modules["diffusers.hooks"] = hooks
     diffusers.LTXImageToVideoPipeline = types.SimpleNamespace(
         from_pretrained=load
     )
@@ -226,6 +254,10 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     CALLS.clear()
 
     LOADED.clear()
+
+    CASTING.clear()
+
+    OFFLOADED.clear()
 
     FAIL_FIRST_CALL[0] = out_of_memory
 
@@ -751,6 +783,13 @@ def test_the_machine_picks_the_model(root):
 
         if expect_big:
             assert "13B-distilled" in model, model
+
+            # 13B in bfloat16 is 26GB against a 24GB card. It only fits
+            # in fp8 storage with the layers streamed on one at a time.
+            assert CASTING and CASTING[0]["storage_dtype"] == "fp8", CASTING
+            kinds = [kind for kind, _ in OFFLOADED]
+            assert kinds.count("transformer") == 1, OFFLOADED
+            assert kinds.count("component") == 2, OFFLOADED
             # Distilled: eight steps, no classifier-free guidance, and
             # no noise on the conditioning picture.
             assert all(c["num_inference_steps"] == 8 for c in calls), calls
