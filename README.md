@@ -327,10 +327,21 @@ My Drive / NikStudio / Input /
 
 ```
 # script.txt - one scene a line. A # parks a line without deleting it.
-Nik waves at the puppy while the flowers sway around them
-Nik runs down the garden path, the kitten chasing him
-Nik claps his hands as butterflies circle overhead
+He walks into a sunny flower garden and waves hello, the puppy trotting beside him, the camera does not move
+He crouches down and pats the golden puppy, which wags its tail, the kitten watching, the camera does not move
+Close up of his face as he laughs, cheeks round, the garden soft behind him, the camera does not move
 ```
+
+`colab/script_example.txt` is a full one — fourteen scenes for a two
+minute song, with the rules for writing them at the top. Copy it into
+Drive as `script.txt` and edit from there.
+
+Do not describe the character or the art style in a line: `CHARACTER`
+and `STYLE` at the top of cell 2 are put in front of every one of them,
+and that repetition is the only thing keeping him the same boy from shot
+to shot. Each line says one thing he does, who else is in the shot, and
+whether the camera moves. Anything left out, the model invents — which is
+how the puppy melted the first time.
 
 Or **give it pictures** and it animates those:
 

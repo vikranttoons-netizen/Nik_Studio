@@ -1,0 +1,49 @@
+# Nik Studio - example script
+#
+# One scene a line. Blank lines space it out. A line starting with #
+# is parked - it stays here but is not made.
+#
+# Do NOT describe Nik or the art style here. Those are set once, in
+# CHARACTER and STYLE at the top of cell 2, and are put in front of
+# every line automatically - which is the only thing keeping him the
+# same boy from shot to shot.
+#
+# What each line should say, in this order:
+#   1. ONE thing he does. Not three.
+#   2. Who else is in the shot, and that they stay.
+#   3. Whether the camera moves. Say "the camera does not move"
+#      unless you actually want it to.
+#
+# Anything you leave out, the model invents. That is how the puppy
+# melted the first time.
+#
+# For a 125 second song, twelve to sixteen scenes is right. Fewer and
+# the same clip comes back too often; the notebook will tell you.
+
+He walks into a sunny flower garden and waves hello, the puppy trotting beside him, the camera does not move
+
+He crouches down and pats the golden puppy, which wags its tail, the kitten watching from the flowers, the camera does not move
+
+Close up of his face as he laughs, cheeks round, the garden soft behind him, the camera does not move
+
+He claps his hands twice, the orange kitten sitting beside him, the flowers still, the camera does not move
+
+The little yellow duckling waddles up to him and he points at it, smiling, the camera does not move
+
+He sways from side to side, singing, the puppy and the kitten beside him, butterflies drifting past, the camera does not move
+
+Close up of the puppy barking happily, its ears bouncing, the garden behind it, the camera does not move
+
+He stamps his feet one at a time, the duckling copying him, the camera does not move
+
+He holds his arms out wide and turns slowly, the animals watching, the camera does not move
+
+Close up of the kitten meowing, whiskers twitching, flowers behind it, the camera does not move
+
+He jumps up and down with both feet, laughing, the puppy hopping beside him, the camera does not move
+
+He kneels and hugs the puppy gently, the kitten and duckling close by, the camera does not move
+
+Wide shot of all four of them standing together in the flowers, he waves, the camera does not move
+
+He blows a kiss towards us and smiles, the animals beside him, the camera does not move
