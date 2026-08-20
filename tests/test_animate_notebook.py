@@ -178,10 +178,14 @@ def cell_two():
     return "".join(notebook["cells"][2]["source"])
 
 
-def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False):
+def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
+        mounted=None):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
+
+    `mounted` stands in for /content/drive/MyDrive, so what happens when
+    the folder is not where it was expected can be tested too.
     """
 
     CALLS.clear()
@@ -191,8 +195,11 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False):
     install_stand_ins(vram, ram, capability)
 
     source = cell_two().replace(
-        'FOLDER = "/content/drive/MyDrive/NikStudio"',
+        'FOLDER = DRIVE + "/NikStudio"',
         f"FOLDER = {str(drive)!r}",
+    ).replace(
+        'DRIVE = "/content/drive/MyDrive"',
+        f"DRIVE = {str(mounted or '/content/drive/MyDrive')!r}",
     )
 
     printed = io.StringIO()
@@ -484,6 +491,80 @@ def test_without_a_song(root):
     print("\n   [OK] falls back to a fixed length per picture")
 
 
+
+def test_finds_a_folder_that_moved(root):
+
+    heading("9  A folder that is not where it was expected")
+
+    mounted = root / "Mounted"
+
+    # What the user actually has: pictures under a differently named
+    # parent, which is what a second Google account or a stray folder
+    # looks like from in here.
+    real = mounted / "Kids" / "NikStudio" / "Input"
+
+    make_input(real.parent, ["Scene01.png", "Scene02.png"])
+
+    printed, refusal, calls = run(
+        root / "Nowhere" / "NikStudio", mounted=mounted,
+    )
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "Found your pictures" in line][0])
+
+    assert not refusal, refusal
+    assert len(calls) == 2, calls
+    assert (real.parent / "Output" / "Episode.mp4").exists()
+
+    print("\n   [OK] found it, and wrote the video beside it")
+
+
+def test_says_what_it_can_see(root):
+
+    heading("10  Nothing found at all is a map, not a shrug")
+
+    mounted = root / "Bare"
+
+    for name in ("Photos", "Documents", "Colab Notebooks"):
+        (mounted / name).mkdir(parents=True)
+
+    printed, refusal, calls = run(
+        root / "Missing" / "NikStudio", mounted=mounted,
+    )
+
+    print("  ", refusal.strip().splitlines()[-3].strip())
+    print("  ", refusal.strip().splitlines()[-1].strip())
+
+    assert calls == [], calls
+    assert "same Google account" in refusal, refusal
+    assert "Photos" in refusal and "Documents" in refusal, refusal
+
+    print("\n   [OK] names the two usual causes and lists the Drive")
+
+
+def test_offers_the_choices(root):
+
+    heading("11  Several candidates are offered, not guessed between")
+
+    mounted = root / "Several"
+
+    for parent in ("First", "Second"):
+        make_input(mounted / parent / "NikStudio", ["Scene01.png"])
+
+    printed, refusal, calls = run(
+        root / "Absent" / "NikStudio", mounted=mounted,
+    )
+
+    print("  ", [line.strip() for line in refusal.splitlines()
+                 if line.strip().startswith(str(mounted))])
+
+    assert calls == [], calls
+    assert "First" in refusal and "Second" in refusal, refusal
+    assert "put the right one in FOLDER" in refusal, refusal
+
+    print("\n   [OK] two matches, so it asks instead of choosing")
+
+
 # ======================================================================
 
 def main():
@@ -504,6 +585,9 @@ def main():
         test_settings_follow_the_machine(root)
         test_out_of_memory_is_survived(root)
         test_without_a_song(root)
+        test_finds_a_folder_that_moved(root)
+        test_says_what_it_can_see(root)
+        test_offers_the_choices(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 
