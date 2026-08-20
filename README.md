@@ -397,9 +397,22 @@ words. Nothing free does real lip-sync yet.
 
 ### Which model, and why
 
+LTX comes in two sizes, and the notebook picks between them by reading
+the machine — the 13B where there is room, the 2B where there is not.
+`FORCE_MODEL = "big"` or `"small"` overrides it.
+
+| | 2B (`Lightricks/LTX-Video`) | 13B distilled (`LTX-Video-0.9.8-13B-distilled`) |
+| --- | --- | --- |
+| Runs on | anything, a free T4 included | a 24GB card with ~30GB of RAM to stream through |
+| Steps | 50 | **8** — distilled, so fewer steps and faster despite the size |
+| Guidance | 3.0 | 1.0, on a fixed schedule that came with the model |
+| Holding your picture | drifts; small things melt within a second or two | takes `image_cond_noise_scale=0.0`, which the 2B's pipeline does not have — no noise is added to your picture before it starts, and that is the thing that lets a clip wander off it |
+| Generated at | 768×448 | 960×544 |
+
+Others considered and rejected:
+
 | Model | Image to video | Free Colab | Licence |
 | ----- | -------------- | ---------- | ------- |
-| **LTX-Video (2B)** | yes | yes | commercial use free under $10M revenue |
 | CogVideoX-5B-I2V | yes | **no — crashes** | free after a free registration |
 | Wan 2.2 TI2V-5B | yes | no — wants ~24GB | Apache 2.0 |
 | CogVideoX-2B | **no**, text only | yes | Apache 2.0 |

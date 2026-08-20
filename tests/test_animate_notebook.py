@@ -55,6 +55,8 @@ class OutOfMemory(Exception):
 
 CALLS = []
 
+LOADED = []
+
 FAIL_FIRST_CALL = [False]
 
 HAS_GPU = [True]
@@ -77,6 +79,9 @@ class StandInPipeline:
 
     def to(self, device):
         return self
+
+    def enable_model_cpu_offload(self):
+        return None
 
     def __call__(self, **asked):
 
@@ -141,9 +146,16 @@ def install_stand_ins(vram, ram, capability):
     )
     sys.modules["torch"] = torch
 
+    def load(model, **kw):
+        LOADED.append(model)
+        return StandInPipeline()
+
     diffusers = types.ModuleType("diffusers")
     diffusers.LTXImageToVideoPipeline = types.SimpleNamespace(
-        from_pretrained=lambda model, **kw: StandInPipeline()
+        from_pretrained=load
+    )
+    diffusers.LTXConditionPipeline = types.SimpleNamespace(
+        from_pretrained=load
     )
     utilities = types.ModuleType("diffusers.utils")
     utilities.export_to_video = export_to_video
@@ -212,6 +224,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     """
 
     CALLS.clear()
+
+    LOADED.clear()
 
     FAIL_FIRST_CALL[0] = out_of_memory
 
@@ -455,15 +469,15 @@ def test_refuses_broken_picture(root):
 
 def test_settings_follow_the_machine(root):
 
-    heading("6  The card decides the precision - not the video size")
+    heading("6  Precision and 8-bit follow the card; size follows the model")
 
     drive = make_input(root / "Tiers", ["Scene01.png", "Scene02.png",
                                         "Scene03.png"])
 
-    for label, vram, ram, capability, precision, quantised in [
-        ("A100, plenty of RAM", 40, 83, 8, "bfloat16", False),
-        ("L4, small RAM      ", 24, 12.7, 8, "bfloat16", True),
-        ("T4                 ", 15.6, 12.7, 7, "float16", True),
+    for label, vram, ram, capability, precision, quantised, size in [
+        ("A100 40GB, 83GB RAM", 40, 83, 8, "bfloat16", False, 960),
+        ("L4 24GB, 13GB RAM  ", 24, 12.7, 8, "bfloat16", True, 768),
+        ("T4 16GB, 13GB RAM  ", 15.6, 12.7, 7, "float16", True, 768),
     ]:
         printed, refusal, calls = run(drive, vram, ram, capability)
 
@@ -472,14 +486,13 @@ def test_settings_follow_the_machine(root):
         assert precision in printed, printed
         assert ("text encoder in 8-bit" in printed) is quantised, printed
 
-        # The size the model is asked for is set by what it was trained
-        # on, and a bigger card is not a reason to push it past that -
-        # 1024x576 is where the picture came apart.
-        assert "Generated at: 768x448" in printed, printed
-        assert all(call["width"] == 768 and call["height"] == 448
-                   for call in calls), calls
+        # The size asked for comes from what the model was trained on.
+        # A bigger card is a reason to run a bigger model, never a
+        # reason to push a model past what it knows - 1024x576 on the 2B
+        # is where the picture came apart.
+        assert all(call["width"] == size for call in calls), calls
 
-        print(f"   {label}: 768x448, {precision}"
+        print(f"   {label}: {size}px wide, {precision}"
               f"{', 8-bit' if quantised else ''}")
 
         for clip in (drive / "Output" / "Clips").glob("*"):
@@ -718,6 +731,47 @@ def test_drive_refusing_to_connect(root):
     print("\n   [OK] says what to do, and that nothing was lost")
 
 
+
+def test_the_machine_picks_the_model(root):
+
+    heading("16  A card with room for the 13B gets the 13B")
+
+    drive = make_input(root / "Models", ["Scene01.png", "Scene02.png"])
+
+    for label, vram, ram, expect_big in [
+        ("L4 24GB / 57GB RAM ", 24, 57, True),
+        ("T4 16GB / 13GB RAM ", 15.6, 12.7, False),
+    ]:
+        printed, refusal, calls = run(drive, vram, ram,
+                                      8 if expect_big else 7)
+
+        assert not refusal, refusal
+
+        model = LOADED[-1]
+
+        if expect_big:
+            assert "13B-distilled" in model, model
+            # Distilled: eight steps, no classifier-free guidance, and
+            # no noise on the conditioning picture.
+            assert all(c["num_inference_steps"] == 8 for c in calls), calls
+            assert all(c["guidance_scale"] == 1.0 for c in calls), calls
+            assert all(c["image_cond_noise_scale"] == 0.0 for c in calls)
+            assert all(c["width"] == 960 for c in calls), calls
+        else:
+            assert model == "Lightricks/LTX-Video", model
+            assert all(c["num_inference_steps"] == 50 for c in calls), calls
+            assert all(c["guidance_scale"] == 3.0 for c in calls), calls
+            assert all("image_cond_noise_scale" not in c for c in calls)
+            assert all(c["width"] == 768 for c in calls), calls
+
+        print(f"   {label}: {model.split('/')[-1]}")
+
+        for clip in (drive / "Output" / "Clips").glob("*"):
+            clip.unlink()
+
+    print("\n   [OK] the big model where it fits, the small one where not")
+
+
 # ======================================================================
 
 def main():
@@ -745,6 +799,7 @@ def main():
         test_one_picture_on_its_own(root)
         test_the_refusal_offers_the_test(root)
         test_drive_refusing_to_connect(root)
+        test_the_machine_picks_the_model(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 
