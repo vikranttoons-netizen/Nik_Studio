@@ -59,6 +59,8 @@ FAIL_FIRST_CALL = [False]
 
 HAS_GPU = [True]
 
+MOUNT_FAILS = [False]
+
 
 class StandInPipeline:
     """
@@ -170,6 +172,25 @@ def install_stand_ins(vram, ram, capability):
     psutil.virtual_memory = lambda: types.SimpleNamespace(total=ram * 1e9)
     sys.modules["psutil"] = psutil
 
+    if MOUNT_FAILS[0]:
+
+        class MessageError(Exception):
+            pass
+
+        def refuse(*a, **kw):
+            raise MessageError("credential propagation was unsuccessful")
+
+        colab = types.ModuleType("google.colab")
+        colab.drive = types.SimpleNamespace(mount=refuse)
+        google = types.ModuleType("google")
+        google.colab = colab
+        sys.modules["google"] = google
+        sys.modules["google.colab"] = colab
+
+    else:
+        for name in ("google", "google.colab"):
+            sys.modules.pop(name, None)
+
 
 # ======================================================================
 
@@ -181,7 +202,7 @@ def cell_two():
 
 
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
-        mounted=None, gpu=True, test_one=False):
+        mounted=None, gpu=True, test_one=False, mount_fails=False):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -195,6 +216,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     FAIL_FIRST_CALL[0] = out_of_memory
 
     HAS_GPU[0] = gpu
+
+    MOUNT_FAILS[0] = mount_fails
 
     install_stand_ins(vram, ram, capability)
 
@@ -668,6 +691,33 @@ def test_the_refusal_offers_the_test(root):
     print("\n   [OK] the way out is in the message, not in my head")
 
 
+
+def test_drive_refusing_to_connect(root):
+
+    heading("15  Drive refusing to sign in is explained, not dumped")
+
+    drive = make_input(root / "NoDrive", ["Scene01.png", "Scene02.png"])
+
+    # The folder is not where it looks, so it has to mount - and the
+    # mount fails the way Colab fails when the browser blocks the popup.
+    _, refusal, calls = run(
+        root / "Missing" / "NikStudio",
+        mounted=root / "NotMounted",
+        mount_fails=True,
+    )
+
+    print("  ", refusal.strip().splitlines()[0])
+    print("  ", refusal.strip().splitlines()[6].strip()[:66], "...")
+
+    assert calls == [], calls
+    assert "would not connect" in refusal, refusal
+    assert "third-party cookies" in refusal, refusal
+    assert "not a problem with your files" in refusal, refusal
+    assert "Traceback" not in refusal
+
+    print("\n   [OK] says what to do, and that nothing was lost")
+
+
 # ======================================================================
 
 def main():
@@ -694,6 +744,7 @@ def main():
         test_checks_before_a_gpu_is_needed(root)
         test_one_picture_on_its_own(root)
         test_the_refusal_offers_the_test(root)
+        test_drive_refusing_to_connect(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 
