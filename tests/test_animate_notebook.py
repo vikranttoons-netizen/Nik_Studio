@@ -360,18 +360,18 @@ def test_refuses_too_few_pictures(root):
 
     assert calls == [], "the model was loaded anyway"
     assert "Stopping before the GPU is used" in refusal
-    assert "about 4 pictures" in refusal, refusal
+    assert "about 6 pictures" in refusal, refusal
 
     print("\n   [OK] refused, and said how many pictures it needs")
 
 
-def test_long_holds_lower_the_frame_rate(root):
+def test_long_holds_are_filled_by_looping(root):
 
-    heading("4b  A long hold slows the movement, it does not judder")
+    heading("4b  A long hold loops a short clip, it does not stretch one")
 
-    # 11 pictures over a two minute song: 11.4s each, which is past the
-    # 8s the model covers at 24fps but well inside the 16s it covers at
-    # 12. This is the real case that prompted it.
+    # 11 pictures over a two minute song: 11.4s each. The model is still
+    # only asked for three seconds - what it can hold - and the rest is
+    # filled forwards and back. This is the real case that prompted it.
     drive = make_input(
         root / "Long",
         [f"Scene{n:02d}.png" for n in range(1, 12)],
@@ -382,21 +382,30 @@ def test_long_holds_lower_the_frame_rate(root):
 
     assert not refusal, refusal
 
-    print("  ", [line.strip() for line in printed.splitlines()
-                 if "fps instead" in line][0])
+    # The model must never be asked for a long clip, whatever the slot.
+    asked = {call["num_frames"] for call in calls}
 
-    assert "generated at" in printed, printed
-    assert "stretched" not in printed, printed
+    print(f"   frames asked for: {asked}  (never more, whatever the slot)")
+
+    assert asked == {73}, asked
+
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "back and forth" in line][0][:76], "...")
+
+    assert "back and forth" in printed, printed
 
     final = drive / "Output" / "Episode.mp4"
 
     length = float(probe(final, "format=duration")[0])
+    size = probe(final, "stream=width,height")
 
-    print(f"   {len(calls)} clips -> {length:.1f}s against a 125s song")
+    print(f"   {len(calls)} clips -> {length:.1f}s at {size[0]}x{size[1]} "
+          "against a 125s song")
 
     assert abs(length - 125) < 1.5, length
+    assert size[:2] == ["1280", "720"], size
 
-    print("\n   [OK] no stretching at all, and the song still fits")
+    print("\n   [OK] short clips, looped, and the song still fits")
 
 
 def test_refuses_broken_picture(root):
@@ -420,34 +429,37 @@ def test_refuses_broken_picture(root):
 
 def test_settings_follow_the_machine(root):
 
-    heading("6  The card and the RAM choose the settings")
+    heading("6  The card decides the precision - not the video size")
 
     drive = make_input(root / "Tiers", ["Scene01.png", "Scene02.png",
                                         "Scene03.png"])
 
-    for label, vram, ram, capability, expect in [
-        ("A100, plenty of RAM", 40, 83, 8, ("1024x576", "bfloat16", False)),
-        ("L4, small RAM      ", 24, 12.7, 8, ("1024x576", "bfloat16", True)),
-        ("T4                 ", 15.6, 12.7, 7, ("704x384", "float16", True)),
+    for label, vram, ram, capability, precision, quantised in [
+        ("A100, plenty of RAM", 40, 83, 8, "bfloat16", False),
+        ("L4, small RAM      ", 24, 12.7, 8, "bfloat16", True),
+        ("T4                 ", 15.6, 12.7, 7, "float16", True),
     ]:
-        printed, refusal, _ = run(drive, vram, ram, capability)
+        printed, refusal, calls = run(drive, vram, ram, capability)
 
         assert not refusal, refusal
 
-        size, precision, quantised = expect
-
-        assert f"Video size  : {size}" in printed, printed
         assert precision in printed, printed
         assert ("text encoder in 8-bit" in printed) is quantised, printed
 
-        print(f"   {label}: {size}, {precision}"
+        # The size the model is asked for is set by what it was trained
+        # on, and a bigger card is not a reason to push it past that -
+        # 1024x576 is where the picture came apart.
+        assert "Generated at: 768x448" in printed, printed
+        assert all(call["width"] == 768 and call["height"] == 448
+                   for call in calls), calls
+
+        print(f"   {label}: 768x448, {precision}"
               f"{', 8-bit' if quantised else ''}")
 
-        # Each tier starts from clean clips, or the second would skip.
         for clip in (drive / "Output" / "Clips").glob("*"):
             clip.unlink()
 
-    print("\n   [OK] nothing to tune by hand")
+    print("\n   [OK] the card changes how it fits, not what it asks for")
 
 
 def test_out_of_memory_is_survived(root):
@@ -614,7 +626,7 @@ def main():
         test_resume(root)
         test_changed_picture_is_not_skipped(root)
         test_refuses_too_few_pictures(root)
-        test_long_holds_lower_the_frame_rate(root)
+        test_long_holds_are_filled_by_looping(root)
         test_refuses_broken_picture(root)
         test_settings_follow_the_machine(root)
         test_out_of_memory_is_survived(root)

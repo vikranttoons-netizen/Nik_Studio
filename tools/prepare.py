@@ -35,18 +35,29 @@ WARN = "[WARN]"
 PICTURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
 AUDIO_SUFFIXES = (".mp3", ".m4a", ".wav", ".aac", ".ogg", ".flac")
 
-# How long one clip can hold the screen, in seconds.
+# How long one picture can hold the screen, in seconds.
 #
-# The model makes a fixed number of frames. At the full 24 a second they
-# cover SMOOTH_SECONDS; generated slower, the same frames cover up to
-# LONGEST_CLIP, which is movement that is genuinely slower rather than
-# frames repeated. Only past that does the finished clip have to be
-# stretched, and stretching is what judders.
+# The model is only ever asked for a short clip, because that is as far
+# as it holds your picture before it starts inventing - at eight seconds
+# the face melted at two and the scene was gone by four. Anything longer
+# is filled by playing that clip forwards, then backwards, then forwards
+# again.
 #
-# These match the notebook on a 24GB card. A smaller card makes fewer
-# frames, and says so itself before it starts.
-SMOOTH_SECONDS = 8.0
-LONGEST_CLIP = 16.0
+# So the question is not "how long a clip" but "how many times does the
+# same movement come round". Twice is unnoticeable. Four times is not.
+# Worked out the same way the notebook does it, from the frames the
+# model is actually asked for, so the two never disagree about how many
+# pictures a song needs. (frames - 1) has to divide by 8, and the
+# forwards-and-back pair drops a frame at each end of the reversed half.
+FPS = 24
+ASKED_FOR = 3.0
+
+FRAMES = max(25, round((ASKED_FOR * FPS - 1) / 8) * 8 + 1)
+
+CLIP_SECONDS = FRAMES / FPS
+BOUNCE_SECONDS = (2 * FRAMES - 2) / FPS
+
+COMFORTABLE = BOUNCE_SECONDS * 2
 
 
 # ----------------------------------------------------------------------
@@ -355,39 +366,36 @@ def report(source, destination):
         print(f"\n       {len(pictures)} picture(s) over {seconds:.0f}s "
               f"= {share:.1f}s each")
 
-        needed = max(1, int(seconds / LONGEST_CLIP + 0.999))
+        needed = max(1, int(seconds / COMFORTABLE + 0.999))
 
-        if share > LONGEST_CLIP * 1.5:
+        times = share / BOUNCE_SECONDS
+
+        if times > 4:
             problems.append(
-                f"{share:.0f}s per picture, but one clip covers at most "
-                f"{LONGEST_CLIP:.0f}s, so each would have to be\n"
-                f"           stretched {share / LONGEST_CLIP:.1f}x and "
-                f"would judder.\n"
+                f"{share:.0f}s per picture, but a clip covers "
+                f"{BOUNCE_SECONDS:.1f}s, so the same movement\n"
+                f"           would come round {times:.0f} times over and be "
+                f"obvious.\n"
                 f"           Use about {needed} pictures for a "
                 f"{seconds:.0f}s song."
             )
 
-        elif share > LONGEST_CLIP:
+        elif times > 2:
             notes.append(
-                f"{share:.1f}s a picture is past the {LONGEST_CLIP:.0f}s one "
-                f"clip covers, so each will be stretched "
-                f"{share / LONGEST_CLIP:.2f}x on top of running at its "
-                f"slowest. {needed} pictures would need none of that."
+                f"{share:.1f}s a picture against a {BOUNCE_SECONDS:.1f}s "
+                f"clip means the movement comes round {times:.1f} times. "
+                f"Watchable, but {needed} pictures would be better."
             )
 
-        elif share > SMOOTH_SECONDS:
-            print(
-                f"{OK} clips will be generated slower rather than stretched"
-            )
-            print(
-                f"       {share:.1f}s a picture is past the "
-                f"{SMOOTH_SECONDS:.0f}s covered at 24fps, so the movement\n"
-                f"       itself is made slower. No frames are repeated and "
-                f"nothing judders."
-            )
+        elif share > CLIP_SECONDS:
+            print(f"{OK} each clip plays forwards and back to fill "
+                  f"{share:.1f}s")
+            print(f"       The model is only asked for "
+                  f"{CLIP_SECONDS:.1f}s, which is as long as it holds\n"
+                  f"       your picture. Nothing is stretched.")
 
         else:
-            print(f"{OK} clips will run at the full frame rate")
+            print(f"{OK} one clip covers each picture outright")
 
     return problems, notes, pictures, song, seconds
 
