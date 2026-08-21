@@ -380,6 +380,14 @@ one audio file is taken as the song. The result lands in
 you open Colab: it counts the scenes in a script the same way the
 notebook does, and carries the script across with the song.
 
+**Drive is optional.** If it will not connect — Colab's sign-in popup is
+routinely blocked by third-party cookie settings, and the error it gives
+says nothing useful — the notebook says what would fix it and then
+carries on without it. It asks you to upload the script, the song and any
+pictures straight from your PC, and downloads the finished video back at
+the end. The only thing lost is that a session's clips do not survive it,
+so a second run generates them again.
+
 **Check on a CPU runtime first.** Colab charges for a GPU from the moment
 it connects, whatever you run on it, so the notebook does everything that
 does not need one before it asks for one:

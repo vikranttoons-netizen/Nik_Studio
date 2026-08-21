@@ -69,6 +69,10 @@ MOUNT_FAILS = [False]
 
 BEATS = [None]
 
+UPLOADS = [{}]
+
+DOWNLOADED = []
+
 
 class StandInPipeline:
     """
@@ -233,8 +237,18 @@ def install_stand_ins(vram, ram, capability):
         def refuse(*a, **kw):
             raise MessageError("credential propagation was unsuccessful")
 
+        def hand_over(names):
+            """What files.upload() does: puts them in the cwd."""
+            for name, data in UPLOADS[0].items():
+                Path(name).write_bytes(data)
+            return dict(UPLOADS[0])
+
         colab = types.ModuleType("google.colab")
         colab.drive = types.SimpleNamespace(mount=refuse)
+        colab.files = types.SimpleNamespace(
+            upload=lambda: hand_over(UPLOADS[0]),
+            download=lambda path: DOWNLOADED.append(path),
+        )
         google = types.ModuleType("google")
         google.colab = colab
         sys.modules["google"] = google
@@ -256,7 +270,8 @@ def cell_two():
 
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
-        beats=None, short=False, full_size=False):
+        beats=None, short=False, full_size=False,
+        uploads=None):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -280,6 +295,10 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     MOUNT_FAILS[0] = mount_fails
 
     BEATS[0] = beats
+
+    UPLOADS[0] = uploads or {}
+
+    DOWNLOADED.clear()
 
     install_stand_ins(vram, ram, capability)
 
@@ -831,28 +850,39 @@ def test_the_refusal_offers_the_test(root):
 
 def test_drive_refusing_to_connect(root):
 
-    heading("15  Drive refusing to sign in is explained, not dumped")
+    heading("15  Drive refusing to sign in no longer stops the run")
 
-    drive = make_input(root / "NoDrive", ["Scene01.png", "Scene02.png"])
-
-    # The folder is not where it looks, so it has to mount - and the
-    # mount fails the way Colab fails when the browser blocks the popup.
-    _, refusal, calls = run(
+    # What Colab does when the browser blocks the sign-in popup. Asking
+    # someone to fight their cookie settings before they can see a
+    # single clip is not a reasonable thing to do, so it carries on with
+    # the session's own disk instead.
+    printed, refusal, calls = run(
         root / "Missing" / "NikStudio",
         mounted=root / "NotMounted",
         mount_fails=True,
+        uploads={
+            "script.txt": b"He waves at the puppy\nHe claps his hands\n",
+        },
     )
 
-    print("  ", refusal.strip().splitlines()[0])
-    print("  ", refusal.strip().splitlines()[6].strip()[:66], "...")
+    assert not refusal, refusal
 
-    assert calls == [], calls
-    assert "would not connect" in refusal, refusal
-    assert "third-party cookies" in refusal, refusal
-    assert "not a problem with your files" in refusal, refusal
-    assert "Traceback" not in refusal
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "would not connect" in line][0][:66], "...")
+    print("  ", [line.strip() for line in printed.splitlines()
+                 if "Carrying on" in line][0][:66], "...")
 
-    print("\n   [OK] says what to do, and that nothing was lost")
+    assert "third-party cookies" in printed, printed
+    assert "Carrying on without it" in printed, printed
+
+    # And it really did the work, from files handed straight over.
+    assert len(calls) == 2, calls
+
+    print(f"   {len(DOWNLOADED)} file(s) handed back to the PC")
+
+    assert DOWNLOADED, "the video was left in a session about to be deleted"
+
+    print("\n   [OK] no Drive, no stopping - uploaded in, downloaded out")
 
 
 
