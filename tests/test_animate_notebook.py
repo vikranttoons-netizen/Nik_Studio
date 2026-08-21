@@ -984,12 +984,20 @@ def test_written_scenes(root):
     # Nothing is sent but words - there is no picture to condition on.
     assert all("image" not in call for call in calls), calls
 
-    # The character and the style lead every one, or the boy is a
-    # different boy in every clip.
-    assert all(call["prompt"].startswith("Nik,") for call in calls), \
+    # The ACTION leads. Burying it behind sixty words of costume
+    # description got back a boy standing still in an empty field, so
+    # the order is the point and the test holds it.
+    assert calls[0]["prompt"].startswith("Nik waves at the puppy"), \
         calls[0]["prompt"][:80]
-    assert all("Pixar" in call["prompt"] for call in calls)
-    assert "chasing him" in calls[1]["prompt"], calls[1]["prompt"]
+    assert calls[1]["prompt"].startswith("Nik runs down the garden path"), \
+        calls[1]["prompt"][:80]
+
+    # The character and the style are still in every one, behind it -
+    # they are what keeps him the same boy from clip to clip.
+    assert all("chubby cheerful 3 year old" in call["prompt"]
+               for call in calls), calls[0]["prompt"]
+    assert all("3D rendered CGI animation" in call["prompt"]
+               for call in calls), calls[0]["prompt"]
 
     # Three sentences, not one run-on. Without the full stops the
     # description ran straight into the action - "blue canvas sneakers

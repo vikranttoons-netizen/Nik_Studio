@@ -454,7 +454,10 @@ melted at one second and the animals' faces by one and a half. So the
 model is only ever asked for **two seconds**, and the edit cuts away
 before there is anything to see.
 
-**The edit.** `SHOT_SECONDS` (2.8) is how long one shot holds. Beats come
+**The edit.** `SHOT_SECONDS` (2.8) is how long one shot holds. Two of the
+six camera moves are `hold` — a slow push on every single shot for two
+minutes is exhausting — and the ones that do move now travel 6% rather
+than 16%, which reads as a drift instead of a lurch. Beats come
 from `librosa`; without them it falls back to an even grid and says so,
 rather than claiming a beat it did not find. Every shot gets a slow
 camera move — push in, pan, pull out — cycling, so coming back to a clip
@@ -464,13 +467,25 @@ which is what YouTube normalises to; an unmastered upload just sounds
 quiet next to a channel that did it.
 
 A vertical 1080×1920 cut of the first 55 seconds is written alongside it
-for Shorts. Turn it off with `MAKE_SHORT = False`.
+for Shorts. The whole 16:9 frame is kept, set against a blurred blow-up
+of itself — cutting a 9:16 slice out of the middle instead throws away
+two thirds of the picture and magnifies the rest by nearly two, which is
+why the vertical version looked far more zoomed in than the wide one.
+Turn it off with `MAKE_SHORT = False`.
 
 **The watermark.** LTX 0.9.8 distilled was trained on captioned video and
 stamps a line of garbled caption text along the bottom of everything it
 makes. No negative prompt shifts it. The bottom 14% is cut off every clip
 and the edit re-frames around what is left.
 
+
+**Put the action first.** The prompt is the scene line, then the
+character, then the style — in that order. It was character-first, and a
+clip came back of a boy standing still in an empty field: no puppy, no
+flowers, none of what the line asked for. A video model weighs the front
+of a prompt hardest, and this one weighs everything weakly, so sixty
+words of costume description in front of the one thing that is meant to
+happen is throwing it away.
 
 **Name everything that must stay.** Whatever the prompt does not mention
 is free to drift, and it will. A prompt describing only the boy left the
