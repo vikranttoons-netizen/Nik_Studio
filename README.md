@@ -334,7 +334,14 @@ Close up of his face as he laughs, cheeks round, the garden soft behind him, the
 
 `colab/script_example.txt` is a full one — fourteen scenes for a two
 minute song, with the rules for writing them at the top. Copy it into
-Drive as `script.txt` and edit from there.
+Drive and edit from there.
+
+Its name barely matters: **any `.txt` in the Input folder is taken as the
+script**, preferring one called `script`. Windows hides extensions, so
+renaming a file to `script.txt` in Explorer quietly produces
+`script.txt.txt`, and Drive is case sensitive, so `Script.txt` is a
+different file again. There is no other reason for a `.txt` to be in
+there, so all of them work.
 
 Do not describe the character or the art style in a line: `CHARACTER`
 and `STYLE` at the top of cell 2 are put in front of every one of them,

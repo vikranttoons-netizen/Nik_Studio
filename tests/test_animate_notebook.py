@@ -1023,6 +1023,45 @@ def test_the_vertical_cut(root):
     print("\n   [OK] both cuts written, and the tall one is under a minute")
 
 
+
+def test_the_script_under_any_name(root):
+
+    heading("20  The notebook finds the script whatever it is called")
+
+    for number, name in enumerate(
+        ("script.txt.txt", "Script.txt", "my scenes.txt"), start=1
+    ):
+        drive = root / f"Named{number}"
+
+        inside = drive / "Input"
+        inside.mkdir(parents=True)
+
+        (inside / name).write_text(
+            "He waves at the puppy\n"
+            "He claps his hands\n"
+            "He jumps up and down\n",
+            encoding="utf-8",
+        )
+
+        subprocess.run(
+            [
+                find_ffmpeg(), "-y", "-loglevel", "error",
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=19",
+                str(inside / "song.mp3"),
+            ],
+            check=True,
+        )
+
+        printed, refusal, calls = run(drive)
+
+        assert not refusal, (name, refusal)
+        assert len(calls) == 3, (name, calls)
+
+        print(f"   {name:<16} -> 3 scene(s), no pictures needed")
+
+    print("\n   [OK] Explorer's hidden extension cannot break it")
+
+
 # ======================================================================
 
 def main():
@@ -1056,6 +1095,7 @@ def main():
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)
+        test_the_script_under_any_name(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 

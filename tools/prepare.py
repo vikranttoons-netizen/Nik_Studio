@@ -102,12 +102,30 @@ def songs_in(folder):
 
 
 def script_in(folder):
-    """A script.txt, if there is one, and the scenes written in it."""
+    """
+    The script and the scenes in it, whatever it ended up being called.
 
-    script = folder / "script.txt"
+    Not `folder / "script.txt"`. Windows hides extensions, so renaming a
+    file to "script.txt" in Explorer quietly produces script.txt.txt;
+    Drive is case sensitive, so Script.txt is a different file. There is
+    no other reason for a .txt to be in a folder of pictures, so any of
+    them is the script - preferring one at least called script.
+    """
 
-    if not script.is_file():
+    texts = sorted(
+        (item for item in folder.iterdir()
+         if item.is_file() and item.suffix.lower() == ".txt"),
+        key=natural_key,
+    )
+
+    named = [text for text in texts if text.stem.lower().startswith("script")]
+
+    texts = named or texts
+
+    if not texts:
         return None, []
+
+    script = texts[0]
 
     scenes = [
         line.strip()

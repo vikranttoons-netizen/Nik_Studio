@@ -494,6 +494,46 @@ def test_a_written_script(root):
     print("\n   [OK] three scenes, the song, and the comment kept intact")
 
 
+
+def test_the_script_under_any_name(root):
+
+    heading("12  The script is found whatever Windows called it")
+
+    # Renaming to "script.txt" in Explorer, with extensions hidden,
+    # quietly produces script.txt.txt. Drive is case sensitive, so
+    # Script.txt is a different file again.
+    for name in ("script.txt", "script.txt.txt", "Script.txt",
+                 "my scenes.txt"):
+
+        folder = root / "Named" / name.replace(".", "_")
+        folder.mkdir(parents=True)
+
+        (folder / name).write_text(
+            "He waves at the puppy\nHe claps his hands\n",
+            encoding="utf-8",
+        )
+
+        make_image(folder / "Scene01.png")
+
+        script, scenes = prepare.script_in(folder)
+
+        print(f"   {name:<16} -> {script.name if script else None}, "
+              f"{len(scenes)} scene(s)")
+
+        assert script is not None, name
+        assert script.name == name, (script.name, name)
+        assert len(scenes) == 2, scenes
+
+    # A folder with no text at all still says so.
+    bare = root / "Named" / "bare"
+    bare.mkdir(parents=True)
+    make_image(bare / "Scene01.png")
+
+    assert prepare.script_in(bare) == (None, [])
+
+    print("\n   [OK] four spellings found, and none invented")
+
+
 # ======================================================================
 
 def main():
@@ -513,6 +553,7 @@ def main():
         test_tidies_in_place(root)
         test_song_with_awkward_tags(root)
         test_a_written_script(root)
+        test_the_script_under_any_name(root)
 
     print("\nALL PREPARE TESTS PASSED")
 
