@@ -352,6 +352,19 @@ and `STYLE` at the top of cell 2 are put in front of every one of them,
 and that repetition is the only thing keeping him the same boy from shot
 to shot.
 
+**The distilled model does not read your negative prompt.** It runs at
+`guidance_scale = 1.0`, which is where classifier-free guidance stops
+happening: the negative prompt is not used at all, and the positive one
+steers only weakly. That is worth knowing before spending an afternoon
+rewording a style — two attempts at fixing the art style that way barely
+moved it, because the words were hardly being read.
+
+`USE_GUIDED_MODEL = True` switches to `LTX-Video-0.9.7-dev`, which is not
+distilled: guidance is 3.5, the style words pull, and the negative prompt
+is obeyed. It takes thirty steps instead of eight, so a clip is about
+four times slower. Try one shot with it before committing to a song. The
+notebook prints which of the two you are on and what it means.
+
 **`STYLE` decides whether it looks expensive.** It used to end with
 "cheerful children's cartoon", and that is exactly the phrase that
 fetched back flat, cheap-looking shading — it is what most of the
