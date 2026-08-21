@@ -343,10 +343,24 @@ renaming a file to `script.txt` in Explorer quietly produces
 different file again. There is no other reason for a `.txt` to be in
 there, so all of them work.
 
+`colab/script_prompt.txt` is the brief to hand a language model if you
+would rather it wrote the scenes — it encodes every rule below, and its
+answer goes straight into `script.txt` unedited.
+
 Do not describe the character or the art style in a line: `CHARACTER`
 and `STYLE` at the top of cell 2 are put in front of every one of them,
 and that repetition is the only thing keeping him the same boy from shot
-to shot. Each line says one thing he does, who else is in the shot, and
+to shot.
+
+**`STYLE` decides whether it looks expensive.** It used to end with
+"cheerful children's cartoon", and that is exactly the phrase that
+fetched back flat, cheap-looking shading — it is what most of the
+training data with that look calls itself. Naming the *craft* rather than
+the audience — "3D animated feature film still, Pixar and DreamWorks
+quality rendering, subsurface scattering, global illumination, volumetric
+sunlight" — is what pulls it towards the render you want, and the flat
+look is pushed away in the negative prompt rather than merely left
+unasked for. Each line says one thing he does, who else is in the shot, and
 whether the camera moves. Anything left out, the model invents — which is
 how the puppy melted the first time.
 
