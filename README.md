@@ -231,6 +231,7 @@ next thing to do.
 ## Testing
 
 ```powershell
+python tests\test_blender.py
 python tests\test_render_pipeline.py
 python tests\test_video_pipeline.py
 python tests\test_workspace_ui.py
@@ -556,6 +557,71 @@ from the GPU's compute capability rather than from
 `torch.cuda.is_bf16_supported()`, which answers `True` on a T4 — torch
 emulates bfloat16 in software there instead of refusing, and the
 emulation is slow enough to turn a twenty minute run into an afternoon.
+
+## The Blender half
+
+`blender/nik_blender.py` renders the clips from a rigged 3D character
+instead of from a video model. Everything after it — the beat cut, the
+camera, the song, the encode, the vertical cut — is the pipeline above,
+unchanged.
+
+```powershell
+pip install bpy
+python blender\nik_blender.py template Nik.blend
+python blender\nik_blender.py render Nik.blend script.txt Clips\
+```
+
+**Why.** A video model cannot hold a character still from one shot to
+the next, cannot reliably be told what to do, and cannot lip sync. A
+rigged character does all three by construction: it is the same model
+every time, the movement is animated rather than guessed, and mouth
+shapes can be driven from the song. That is how the channels this is
+meant to compete with are actually made — they are 3D animation, not AI.
+
+### What your .blend must contain
+
+Build to this and the tool drives it.
+
+| | |
+| --- | --- |
+| One armature | the character's rig. Any name. |
+| Actions on it | `idle`, `walk`, `wave`, `clap`, `jump`, `sway`, `point`, `crouch`, `nod`, `spin`. Only `idle` is required — it is what plays for a movement you have not animated. |
+| Three cameras | `Cam_Wide`, `Cam_Medium`, `Cam_Close` |
+
+Everything else — the set, the lights, the animals — is yours and is
+left alone.
+
+`template` writes a .blend shaped exactly like that, with a stand-in body
+made of spheres. It is not a character; it is there so the pipeline can
+be run today and so there is something to compare against while you
+build the real one. Open it, see what is named what, replace the body.
+
+### How a line becomes a shot
+
+The action comes from the **first clause only** — everything up to the
+first comma. A script line is written as *what he does, who else is
+there, what the background is doing*, and reading the whole line picks
+up the wrong verb: "Close up of the puppy barking, Nik stands nearby,
+flowers nod in the breeze" was making the boy nod.
+
+Within that clause the **earliest verb wins**, because that is what the
+line is about — "he crouches down and holds out one hand" is a crouch,
+not a point.
+
+The rig's own action names count too, so adding a `twirl` action to the
+.blend makes a line saying "twirls" use it, with no change here.
+
+The camera comes from how the line opens: `Wide shot of` → `Cam_Wide`,
+`Close up of` → `Cam_Close`, anything else → `Cam_Medium`.
+
+### Lip sync
+
+Not built yet, and it is the next thing. [Rhubarb Lip
+Sync](https://github.com/DanielSWolf/rhubarb-lip-sync) is MIT licensed
+and reads an audio file into a list of mouth shapes with timings; the
+rig needs a pose for each shape and the tool sets the keys. That is how
+this is done in 3D — the AI face models are trained on real faces and
+mangle a stylised one.
 
 ## Not built yet
 

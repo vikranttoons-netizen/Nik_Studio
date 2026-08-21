@@ -19,3 +19,17 @@ imageio-ffmpeg>=0.5
 #   pip install torch --index-url https://download.pytorch.org/whl/cu121
 #   pip install diffusers transformers accelerate safetensors
 # ----------------------------------------------------------------------
+
+# ----------------------------------------------------------------------
+# Optional: the Blender half (blender/nik_blender.py).
+#
+# A rigged 3D character is the only thing that holds a character still
+# from shot to shot, does the movement you actually asked for, and can
+# be lip synced. This is the same Blender you download for the desktop,
+# as a Python package, so a script can drive it.
+#
+#   pip install bpy
+#
+# Big (about 500MB) and tied to one Python version, which is why it is
+# not installed by default.
+# ----------------------------------------------------------------------
