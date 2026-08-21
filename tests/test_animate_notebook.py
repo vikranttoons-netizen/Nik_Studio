@@ -271,7 +271,7 @@ def cell_two():
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
-        uploads=None):
+        uploads=None, local=None):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -308,6 +308,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         'DRIVE = "/content/drive/MyDrive"',
         f"DRIVE = {str(mounted or '/content/drive/MyDrive')!r}",
+    ).replace(
+        'LOCAL = "/content/NikStudio"',
+        f"LOCAL = {str(local or '/content/NikStudio')!r}",
     ).replace(
         "TEST_ONE_PICTURE = False",
         f"TEST_ONE_PICTURE = {test_one}",
@@ -860,6 +863,11 @@ def test_drive_refusing_to_connect(root):
         root / "Missing" / "NikStudio",
         mounted=root / "NotMounted",
         mount_fails=True,
+        # Where the run lands without Drive. Pinned to this test's own
+        # folder: on the real thing it is /content/NikStudio, and one
+        # test leaving clips there is another test finding them already
+        # made and generating nothing.
+        local=root / "NoDriveSession",
         uploads={
             "script.txt": b"He waves at the puppy\nHe claps his hands\n",
         },
