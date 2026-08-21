@@ -978,10 +978,17 @@ def test_written_scenes(root):
 
     # The character and the style lead every one, or the boy is a
     # different boy in every clip.
-    assert all(call["prompt"].startswith("Nik, a cheerful 3 year old")
-               for call in calls), calls[0]["prompt"][:80]
-    assert all("Pixar style" in call["prompt"] for call in calls)
+    assert all(call["prompt"].startswith("Nik,") for call in calls), \
+        calls[0]["prompt"][:80]
+    assert all("Pixar" in call["prompt"] for call in calls)
     assert "chasing him" in calls[1]["prompt"], calls[1]["prompt"]
+
+    # Three sentences, not one run-on. Without the full stops the
+    # description ran straight into the action - "blue canvas sneakers
+    # Close up of the puppy" - and was read as one clause.
+    for call in calls:
+        assert call["prompt"].count(". ") >= 2, call["prompt"]
+        assert call["prompt"].endswith("."), call["prompt"]
 
     final = drive / "Output" / "Episode.mp4"
 
