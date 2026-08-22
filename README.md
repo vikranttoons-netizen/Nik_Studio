@@ -353,18 +353,17 @@ and `STYLE` at the top of cell 2 are put in front of every one of them,
 and that repetition is the only thing keeping him the same boy from shot
 to shot.
 
-**The distilled model does not read your negative prompt.** It runs at
-`guidance_scale = 1.0`, which is where classifier-free guidance stops
-happening: the negative prompt is not used at all, and the positive one
-steers only weakly. That is worth knowing before spending an afternoon
-rewording a style — two attempts at fixing the art style that way barely
-moved it, because the words were hardly being read.
+**The fast model does not read your negative prompt.** `FAST_MODEL =
+True` runs LTX 13B distilled at `guidance_scale = 1.0`, which is where
+classifier-free guidance stops happening: the negative prompt is not
+used at all, and the positive one steers only weakly. That is worth
+knowing before spending an afternoon rewording a style — two attempts at
+fixing the art style that way barely moved it, because the words were
+hardly being read.
 
-`USE_GUIDED_MODEL = True` switches to `LTX-Video-0.9.7-dev`, which is not
-distilled: guidance is 3.5, the style words pull, and the negative prompt
-is obeyed. It takes thirty steps instead of eight, so a clip is about
-four times slower. Try one shot with it before committing to a song. The
-notebook prints which of the two you are on and what it means.
+The default is Wan 2.2 at `guidance_scale = 5.0`: the style words pull
+and the negative prompt is obeyed. The notebook prints which of the two
+you are on and what it means.
 
 **`STYLE` decides whether it looks expensive.** It used to end with
 "cheerful children's cartoon", and that is exactly the phrase that
@@ -452,14 +451,26 @@ small-RAM runtime dies just the same. There is nothing to tune.
 a clip goes on, smallest things first. Over eight seconds the face melted
 at two and the whole scene was gone by four; over three, the butterflies
 melted at one second and the animals' faces by one and a half. So the
-model is only ever asked for **two seconds**, and the edit cuts away
-before there is anything to see.
+model is only ever asked for **two seconds** on LTX, and the edit cuts
+away before there is anything to see. Wan drifts far less, so it is
+asked for one take slightly longer than a whole shot instead.
 
 **The edit.** `SHOT_SECONDS` (2.8) is how long one shot holds. One of
 the six camera moves is a `hold`; the rest travel 11%. That number has
 been wrong twice: 16% was a lurch, and 6% took the whole video down to a
 third of the movement it had, because this model barely moves on its own
 and the camera was carrying all of it.
+
+**Movement, as a number.** The run ends by printing two of them — the
+motion in the finished video and the motion in one clip straight from
+the model — because "it is still not right" is not something anyone can
+act on and a video is not always something you can send. Every frame is
+subtracted from the one before it and what is left is averaged, so a
+photograph scores 0. The LTX videos scored between 3 and 10; the
+children's channels this is aimed at score 15 to 20. Two numbers rather
+than one because they separate the two possible faults, which need
+opposite fixes: the model not moving anything, and the edit not doing
+enough with what it was given.
 
 **The beat.** The cuts land on the beat, but between cuts nothing was
 answering the music — the picture simply sat there. Every beat now gives
@@ -541,35 +552,50 @@ words. Nothing free does real lip-sync yet.
 
 ### Which model, and why
 
-LTX comes in two sizes, and the notebook picks between them by reading
-the machine — the 13B where there is room, the 2B where there is not.
-`FORCE_MODEL = "big"` or `"small"` overrides it.
+**Wan 2.2 TI2V-5B is the default on a card with room for it.** Every
+video this notebook made before it was LTX, and the complaint about
+every one of them was the same: not enough happens. That is not a
+prompting fault better words would have fixed. LTX 13B is built to hold
+a picture steady and it is very good at it — ask it for a parade and it
+gives you a photograph of one. Wan is trained on movement, is Apache 2.0
+with no revenue ceiling attached, and is a third of the size, so it
+needs none of the fp8 machinery the LTX 13B did: no component is bigger
+than the card, and whole-component offloading is enough.
 
-The 13B itself comes two ways, and the **obedient one is the default**.
-The distilled version needs eight steps rather than thirty, which is four
-times faster, and pays for it with `guidance_scale = 1.0` — where there
-is no classifier-free guidance at all, so the negative prompt is not read
-and the positive one steers only weakly. That was the default behind a
-switch you had to remember, and it went unremembered three runs running,
-which is a bad setting rather than a bad memory. `FAST_MODEL = True`
-buys the speed back knowingly: about 12 minutes for sixteen shots
-instead of 42, for a video that half reads its own script.
+The notebook still reads the machine — `FORCE_MODEL = "big"` or
+`"small"` overrides it — and `FAST_MODEL = True` buys speed back
+knowingly.
 
-| | 2B (`Lightricks/LTX-Video`) | 13B distilled (`LTX-Video-0.9.8-13B-distilled`) |
-| --- | --- | --- |
-| Runs on | anything, a free T4 included | a 24GB card with ~30GB of RAM to stream through |
-| Steps | 50 | **8** — distilled, so fewer steps and faster despite the size |
-| Guidance | 3.0 | 1.0, on a fixed schedule that came with the model |
-| Holding your picture | drifts; small things melt within a second or two | takes `image_cond_noise_scale=0.0`, which the 2B's pipeline does not have — no noise is added to your picture before it starts, and that is the thing that lets a clip wander off it |
-| Generated at | 768×448 | 960×544 |
+| | Wan 2.2 TI2V-5B *(default)* | LTX 13B distilled *(`FAST_MODEL`)* | LTX 2B *(small cards)* |
+| --- | --- | --- | --- |
+| Runs on | a 24GB card, ~30GB RAM | the same | anything, a free T4 included |
+| Steps | 30 | **8** — distilled | 50 |
+| Guidance | 5.0 — the negative prompt is read | 1.0 — it is not read at all | 3.0 |
+| Movement | what it is built for | holds still; that is what it is built for | drifts rather than moves |
+| Generated at | 832×480 | 960×544 | 768×448 |
+| Clip length | 3.0s — a whole shot in one take | 2.0s, played forwards and back | 2.0s, played forwards and back |
+| Sixteen shots | about an hour | about 12 minutes | — |
+| Licence | Apache 2.0 | free under $10M revenue | free under $10M revenue |
 
-13B in bfloat16 is 26GB and a 24GB card is a 24GB card, so simply moving
-whole components on and off does not help — the component that does not
-fit is the one you need. It is loaded the way the diffusers docs
-prescribe instead: fp8 layerwise weight-casting halves the storage and
-converts back a layer at a time, and leaf-level group offloading keeps
-only the piece being computed on the card. That is what takes it from
-26GB to something an L4 can run.
+Two details that are the model's own instructions rather than choices:
+the VAE is kept in **float32** (in bfloat16 it returns blotchy colour),
+and the scheduler runs at **`flow_shift = 5.0`**. The size divides by 32
+both ways because the VAE compresses 16× in space and the patch size
+doubles that again, and `(frames - 1)` divides by 4 rather than LTX's 8.
+
+**The loop was itself part of the problem.** A two-second clip played
+forwards, then backwards, then forwards again is a wobble — the parade
+walks off and then walks back in. LTX could not be trusted past two
+seconds, so there was no choice about it. Wan holds together, so each
+shot gets one unbroken clip slightly longer than `SHOT_SECONDS` and the
+movement only ever goes one way. The notebook says `clips run forwards
+only` when that applies.
+
+The LTX 13B is still loaded the way the diffusers docs prescribe when
+you ask for it: 26GB in bfloat16 against a 24GB card, so fp8 layerwise
+weight-casting halves the storage and converts back a layer at a time,
+and leaf-level group offloading keeps only the piece being computed on
+the card.
 
 Others considered and rejected:
 

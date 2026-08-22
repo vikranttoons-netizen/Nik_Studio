@@ -73,6 +73,30 @@ UPLOADS = [{}]
 
 DOWNLOADED = []
 
+SHIFTED = []
+
+# Every frame identical, so the only thing that can move in the
+# finished video is the camera. Used by the beat-pulse test, which is
+# measuring the camera and nothing else.
+STILL_FRAMES = [False]
+
+
+def textured(width, height):
+    """A still picture with enough detail in it to see a zoom."""
+
+    import random
+
+    speckle = Image.new("RGB", (32, 18))
+
+    rolls = random.Random(7)
+
+    speckle.putdata([
+        (rolls.randrange(256), rolls.randrange(256), rolls.randrange(256))
+        for _ in range(32 * 18)
+    ])
+
+    return speckle.resize((width, height), Image.NEAREST)
+
 
 class StandInPipeline:
     """
@@ -89,6 +113,7 @@ class StandInPipeline:
             enable_tiling=lambda: None,
         )
         self.text_encoder = types.SimpleNamespace(to=lambda device: None)
+        self.scheduler = types.SimpleNamespace(config={})
 
     def to(self, device):
         return self
@@ -105,10 +130,15 @@ class StandInPipeline:
 
         width, height = asked["width"], asked["height"]
 
-        frames = [
-            Image.new("RGB", (width, height), (number * 3 % 255, 80, 160))
-            for number in range(asked["num_frames"])
-        ]
+        if STILL_FRAMES[0]:
+            one = textured(width, height)
+            frames = [one.copy() for _ in range(asked["num_frames"])]
+        else:
+            frames = [
+                Image.new("RGB", (width, height),
+                          (number * 3 % 255, 80, 160))
+                for number in range(asked["num_frames"])
+            ]
 
         return types.SimpleNamespace(frames=[frames])
 
@@ -142,6 +172,7 @@ def install_stand_ins(vram, ram, capability):
 
     torch = types.ModuleType("torch")
     torch.bfloat16, torch.float16 = "bfloat16", "float16"
+    torch.float32 = "float32"
     torch.float8_e4m3fn = "fp8"
     torch.device = lambda name: name
     torch.OutOfMemoryError = OutOfMemory
@@ -190,6 +221,18 @@ def install_stand_ins(vram, ram, capability):
     )
     diffusers.LTXConditionPipeline = types.SimpleNamespace(
         from_pretrained=load
+    )
+    diffusers.WanPipeline = types.SimpleNamespace(from_pretrained=load)
+    diffusers.WanImageToVideoPipeline = types.SimpleNamespace(
+        from_pretrained=load
+    )
+    diffusers.AutoencoderKLWan = types.SimpleNamespace(
+        from_pretrained=lambda model, **kw: types.SimpleNamespace(
+            to=lambda device: None, enable_tiling=lambda: None
+        )
+    )
+    diffusers.UniPCMultistepScheduler = types.SimpleNamespace(
+        from_config=lambda config, **kw: SHIFTED.append(kw)
     )
     utilities = types.ModuleType("diffusers.utils")
     utilities.export_to_video = export_to_video
@@ -507,11 +550,12 @@ def test_the_edit_cuts_it_up(root):
 
     assert not refusal, refusal
 
-    # The model is never asked for more than its two seconds, whatever
-    # the song is doing.
+    # The model is asked for one shot's worth and no more, whatever the
+    # song is doing. 73 frames is 3.0s at 24fps - SHOT_SECONDS plus a
+    # little, so a whole shot is one unbroken take.
     asked = {call["num_frames"] for call in calls}
 
-    assert asked == {49}, asked
+    assert asked == {73}, asked
     assert len(calls) == 11, len(calls)
 
     editing = [line for line in printed.splitlines()
@@ -624,7 +668,7 @@ def test_settings_follow_the_machine(root):
                                         "Scene03.png"])
 
     for label, vram, ram, capability, precision, quantised, size in [
-        ("A100 40GB, 83GB RAM", 40, 83, 8, "bfloat16", False, 960),
+        ("A100 40GB, 83GB RAM", 40, 83, 8, "bfloat16", False, 832),
         ("L4 24GB, 13GB RAM  ", 24, 12.7, 8, "bfloat16", True, 768),
         ("T4 16GB, 13GB RAM  ", 15.6, 12.7, 7, "float16", True, 768),
     ]:
@@ -820,7 +864,7 @@ def test_one_picture_on_its_own(root):
     # One clip, from the first picture, at its own length - not looped
     # to fill a slot and not cut to a share of the song.
     assert len(calls) == 1, calls
-    assert calls[0]["num_frames"] == 49, calls
+    assert calls[0]["num_frames"] == 73, calls
     assert "back and forth" not in printed, printed
 
     final = drive / "Output" / "Episode.mp4"
@@ -830,7 +874,7 @@ def test_one_picture_on_its_own(root):
 
     print(f"   {length:.1f}s, streams {streams}")
 
-    assert abs(length - 49 / 24) < 0.3, length
+    assert abs(length - 73 / 24) < 0.3, length
     assert "audio" not in streams, "the song was laid over a test clip"
 
     print("\n   [OK] one clip, its own length, nothing over the top")
@@ -899,23 +943,39 @@ def test_drive_refusing_to_connect(root):
 
 def test_the_machine_picks_the_model(root):
 
-    heading("16  A card with room for it gets the model that obeys")
+    heading("16  A card with room for it gets the model that moves")
 
     drive = make_input(root / "Models", ["Scene01.png", "Scene02.png"])
 
-    # The default, on a card that can take it. Not the distilled one:
-    # that runs at guidance 1.0, where the negative prompt is not read
-    # at all and the style words barely steer - and it was a switch you
-    # had to remember, which went unremembered three runs running.
+    SHIFTED.clear()
+
+    # The default, on a card that can take it. Wan, because motion is
+    # the whole complaint about what LTX gave back - and at real
+    # guidance, so the negative prompt is read.
     printed, refusal, calls = run(drive, 24, 57, 8)
 
     assert not refusal, refusal
 
     print(f"   L4 24GB, default   : {LOADED[-1].split('/')[-1]}")
 
-    assert LOADED[-1].endswith("LTX-Video-0.9.7-dev"), LOADED[-1]
+    assert LOADED[-1].endswith("Wan2.2-TI2V-5B-Diffusers"), LOADED[-1]
     assert all(c["num_inference_steps"] == 30 for c in calls), calls
-    assert all(c["guidance_scale"] == 3.5 for c in calls), calls
+    assert all(c["guidance_scale"] == 5.0 for c in calls), calls
+
+    # Wan has no frame_rate argument, and the LTX-only settings must
+    # not be sent to it.
+    assert all("frame_rate" not in c for c in calls), calls
+    assert all("image_cond_noise_scale" not in c for c in calls), calls
+
+    # 832x480 is what it was trained at; both divide by 32.
+    assert all(c["width"] == 832 and c["height"] == 480 for c in calls)
+
+    # And the clip covers a whole shot on its own, so nothing has to be
+    # played backwards to fill the time.
+    assert all(c["num_frames"] == 73 for c in calls), calls
+    assert "forwards only" in printed, printed
+
+    assert SHIFTED and SHIFTED[0]["flow_shift"] == 5.0, SHIFTED
 
     for clip in (drive / "Output" / "Clips").glob("*"):
         clip.unlink()
@@ -1219,6 +1279,11 @@ def test_the_camera_answers_the_beat(root):
 
     beat = [n * 0.55 for n in range(1, 34)]
 
+    # The clips are made still on purpose. Anything the model itself
+    # moved would be counted as camera movement and this test would
+    # pass on the model's motion rather than the camera's.
+    STILL_FRAMES[0] = True
+
     printed, refusal, _ = run(drive, beats=beat)
 
     assert not refusal, refusal
@@ -1230,7 +1295,9 @@ def test_the_camera_answers_the_beat(root):
 
     run(plain)
 
-    from PIL import Image, ImageChops, ImageStat
+    STILL_FRAMES[0] = False
+
+    from PIL import ImageChops, ImageStat
 
     def movement(video):
         folder = video.parent / f"{video.stem}_frames"
