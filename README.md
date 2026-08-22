@@ -455,10 +455,18 @@ melted at one second and the animals' faces by one and a half. So the
 model is only ever asked for **two seconds**, and the edit cuts away
 before there is anything to see.
 
-**The edit.** `SHOT_SECONDS` (2.8) is how long one shot holds. Two of the
-six camera moves are `hold` — a slow push on every single shot for two
-minutes is exhausting — and the ones that do move now travel 6% rather
-than 16%, which reads as a drift instead of a lurch. Beats come
+**The edit.** `SHOT_SECONDS` (2.8) is how long one shot holds. One of
+the six camera moves is a `hold`; the rest travel 11%. That number has
+been wrong twice: 16% was a lurch, and 6% took the whole video down to a
+third of the movement it had, because this model barely moves on its own
+and the camera was carrying all of it.
+
+**The beat.** The cuts land on the beat, but between cuts nothing was
+answering the music — the picture simply sat there. Every beat now gives
+the camera a small push that falls away over about a fifth of a second,
+so the frame breathes in time. Measured against a still picture: the
+camera move alone comes out at 1.81 and with the pulse at 4.26, with the
+peaks on the beats. 0.08 strength was jumpy; it is 0.05. Beats come
 from `librosa`; without them it falls back to an even grid and says so,
 rather than claiming a beat it did not find. Every shot gets a slow
 camera move — push in, pan, pull out — cycling, so coming back to a clip
@@ -483,11 +491,12 @@ they are left off and it says so, with the one line that fixes it.
 Rendering empty boxes would be worse than rendering nothing.
 
 A vertical 1080×1920 cut of the first 55 seconds is written alongside it
-for Shorts. The whole 16:9 frame is kept, set against a blurred blow-up
-of itself — cutting a 9:16 slice out of the middle instead throws away
-two thirds of the picture and magnifies the rest by nearly two, which is
-why the vertical version looked far more zoomed in than the wide one.
-Turn it off with `MAKE_SHORT = False`.
+for Shorts, centre cropped — the character is in the middle of every
+shot, so the middle is what to keep. Fitting the whole 16:9 frame into
+9:16 against a blurred blow-up of itself was tried and was worse: the
+picture fills under a third of the height, so most of the Short was a
+huge blurred face with a strip of video through the middle. Turn it off
+with `MAKE_SHORT = False`.
 
 **The watermark.** LTX 0.9.8 distilled was trained on captioned video and
 stamps a line of garbled caption text along the bottom of everything it

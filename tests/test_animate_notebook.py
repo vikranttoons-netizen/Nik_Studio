@@ -1199,6 +1199,62 @@ def test_the_words_on_screen(root):
     print("\n   [OK] burned into both cuts, each at its own size")
 
 
+
+def test_the_camera_answers_the_beat(root):
+
+    heading("22  The camera moves with the song, not past it")
+
+    drive = make_input(root / "Pulse", ["Scene01.png", "Scene02.png",
+                                        "Scene03.png"], song_seconds=19)
+
+    beat = [n * 0.55 for n in range(1, 34)]
+
+    printed, refusal, _ = run(drive, beats=beat)
+
+    assert not refusal, refusal
+    assert "cut on the beat" in printed, printed
+
+    # The same episode, cut on a stopwatch instead.
+    plain = make_input(root / "NoPulse", ["Scene01.png", "Scene02.png",
+                                          "Scene03.png"], song_seconds=19)
+
+    run(plain)
+
+    from PIL import Image, ImageChops, ImageStat
+
+    def movement(video):
+        folder = video.parent / f"{video.stem}_frames"
+        folder.mkdir(exist_ok=True)
+        subprocess.run(
+            [find_ffmpeg(), "-y", "-loglevel", "error", "-i", str(video),
+             "-vf", "scale=160:-1,fps=8", f"{folder}/%04d.png"],
+            check=True,
+        )
+        files = sorted(folder.iterdir())
+        previous = Image.open(files[0]).convert("L")
+        steps = []
+        for f in files[1:]:
+            current = Image.open(f).convert("L")
+            steps.append(ImageStat.Stat(
+                ImageChops.difference(previous, current)).mean[0])
+            previous = current
+        inside = [s for s in steps if s <= 25]
+        return sum(inside) / len(inside)
+
+    with_beat = movement(drive / "Output" / "Episode.mp4")
+    without = movement(plain / "Output" / "Episode.mp4")
+
+    print(f"   movement with the beat {with_beat:.2f}, "
+          f"without it {without:.2f}")
+
+    # The clips are identical; the only difference is the camera being
+    # given the beats. A video that measures the same is one where the
+    # pulse quietly did nothing.
+    assert with_beat > without * 1.15, (with_beat, without)
+
+    print("\n   [OK] the picture answers the music between the cuts")
+
+
 # ======================================================================
 
 def main():
@@ -1234,6 +1290,7 @@ def main():
         test_the_vertical_cut(root)
         test_the_script_under_any_name(root)
         test_the_words_on_screen(root)
+        test_the_camera_answers_the_beat(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 
