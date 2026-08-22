@@ -545,6 +545,16 @@ LTX comes in two sizes, and the notebook picks between them by reading
 the machine — the 13B where there is room, the 2B where there is not.
 `FORCE_MODEL = "big"` or `"small"` overrides it.
 
+The 13B itself comes two ways, and the **obedient one is the default**.
+The distilled version needs eight steps rather than thirty, which is four
+times faster, and pays for it with `guidance_scale = 1.0` — where there
+is no classifier-free guidance at all, so the negative prompt is not read
+and the positive one steers only weakly. That was the default behind a
+switch you had to remember, and it went unremembered three runs running,
+which is a bad setting rather than a bad memory. `FAST_MODEL = True`
+buys the speed back knowingly: about 12 minutes for sixteen shots
+instead of 42, for a video that half reads its own script.
+
 | | 2B (`Lightricks/LTX-Video`) | 13B distilled (`LTX-Video-0.9.8-13B-distilled`) |
 | --- | --- | --- |
 | Runs on | anything, a free T4 included | a 24GB card with ~30GB of RAM to stream through |

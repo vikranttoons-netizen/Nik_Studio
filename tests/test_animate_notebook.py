@@ -271,7 +271,7 @@ def cell_two():
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
-        uploads=None, local=None):
+        uploads=None, local=None, fast=False):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -317,6 +317,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         "MAKE_SHORT = True",
         f"MAKE_SHORT = {short}",
+    ).replace(
+        "FAST_MODEL = False",
+        f"FAST_MODEL = {fast}",
     )
 
     if not full_size:
@@ -896,50 +899,57 @@ def test_drive_refusing_to_connect(root):
 
 def test_the_machine_picks_the_model(root):
 
-    heading("16  A card with room for the 13B gets the 13B")
+    heading("16  A card with room for it gets the model that obeys")
 
     drive = make_input(root / "Models", ["Scene01.png", "Scene02.png"])
 
-    for label, vram, ram, expect_big in [
-        ("L4 24GB / 57GB RAM ", 24, 57, True),
-        ("T4 16GB / 13GB RAM ", 15.6, 12.7, False),
-    ]:
-        printed, refusal, calls = run(drive, vram, ram,
-                                      8 if expect_big else 7)
+    # The default, on a card that can take it. Not the distilled one:
+    # that runs at guidance 1.0, where the negative prompt is not read
+    # at all and the style words barely steer - and it was a switch you
+    # had to remember, which went unremembered three runs running.
+    printed, refusal, calls = run(drive, 24, 57, 8)
 
-        assert not refusal, refusal
+    assert not refusal, refusal
 
-        model = LOADED[-1]
+    print(f"   L4 24GB, default   : {LOADED[-1].split('/')[-1]}")
 
-        if expect_big:
-            assert "13B-distilled" in model, model
+    assert LOADED[-1].endswith("LTX-Video-0.9.7-dev"), LOADED[-1]
+    assert all(c["num_inference_steps"] == 30 for c in calls), calls
+    assert all(c["guidance_scale"] == 3.5 for c in calls), calls
 
-            # 13B in bfloat16 is 26GB against a 24GB card. It only fits
-            # in fp8 storage with the layers streamed on one at a time.
-            assert CASTING and CASTING[0]["storage_dtype"] == "fp8", CASTING
-            kinds = [kind for kind, _ in OFFLOADED]
-            assert kinds.count("transformer") == 1, OFFLOADED
-            assert kinds.count("component") == 2, OFFLOADED
-            # Distilled: eight steps, no classifier-free guidance, and
-            # no noise on the conditioning picture.
-            assert all(c["num_inference_steps"] == 8 for c in calls), calls
-            assert all(c["guidance_scale"] == 1.0 for c in calls), calls
-            assert all(c["image_cond_noise_scale"] == 0.0 for c in calls)
-            assert all(c["width"] == 960 for c in calls), calls
-        else:
-            assert model == "Lightricks/LTX-Video", model
-            assert all(c["num_inference_steps"] == 50 for c in calls), calls
-            assert all(c["guidance_scale"] == 3.0 for c in calls), calls
-            assert all("image_cond_noise_scale" not in c for c in calls)
-            assert all(c["width"] == 768 for c in calls), calls
+    for clip in (drive / "Output" / "Clips").glob("*"):
+        clip.unlink()
 
-        print(f"   {label}: {model.split('/')[-1]}")
+    # FAST_MODEL is how you buy speed back, knowingly.
+    printed, refusal, calls = run(drive, 24, 57, 8, fast=True)
 
-        for clip in (drive / "Output" / "Clips").glob("*"):
-            clip.unlink()
+    assert not refusal, refusal
 
-    print("\n   [OK] the big model where it fits, the small one where not")
+    print(f"   L4 24GB, FAST_MODEL: {LOADED[-1].split('/')[-1]}")
 
+    assert "13B-distilled" in LOADED[-1], LOADED[-1]
+    assert all(c["num_inference_steps"] == 8 for c in calls), calls
+    assert all(c["guidance_scale"] == 1.0 for c in calls), calls
+    assert all(c["image_cond_noise_scale"] == 0.0 for c in calls)
+
+    # fp8 storage and leaf offloading, or 13B in bfloat16 is 26GB
+    # against a 24GB card.
+    assert CASTING and CASTING[0]["storage_dtype"] == "fp8", CASTING
+
+    for clip in (drive / "Output" / "Clips").glob("*"):
+        clip.unlink()
+
+    # And a small card cannot run either, so it gets the 2B.
+    printed, refusal, calls = run(drive, 15.6, 12.7, 7)
+
+    assert not refusal, refusal
+
+    print(f"   T4 16GB            : {LOADED[-1].split('/')[-1]}")
+
+    assert LOADED[-1] == "Lightricks/LTX-Video", LOADED[-1]
+    assert all(c["width"] == 768 for c in calls), calls
+
+    print("\n   [OK] obedient by default, fast on request, small where it must")
 
 
 def test_written_scenes(root):
