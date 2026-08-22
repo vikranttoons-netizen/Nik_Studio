@@ -1,42 +1,16 @@
-# Nik Studio - example script
-#
-# One scene a line. Blank lines space it out. A line starting with #
-# is parked - it stays here but is not made.
-#
-# Do NOT describe Nik or the art style here. Those are set once, in
-# CHARACTER and STYLE at the top of cell 2, and are put in front of
-# every line automatically - which is the only thing keeping him the
-# same boy from shot to shot.
-#
-# What each line should say, in this order:
-#   1. ONE thing he does. Not three. Something a camera could film.
-#   2. Who else is in the shot, and what they are doing.
-#   3. One small piece of background life - flowers nodding, leaves
-#      swaying, clouds drifting - so the world is not frozen.
-#   4. "the camera does not move", unless it genuinely should.
-#
-# Anything you leave out, the model invents. That is how the puppy
-# melted the first time.
-#
-# Avoid: turning or spinning on the spot (the face rotates away and
-# comes back wrong), and more than one action in a line.
-#
-# colab/script_prompt.txt is the brief to hand a language model if you
-# would rather it wrote these for you.
-
-He walks into the meadow, the puppy watches him curiously, butterflies drift above the flowers, the camera does not move
-He waves toward the puppy, the puppy wags its tail, leaves sway gently overhead, the camera does not move
-Close up of the puppy barking cheerfully, Nik stands nearby, flowers nod in the breeze, the camera does not move
-He claps his hands, the puppy bounces beside him, grass ripples softly around their feet, the camera does not move
-Wide shot of Nik walking toward the kitten, the kitten stretches happily, butterflies drift across the meadow, the camera does not move
-He points toward the kitten, the kitten meows sweetly, leaves sway gently in the background, the camera does not move
-Close up of the kitten meowing playfully, Nik watches nearby, flowers nod softly, the camera does not move
-He crouches down and holds out one hand, the kitten bounces happily towards it, clouds drift slowly overhead, the camera does not move
-He walks toward the duckling, the duckling waddles toward him, grass ripples gently beside the path, the camera does not move
-Close up of the duckling quacking cheerfully, Nik smiles nearby, butterflies drift above the pond, the camera does not move
-He taps his feet, the duckling flaps its wings, flowers sway gently around them, the camera does not move
-He sways from side to side with his arms out, the puppy, kitten and duckling bounce nearby, leaves sway overhead, the camera does not move
-He nods his head in time with the music, the puppy, kitten and duckling bob beside him, butterflies drift around them, the camera does not move
-He waves goodbye, the puppy, kitten, and duckling wave beside him, flowers nod softly, the camera does not move
-He walks toward the three animals, they gather happily around him, grass ripples in the breeze, the camera does not move
-Wide shot of Nik sitting with the animals, the puppy, kitten, and duckling cuddle beside him, leaves sway gently, the camera does not move
+He walks into the sunny meadow and waves hello, the puppy watching from the flowers, butterflies drifting past, the camera does not move
+He claps his hands brightly, the puppy bouncing beside him, flowers nodding in the breeze, the camera does not move
+He taps his feet in time, the puppy hopping near his shoes, grass rippling around them, the camera does not move
+He sways from side to side with his arms out, the puppy swaying too, leaves swaying overhead, the camera does not move
+He points happily as the puppy runs to him, the puppy racing across the grass, butterflies scattering, the camera does not move
+Close up of the puppy barking cheerfully and wagging its tail, Nik smiling nearby, flowers nodding softly, the camera does not move
+He claps his hands with the puppy beside him, the puppy bouncing on its paws, clouds drifting slowly overhead, the camera does not move
+He crouches down and holds out one hand, the kitten stepping softly towards it, grass rippling gently, the camera does not move
+Close up of the kitten meowing playfully and shaking its paws, Nik watching nearby, flowers swaying, the camera does not move
+He claps his hands with the kitten beside him, the kitten batting at a butterfly, leaves swaying above, the camera does not move
+He waves the duckling over, the duckling waddling towards him, grass rippling beside the path, the camera does not move
+Close up of the duckling quacking and flapping its wings, Nik smiling nearby, butterflies drifting past, the camera does not move
+Wide shot of Nik standing with all three animals around him, the puppy, kitten and duckling calling out together, flowers nodding, the camera does not move
+He sways and claps with all three animals bouncing around him, the puppy, kitten and duckling dancing, leaves swaying overhead, the camera does not move
+He waves goodbye with a big smile, the puppy, kitten and duckling waving beside him, flowers nodding softly, the camera does not move
+Wide shot of Nik sitting in the flowers with the three animals cuddled beside him, all of them waving, butterflies drifting, the camera does not move
