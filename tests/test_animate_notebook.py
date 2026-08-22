@@ -1115,6 +1115,90 @@ def test_the_script_under_any_name(root):
     print("\n   [OK] Explorer's hidden extension cannot break it")
 
 
+
+def test_the_words_on_screen(root):
+
+    heading("21  The words of the song, drawn on and on the beat")
+
+    drive = make_input(root / "Sing", ["Scene01.png", "Scene02.png",
+                                       "Scene03.png"], song_seconds=19)
+
+    (drive / "Input" / "lyrics.txt").write_text(
+        "# the chorus\n"
+        "One little elephant went out to play\n"
+        "Upon a spider's web one day\n"
+        "He had such enormous fun\n"
+        "That he called for another elephant to come\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, _ = run(drive, full_size=True, short=True)
+
+    assert not refusal, refusal
+
+    print("  ", [l.strip() for l in printed.splitlines()
+                 if l.startswith("Lyrics")][0])
+
+    # The lyric sheet must not be mistaken for the script.
+    assert "3 picture(s)" in printed or "From       : 3 picture" in printed, \
+        printed
+
+    sheet = drive / "Output" / "lyrics_1920x1080.ass"
+
+    assert sheet.exists(), "no subtitle file was written"
+
+    written = sheet.read_text(encoding="utf-8")
+
+    dialogue = [l for l in written.splitlines() if l.startswith("Dialogue:")]
+
+    print(f"   {len(dialogue)} lines timed, "
+          f"font {[l for l in written.splitlines() if l.startswith('Style:')][0].split(',')[1]}")
+
+    # The commented line is not a lyric.
+    assert len(dialogue) == 4, dialogue
+
+    # And they are inside the song, in order.
+    starts = [line.split(",")[1] for line in dialogue]
+    assert starts == sorted(starts), starts
+
+    # The words are really on the picture: the bottom of the frame has
+    # to differ from the same run without them.
+    plain = make_input(root / "Quiet", ["Scene01.png", "Scene02.png",
+                                        "Scene03.png"], song_seconds=19)
+
+    run(plain, full_size=True)
+
+    from PIL import Image, ImageChops, ImageStat
+
+    def bottom(video):
+        out = video.parent / f"{video.stem}_bottom.png"
+        subprocess.run(
+            [find_ffmpeg(), "-y", "-loglevel", "error", "-ss", "4",
+             "-i", str(video), "-frames:v", "1",
+             "-vf", "crop=1920:200:0:860", str(out)],
+            check=True,
+        )
+        return Image.open(out).convert("L")
+
+    sung = bottom(drive / "Output" / "Episode.mp4")
+    quiet = bottom(plain / "Output" / "Episode.mp4")
+
+    difference = ImageStat.Stat(ImageChops.difference(sung, quiet)).mean[0]
+
+    print(f"   bottom of the frame differs by {difference:.1f} "
+          "against the same run without lyrics")
+
+    assert difference > 3.0, difference
+
+    tall = drive / "Output" / "Episode_Short.mp4"
+
+    assert tall.exists()
+    assert (drive / "Output" / "lyrics_1080x1920.ass").exists(), \
+        "the vertical cut got no lyrics of its own"
+
+    print("\n   [OK] burned into both cuts, each at its own size")
+
+
 # ======================================================================
 
 def main():
@@ -1149,6 +1233,7 @@ def main():
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)
         test_the_script_under_any_name(root)
+        test_the_words_on_screen(root)
 
     print("\nALL ANIMATE NOTEBOOK TESTS PASSED")
 

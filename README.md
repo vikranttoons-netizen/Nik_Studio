@@ -467,6 +467,21 @@ h264 high profile with `+faststart`, and the song is brought to −14 LUFS,
 which is what YouTube normalises to; an unmastered upload just sounds
 quiet next to a channel that did it.
 
+**The words of the song.** Put a `lyrics.txt` in the Input folder, one
+line of the song to a line, and they are drawn on screen — spread across
+the song on its beats, so they change with the music rather than on a
+stopwatch. Children sing along with them, and it is what every channel in
+this corner of YouTube does. It costs no GPU at all.
+
+Any `.txt` whose name starts with `lyric` is the lyric sheet; anything
+else is the script, so the two are never confused. The wide video and the
+vertical one each get their own, drawn at their own size — burning them
+once and shrinking would leave the words half-sized in the Short.
+
+If the lyrics are in Devanagari and no font on the machine can draw it,
+they are left off and it says so, with the one line that fixes it.
+Rendering empty boxes would be worse than rendering nothing.
+
 A vertical 1080×1920 cut of the first 55 seconds is written alongside it
 for Shorts. The whole 16:9 frame is kept, set against a blurred blow-up
 of itself — cutting a 9:16 slice out of the middle instead throws away
