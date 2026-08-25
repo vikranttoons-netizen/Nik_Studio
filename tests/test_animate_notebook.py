@@ -314,7 +314,7 @@ def cell_two():
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
-        uploads=None, local=None, fast=False):
+        uploads=None, local=None, fast=False, force=""):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -363,6 +363,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         "FAST_MODEL = False",
         f"FAST_MODEL = {fast}",
+    ).replace(
+        'FORCE_MODEL = ""',
+        f"FORCE_MODEL = {force!r}",
     )
 
     if not full_size:
@@ -672,7 +675,13 @@ def test_settings_follow_the_machine(root):
         ("L4 24GB, 13GB RAM  ", 24, 12.7, 8, "bfloat16", True, 768),
         ("T4 16GB, 13GB RAM  ", 15.6, 12.7, 7, "float16", True, 768),
     ]:
-        printed, refusal, calls = run(drive, vram, ram, capability)
+        # Two of these cards are too small for Wan and would be sent
+        # away. This test is about precision and fitting, so it says
+        # "small on purpose" and gets on with it.
+        printed, refusal, calls = run(
+            drive, vram, ram, capability,
+            force="" if vram >= 20 and ram >= 30 else "small",
+        )
 
         assert not refusal, refusal
 
@@ -1000,7 +1009,7 @@ def test_the_machine_picks_the_model(root):
         clip.unlink()
 
     # And a small card cannot run either, so it gets the 2B.
-    printed, refusal, calls = run(drive, 15.6, 12.7, 7)
+    printed, refusal, calls = run(drive, 15.6, 12.7, 7, force="small")
 
     assert not refusal, refusal
 
@@ -1010,6 +1019,43 @@ def test_the_machine_picks_the_model(root):
     assert all(c["width"] == 768 for c in calls), calls
 
     print("\n   [OK] obedient by default, fast on request, small where it must")
+
+
+def test_a_small_card_is_sent_away(root):
+
+    heading("23  A card too small for the model that moves stops the run")
+
+    drive = make_input(root / "SmallCard", ["Scene01.png", "Scene02.png"])
+
+    # A T4, with a GPU really connected. The notebook used to print
+    # which model it had picked and carry on regardless - an hour spent
+    # on the model whose whole problem is that it does not move.
+    printed, refusal, calls = run(drive, 15.6, 12.7, 7)
+
+    assert calls == [], "an hour of the wrong model was spent anyway"
+
+    print("  ", refusal.strip().splitlines()[2].strip())
+
+    assert "L4 GPU" in refusal, refusal
+    assert "drifts rather than moves" in refusal, refusal
+    assert 'FORCE_MODEL = "small"' in refusal, refusal
+
+    # The free check on a CPU runtime must still do its job: it has no
+    # card to judge, so it assumes the one you are about to turn on.
+    printed, refusal, calls = run(drive, 15.6, 12.7, 7, gpu=False)
+
+    assert "cost nothing" in refusal, refusal
+    assert "L4 GPU > Save" in refusal, refusal
+
+    print("   the free check on a CPU runtime still runs")
+
+    # And it can be overruled, knowingly.
+    printed, refusal, calls = run(drive, 15.6, 12.7, 7, force="small")
+
+    assert not refusal, refusal
+    assert len(calls) == 2, calls
+
+    print("\n   [OK] stopped before the hour, and can be overruled")
 
 
 def test_written_scenes(root):
@@ -1362,6 +1408,7 @@ def main():
         test_the_refusal_offers_the_test(root)
         test_drive_refusing_to_connect(root)
         test_the_machine_picks_the_model(root)
+        test_a_small_card_is_sent_away(root)
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)

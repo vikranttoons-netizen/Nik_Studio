@@ -566,6 +566,14 @@ The notebook still reads the machine — `FORCE_MODEL = "big"` or
 `"small"` overrides it — and `FAST_MODEL = True` buys speed back
 knowingly.
 
+**A card too small for Wan stops the run** rather than quietly falling
+back. A T4 can only run the 2B, which is the model behind every video
+that was not lively enough, and an hour spent on it is an hour wasted;
+the notebook says to switch to L4 and how, and takes `FORCE_MODEL =
+"small"` from anyone who means it. The free check on a CPU runtime is
+unaffected — it has no card to judge, so it assumes the one you are
+about to turn on.
+
 | | Wan 2.2 TI2V-5B *(default)* | LTX 13B distilled *(`FAST_MODEL`)* | LTX 2B *(small cards)* |
 | --- | --- | --- | --- |
 | Runs on | a 24GB card, ~30GB RAM | the same | anything, a free T4 included |
