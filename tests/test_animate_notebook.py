@@ -350,7 +350,8 @@ def cell_two():
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
-        uploads=None, local=None, fast=False, force=""):
+        uploads=None, local=None, fast=False, force="",
+        quality="good"):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -406,6 +407,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         'FORCE_MODEL = ""',
         f"FORCE_MODEL = {force!r}",
+    ).replace(
+        'QUALITY = "good"',
+        f"QUALITY = {quality!r}",
     )
 
     if not full_size:
@@ -711,7 +715,7 @@ def test_settings_follow_the_machine(root):
                                         "Scene03.png"])
 
     for label, vram, ram, capability, precision, quantised, size in [
-        ("A100 40GB, 83GB RAM", 40, 83, 8, "bfloat16", False, 832),
+        ("A100 40GB, 83GB RAM", 40, 83, 8, "bfloat16", False, 1024),
         ("L4 24GB, 13GB RAM  ", 24, 12.7, 8, "bfloat16", True, 768),
         ("T4 16GB, 13GB RAM  ", 15.6, 12.7, 7, "float16", True, 768),
     ]:
@@ -1016,8 +1020,10 @@ def test_the_machine_picks_the_model(root):
     assert all("frame_rate" not in c for c in calls), calls
     assert all("image_cond_noise_scale" not in c for c in calls), calls
 
-    # 832x480 is what it was trained at; both divide by 32.
-    assert all(c["width"] == 832 and c["height"] == 480 for c in calls)
+    # 1024x576 by default - 1.9x up to 1080p rather than the 2.3x
+    # that 832x480 needed, which was most of the softness. Both
+    # divide by 32, which the Wan VAE requires.
+    assert all(c["width"] == 1024 and c["height"] == 576 for c in calls)
 
     # And the clip covers a whole shot on its own, so nothing has to be
     # played backwards to fill the time.
@@ -1025,6 +1031,23 @@ def test_the_machine_picks_the_model(root):
     assert "forwards only" in printed, printed
 
     assert SHIFTED and SHIFTED[0]["flow_shift"] == 5.0, SHIFTED
+
+    # One setting, three answers, and the finished size is what makes
+    # the difference: 832x480 is stretched 2.3 times to reach 1080p.
+    for quality, size, steps in (("draft", 832, 20),
+                                 ("good", 1024, 30),
+                                 ("best", 1280, 30)):
+
+        for clip in (drive / "Output" / "Clips").glob("*"):
+            clip.unlink()
+
+        printed, refusal, calls = run(drive, 24, 57, 8, quality=quality)
+
+        assert not refusal, refusal
+        assert all(c["width"] == size for c in calls), calls
+        assert all(c["num_inference_steps"] == steps for c in calls), calls
+
+        print(f"   QUALITY {quality:<7}: {size} wide, {steps} steps")
 
     for clip in (drive / "Output" / "Clips").glob("*"):
         clip.unlink()
@@ -1148,7 +1171,7 @@ def test_one_picture_of_him(root):
     # And the video is made FROM the drawings - words alone would send
     # no picture at all.
     assert all("image" in call for call in calls), calls
-    assert all(call["width"] == 832 for call in calls), calls
+    assert all(call["width"] == 1024 for call in calls), calls
 
     scenes = sorted((drive / "Output" / "Scenes").glob("*.png"))
 

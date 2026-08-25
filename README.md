@@ -600,6 +600,43 @@ card is how a run dies at scene twelve with everything to do over.
 Licences: SDXL base is CreativeML Open RAIL++-M, IP-Adapter is Apache
 2.0. Both are free to use commercially.
 
+### `QUALITY`, and why size is most of it
+
+One setting, three answers: `"draft"` (832×480, 20 steps), `"good"`
+(1024×576, 30 — the default) and `"best"` (1280×704, 30 — what the 5B
+was trained at, roughly three times the time of `"good"`).
+
+The finished video is 1080p, so a clip generated at 832×480 is stretched
+2.3× to reach it and one at 1024×576 only 1.9×. That stretch is most of
+why the finished file has looked softer than the clip it was made from,
+and it is also why the upscale in the edit is `lanczos` now rather than
+`bicubic` — the earlier comment said a 960-wide clip has no detail for a
+sharper filter to find, and at 1024 and 1280 wide there is.
+
+The run also says, after the first clip and only then, how long the rest
+will take at that rate. It is measured rather than guessed, and it
+arrives while there is still time to switch to `"draft"` instead of
+finding out an hour later how long an hour is.
+
+`MOTION` is a third fixed part of every written prompt, alongside
+`FRAMING` and `CHARACTER`. The clips measured 3.67 against the 15–20 the
+children's channels run at, and the script was not the whole of it: a
+video model will animate one arm and leave everything else standing
+perfectly still, because nothing asked it not to. It is written as a
+description — "smooth lively continuous movement, natural secondary
+motion in his hair, his clothes and the grass" — rather than as a
+negation, because the last time this notebook told a model to be unlike
+a still picture, the face melted at two seconds.
+
+### Repeats are the other half
+
+Sixteen clips across a 125-second song is 45 cuts, so each clip covers
+about three cuts in a row. Different camera move each time, same three
+seconds of picture — and that reuse is the clearest thing separating
+this from the channels it is aimed at, which never show a shot twice.
+No code change fixes it: the run now prints the number of scenes that
+would remove it entirely, and that number goes in `script.txt`.
+
 ### A preview small enough to send
 
 The finished file is 1080p and a couple of hundred megabytes, and most
@@ -638,9 +675,9 @@ about to turn on.
 | Steps | 30 | **8** — distilled | 50 |
 | Guidance | 5.0 — the negative prompt is read | 1.0 — it is not read at all | 3.0 |
 | Movement | what it is built for | holds still; that is what it is built for | drifts rather than moves |
-| Generated at | 832×480 | 960×544 | 768×448 |
+| Generated at | 1024×576 (`QUALITY`) | 960×544 | 768×448 |
 | Clip length | 3.0s — a whole shot in one take | 2.0s, played forwards and back | 2.0s, played forwards and back |
-| Sixteen shots | about an hour | about 12 minutes | — |
+| Sixteen shots | an hour and a bit at `"good"` | about 12 minutes | — |
 | Licence | Apache 2.0 | free under $10M revenue | free under $10M revenue |
 
 Two details that are the model's own instructions rather than choices:
