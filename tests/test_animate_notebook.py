@@ -75,6 +75,10 @@ DOWNLOADED = []
 
 SHIFTED = []
 
+DRAWN = []
+
+LIKENESS = []
+
 # Every frame identical, so the only thing that can move in the
 # finished video is the camera. Used by the beat-pulse test, which is
 # measuring the camera and nothing else.
@@ -96,6 +100,31 @@ def textured(width, height):
     ])
 
     return speckle.resize((width, height), Image.NEAREST)
+
+
+class StandInDrawing:
+    """Stands in for SDXL with an IP-Adapter on it."""
+
+    def load_ip_adapter(self, repository, **kw):
+        LIKENESS.append(dict(kw, repository=repository))
+
+    def set_ip_adapter_scale(self, scale):
+        LIKENESS.append({"scale": scale})
+
+    def enable_model_cpu_offload(self):
+        return None
+
+    def to(self, device):
+        return self
+
+    def __call__(self, **asked):
+
+        DRAWN.append(asked)
+
+        return types.SimpleNamespace(images=[
+            Image.new("RGB", (asked["width"], asked["height"]),
+                      (30, 160, 90))
+        ])
 
 
 class StandInPipeline:
@@ -222,6 +251,13 @@ def install_stand_ins(vram, ram, capability):
     diffusers.LTXConditionPipeline = types.SimpleNamespace(
         from_pretrained=load
     )
+    def load_drawing(model, **kw):
+        LOADED.append(model)
+        return StandInDrawing()
+
+    diffusers.StableDiffusionXLPipeline = types.SimpleNamespace(
+        from_pretrained=load_drawing
+    )
     diffusers.WanPipeline = types.SimpleNamespace(from_pretrained=load)
     diffusers.WanImageToVideoPipeline = types.SimpleNamespace(
         from_pretrained=load
@@ -330,6 +366,10 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     CASTING.clear()
 
     OFFLOADED.clear()
+
+    DRAWN.clear()
+
+    LIKENESS.clear()
 
     FAIL_FIRST_CALL[0] = out_of_memory
 
@@ -1058,6 +1098,106 @@ def test_a_small_card_is_sent_away(root):
     print("\n   [OK] stopped before the hour, and can be overruled")
 
 
+def test_one_picture_of_him(root):
+
+    heading("24  One picture of Nik, and every scene is drawn from him")
+
+    drive = make_input(root / "Reference", [], song_seconds=19)
+
+    inside = drive / "Input"
+
+    # The reference, and nothing else that looks like a scene.
+    Image.new("RGB", (768, 768), (210, 170, 140)).save(inside / "nik.png")
+
+    (inside / "script.txt").write_text(
+        "He waves both hands above his head, the puppy sitting beside "
+        "him\n"
+        "He claps his hands three times quickly, the puppy bouncing\n"
+        "He jumps up and down twice, the duckling flapping beside him\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    # It is the boy, not a scene. Animating it would put a picture of
+    # him standing on his own into the middle of the video, and it must
+    # not be counted when the run works out whether there is enough for
+    # the song either.
+    assert "every scene is drawn from him" in printed, printed
+    assert len(calls) == 3, calls
+
+    print(f"   {len(DRAWN)} scene(s) drawn, {len(calls)} clip(s) animated")
+
+    assert len(DRAWN) == 3, DRAWN
+
+    # The reference is in front of the drawing model for every one, and
+    # pulling at the strength that was asked for.
+    assert all(draw["ip_adapter_image"] is not None for draw in DRAWN)
+    assert {"scale": 0.6} in LIKENESS, LIKENESS
+
+    weights = [entry for entry in LIKENESS if "weight_name" in entry]
+
+    assert weights and "sdxl" in weights[0]["weight_name"], weights
+
+    # Drawn at a size SDXL knows, not at the video size.
+    assert all(draw["width"] == 1344 and draw["height"] == 768
+               for draw in DRAWN), DRAWN
+
+    # And the video is made FROM the drawings - words alone would send
+    # no picture at all.
+    assert all("image" in call for call in calls), calls
+    assert all(call["width"] == 832 for call in calls), calls
+
+    scenes = sorted((drive / "Output" / "Scenes").glob("*.png"))
+
+    print(f"   kept on disk: {', '.join(f.name for f in scenes)}")
+
+    assert len(scenes) == 3, scenes
+
+    # Second time round nothing is drawn again.
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+    assert DRAWN == [], "the scenes were drawn a second time"
+
+    print("   a second run drew nothing and animated nothing")
+
+    print("\n   [OK] one reference in, the same boy in every scene")
+
+
+def test_a_preview_small_enough_to_send(root):
+
+    heading("25  A copy small enough to send back")
+
+    drive = make_input(root / "Preview", ["Scene01.png", "Scene02.png"])
+
+    printed, refusal, calls = run(drive, full_size=True)
+
+    assert not refusal, refusal
+
+    preview = drive / "Output" / "Episode_Preview.mp4"
+
+    assert preview.exists(), "no preview was made"
+
+    big = (drive / "Output" / "Episode.mp4").stat().st_size
+
+    small = preview.stat().st_size
+
+    print(f"   Episode.mp4 {big / 1e6:.1f}MB -> "
+          f"Episode_Preview.mp4 {small / 1e6:.1f}MB")
+
+    assert small < 25e6, small
+    assert small < big, (small, big)
+
+    wide = int(probe(preview, "stream=width")[0])
+
+    assert wide in (640, 480, 384), wide
+
+    print("\n   [OK] the finished video can always be sent back")
+
+
 def test_written_scenes(root):
 
     heading("17  Scenes written as text, with no pictures at all")
@@ -1428,6 +1568,8 @@ def main():
         test_drive_refusing_to_connect(root)
         test_the_machine_picks_the_model(root)
         test_a_small_card_is_sent_away(root)
+        test_one_picture_of_him(root)
+        test_a_preview_small_enough_to_send(root)
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)

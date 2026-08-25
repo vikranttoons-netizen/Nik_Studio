@@ -565,6 +565,49 @@ eleven clips later.
 **One honest limit.** The mouth moves but it is not lip-synced to the
 words. Nothing free does real lip-sync yet.
 
+### One picture of Nik, and every scene drawn from him
+
+A model asked for sixteen scenes from words alone gives you sixteen
+different boys. The words are all it has to hold him to, and words are
+not a face — `CHARACTER` describes him in every prompt and it still is
+not the same child twice.
+
+So: put **one** picture of Nik on his own in the Input folder, named so
+it starts with `nik`. It stops being a scene and becomes the boy. Each
+line of the script is drawn as a still — SDXL with **IP-Adapter**
+carrying the reference — and the video is made from that drawing rather
+than from the words.
+
+That fixes two things at once. He is the same boy in all sixteen, and
+the framing is decided by a model that is good at composing a picture
+instead of by one that is good at moving one. The first Wan clip cut
+the top of his head off and then walked him out of the frame; a drawn
+first frame cannot do either.
+
+Only him. `REFERENCE_NAME` picks out one file and one only — the puppy,
+the kitten and the duckling still come from the words in the line,
+because a reference of a boy should not be asked to decide what a
+duckling looks like. `LIKENESS` (0.6) is how hard it pulls: too low and
+he drifts back to being a different boy, too high and every scene comes
+back as a copy of the reference whatever the line said. `REFERENCE_NAME
+= ""` turns the whole thing off.
+
+The scenes are kept in `Output/Scenes` and stamped like the clips, so a
+second run draws nothing again. The drawing model is loaded before the
+video model and deleted before it — two seven-gigabyte models on one
+card is how a run dies at scene twelve with everything to do over.
+
+Licences: SDXL base is CreativeML Open RAIL++-M, IP-Adapter is Apache
+2.0. Both are free to use commercially.
+
+### A preview small enough to send
+
+The finished file is 1080p and a couple of hundred megabytes, and most
+places will not accept one that size — which meant the only thing that
+ever came back was a description, and a description cannot be measured.
+Every run also writes `Episode_Preview.mp4`, re-encoded small and
+re-encoded smaller again if the first attempt is not under 25MB.
+
 ### Which model, and why
 
 **Wan 2.2 TI2V-5B is the default on a card with room for it.** Every
