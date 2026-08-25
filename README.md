@@ -597,6 +597,27 @@ second run draws nothing again. The drawing model is loaded before the
 video model and deleted before it — two seven-gigabyte models on one
 card is how a run dies at scene twelve with everything to do over.
 
+Two things that took a crash and a swallowed warning to learn.
+
+`ip-adapter-plus_sdxl_vit-h` expects CLIP **ViT-H**, which is 1280 wide.
+SDXL ships with **ViT-bigG**, which is 1664, and diffusers will load
+that one without complaint and then fail inside the first step with
+`mat1 and mat2 shapes cannot be multiplied (514x1664 and 1280x1280)` —
+those two numbers are the two encoders. The image encoder is named
+explicitly now rather than left to a default that does not match.
+
+And SDXL reads **77 tokens** and discards the rest without stopping. The
+video prompt is about 225, so the first attempt sent framing, character
+and style straight into the bin and kept only the action — a failure
+that announces itself in one line inside a wall of warnings and would
+otherwise have produced sixteen styleless pictures. There is a separate,
+short `"drawing"` prompt now: the action, `DRAW_FRAMING` and
+`DRAW_STYLE`, about 33 words. The character is deliberately *not*
+repeated — that is what the reference picture is for, and spending forty
+of seventy-seven tokens describing a boy whose photograph is already in
+front of the model is what pushed the style off the end. A script line
+long enough to overflow anyway is named before the drawing starts.
+
 Licences: SDXL base is CreativeML Open RAIL++-M, IP-Adapter is Apache
 2.0. Both are free to use commercially.
 

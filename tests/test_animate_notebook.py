@@ -79,6 +79,8 @@ DRAWN = []
 
 LIKENESS = []
 
+EYES = []
+
 # Every frame identical, so the only thing that can move in the
 # finished video is the camera. Used by the beat-pulse test, which is
 # measuring the camera and nothing else.
@@ -281,6 +283,15 @@ def install_stand_ins(vram, ram, capability):
     transformers.T5EncoderModel = types.SimpleNamespace(
         from_pretrained=lambda *a, **kw: object()
     )
+
+    # The IP-Adapter's own image encoder. Which one is loaded is the
+    # whole of the bug this stands in for, so the subfolder is recorded.
+    transformers.CLIPVisionModelWithProjection = types.SimpleNamespace(
+        from_pretrained=lambda model, **kw: EYES.append(
+            dict(kw, repository=model)
+        )
+    )
+    transformers.CLIPImageProcessor = lambda *a, **kw: object()
     sys.modules["transformers"] = transformers
 
     display = types.ModuleType("IPython.display")
@@ -371,6 +382,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     DRAWN.clear()
 
     LIKENESS.clear()
+
+    EYES.clear()
 
     FAIL_FIRST_CALL[0] = out_of_memory
 
@@ -1159,6 +1172,32 @@ def test_one_picture_of_him(root):
     # pulling at the strength that was asked for.
     assert all(draw["ip_adapter_image"] is not None for draw in DRAWN)
     assert {"scale": 0.6} in LIKENESS, LIKENESS
+
+    # The image encoder is named rather than left to SDXL's default.
+    # ip-adapter-plus_sdxl_vit-h wants CLIP ViT-H at 1280 wide; SDXL
+    # ships ViT-bigG at 1664, and the mismatch fails inside the first
+    # step with "mat1 and mat2 shapes cannot be multiplied".
+    assert EYES, "no image encoder was chosen - SDXL's default will not fit"
+    assert EYES[0]["subfolder"] == "models/image_encoder", EYES
+
+    print(f"   image encoder: {EYES[0]['repository']}/"
+          f"{EYES[0]['subfolder']}")
+
+    # And what SDXL is asked to draw fits in the 77 tokens it reads.
+    # The video prompt is about 225, and the first attempt sent that -
+    # so the framing, the character and the style were all cut off.
+    for draw in DRAWN:
+
+        words = len(draw["prompt"].split())
+
+        assert words <= 55, (words, draw["prompt"])
+
+        assert "chubby cheerful" not in draw["prompt"], draw["prompt"]
+        assert "Pixar" in draw["prompt"], draw["prompt"]
+        assert "medium wide shot" in draw["prompt"], draw["prompt"]
+
+    print(f"   drawing prompt: {max(len(d['prompt'].split()) for d in DRAWN)}"
+          " words at its longest, against the 55 that fit")
 
     weights = [entry for entry in LIKENESS if "weight_name" in entry]
 
