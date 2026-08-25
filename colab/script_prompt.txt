@@ -29,9 +29,14 @@ WHAT TO WRITE
        of it again, and the second half of the clip is an empty field -
        that is exactly what happened to the first one of these.
 
-       Make it big and make it repeat. "He claps his hands three times
-       quickly" and "he jumps up and down twice" read on screen; "he
-       smiles and nods" does not.
+       Make it big, and make it SLOW. Each shot is four seconds long
+       and the action has to fill them without hurrying. "He claps his
+       hands twice" and "he waves one hand slowly above his head" are
+       right. "He claps five times" and anything with "quickly" or
+       "rapidly" in it comes back frantic - the first one did.
+
+       Never more than two of anything. Never the words "quickly",
+       "rapidly" or "fast".
     2. Who else is in the shot and what they are doing, if anyone.
        Name them: the puppy, the kitten, the duckling.
     3. One small piece of background life - flowers nodding, butterflies
@@ -57,6 +62,11 @@ RULES
   - Nobody enters or leaves a shot. The animals are already beside him
     at the start of the line and still there at the end. They may bark,
     hop on the spot, flap, sit, wag - not run to him or waddle over.
+  - EVERY animal in the line must be doing something. The first video
+    moved the boy and left the puppy sitting like an ornament, and the
+    reason was that the line only said the puppy was there. "the puppy
+    beside him" is not enough; "the puppy beside him wagging its tail"
+    is.
   - Nothing violent, nothing frightening, nothing sad.
   - The shots should follow one another as a little story: he greets
     each animal in turn, they play, they end together. Not "he

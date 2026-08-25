@@ -649,6 +649,46 @@ motion in his hair, his clothes and the grass" — rather than as a
 negation, because the last time this notebook told a model to be unlike
 a still picture, the face melted at two seconds.
 
+### What the first finished clip showed
+
+Four things, and only one of them was the model's doing.
+
+**It was frantic.** The line said "he claps his hands three times
+quickly" and the clip was three seconds long, so it did three claps in
+three seconds. Pace is set by how much room the action is given, not by
+any setting called speed: `CLIP_SECONDS` is now `SHOT_SECONDS + 1.2`, so
+the model gets four seconds to do what the edit shows 2.8 of. The
+example script and the brief are rewritten to match — never more than
+two of anything, and the words "quickly", "rapidly" and "fast" are
+banned outright.
+
+**Only the boy moved.** The puppy and the kitten sat like ornaments.
+`MOTION` now opens with "everyone in the shot is moving at once — the
+boy and every animal with him", the brief insists every animal named in
+a line is given something to do, and `NEGATIVE` names "frozen animals"
+and "only one character moving". Note what is still *not* in that
+negative: "static image". That phrase asks the model to be unlike the
+picture it was handed, and it is what melted a face at two seconds.
+
+**Every shot looked like the reference.** Same rainbow, same flowers,
+same seated pose, whatever the line said — because IP-Adapter carries
+what it is shown, and it was shown a whole scene rather than a boy.
+`LIKENESS` drops to 0.5, but the real fix belongs to the reference
+picture: the run measures its shape and says so when it is more than
+1.25× wider than tall, because a wide reference is read as a place and a
+tall one as a person.
+
+**The lyrics were nearly invisible** — white with a thin grey edge over
+lit grass, needing the contrast pushed 2× in an editor before they read
+at all. They are a quarter larger now, with a pure black outline twice
+as thick and a real drop shadow. Measured against the same run without
+them, the bottom of the frame differs by 33.5 where it used to differ by
+13.2.
+
+And a test clip is the model's work and nothing else again: it was
+coming back with a line of the song burned across it, because
+`TEST_ONE_PICTURE` dropped the song and forgot the words.
+
 ### Repeats are the other half
 
 Sixteen clips across a 125-second song is 45 cuts, so each clip covers

@@ -611,11 +611,13 @@ def test_the_edit_cuts_it_up(root):
     assert not refusal, refusal
 
     # The model is asked for one shot's worth and no more, whatever the
-    # song is doing. 73 frames is 3.0s at 24fps - SHOT_SECONDS plus a
-    # little, so a whole shot is one unbroken take.
+    # song is doing. 97 frames is 4.0s at 24fps - a good second longer
+    # than a shot needs, because a model given "he claps three times"
+    # and three seconds does three claps in three seconds, and the
+    # first clip that came back was frantic.
     asked = {call["num_frames"] for call in calls}
 
-    assert asked == {73}, asked
+    assert asked == {97}, asked
     assert len(calls) == 11, len(calls)
 
     editing = [line for line in printed.splitlines()
@@ -930,7 +932,7 @@ def test_one_picture_on_its_own(root):
     # One clip, from the first picture, at its own length - not looped
     # to fill a slot and not cut to a share of the song.
     assert len(calls) == 1, calls
-    assert calls[0]["num_frames"] == 73, calls
+    assert calls[0]["num_frames"] == 97, calls
     assert "back and forth" not in printed, printed
 
     final = drive / "Output" / "Episode.mp4"
@@ -940,8 +942,13 @@ def test_one_picture_on_its_own(root):
 
     print(f"   {length:.1f}s, streams {streams}")
 
-    assert abs(length - 73 / 24) < 0.3, length
+    assert abs(length - 97 / 24) < 0.3, length
     assert "audio" not in streams, "the song was laid over a test clip"
+
+    # Nor the words. The first test clip came back with a line of the
+    # song burned across it, which is not what a test of the model is
+    # for.
+    assert "drawn on" not in printed, printed
 
     print("\n   [OK] one clip, its own length, nothing over the top")
 
@@ -1040,7 +1047,7 @@ def test_the_machine_picks_the_model(root):
 
     # And the clip covers a whole shot on its own, so nothing has to be
     # played backwards to fill the time.
-    assert all(c["num_frames"] == 73 for c in calls), calls
+    assert all(c["num_frames"] == 97 for c in calls), calls
     assert "forwards only" in printed, printed
 
     assert SHIFTED and SHIFTED[0]["flow_shift"] == 5.0, SHIFTED
@@ -1171,7 +1178,7 @@ def test_one_picture_of_him(root):
     # The reference is in front of the drawing model for every one, and
     # pulling at the strength that was asked for.
     assert all(draw["ip_adapter_image"] is not None for draw in DRAWN)
-    assert {"scale": 0.6} in LIKENESS, LIKENESS
+    assert {"scale": 0.5} in LIKENESS, LIKENESS
 
     # The image encoder is named rather than left to SDXL's default.
     # ip-adapter-plus_sdxl_vit-h wants CLIP ViT-H at 1280 wide; SDXL
