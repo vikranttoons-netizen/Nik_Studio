@@ -1115,12 +1115,31 @@ def test_written_scenes(root):
     assert all("3D rendered CGI animation" in call["prompt"]
                for call in calls), calls[0]["prompt"]
 
-    # Three sentences, not one run-on. Without the full stops the
+    # And the framing sits between them, second only to the action.
+    # The first Wan clip cut the top of his head off and then walked
+    # him out of the picture, because nothing said where to stand.
+    for call in calls:
+
+        where = call["prompt"]
+
+        assert "medium wide shot" in where, where
+        assert "stays fully in frame" in where, where
+
+        assert (where.index("medium wide shot")
+                < where.index("chubby cheerful")
+                < where.index("3D rendered CGI")), where
+
+    # Four sentences, not one run-on. Without the full stops the
     # description ran straight into the action - "blue canvas sneakers
     # Close up of the puppy" - and was read as one clause.
     for call in calls:
-        assert call["prompt"].count(". ") >= 2, call["prompt"]
+        assert call["prompt"].count(". ") >= 3, call["prompt"]
         assert call["prompt"].endswith("."), call["prompt"]
+
+    # The faults that clip had are named in the negative prompt, which
+    # this model does read.
+    assert "cropped head" in calls[0]["negative_prompt"]
+    assert "character walking out of frame" in calls[0]["negative_prompt"]
 
     final = drive / "Output" / "Episode.mp4"
 

@@ -365,6 +365,21 @@ The default is Wan 2.2 at `guidance_scale = 5.0`: the style words pull
 and the negative prompt is obeyed. The notebook prints which of the two
 you are on and what it means.
 
+**`FRAMING` decides whether he is in the shot at all.** The first Wan
+clip came back with the boy filling the frame, the top of his head cut
+off, and by two seconds he had walked out of the right of the picture
+and left an empty meadow. Neither is the model's fault: nothing said
+how far away to stand or that he had to stay, so it chose, and a video
+model's idea of a shot is whatever its training data did most — which
+is close. `FRAMING` sits second in the prompt, straight after the
+action, and the faults are named in `NEGATIVE` as well.
+
+The other half of that fix is in the script. A line that says he
+*walks into* the meadow gets a model that walks him out again, and the
+back half of the clip is grass. Every action has to happen where he
+already is, and `colab/script_prompt.txt` says so in the words you hand
+to ChatGPT.
+
 **`STYLE` decides whether it looks expensive.** It used to end with
 "cheerful children's cartoon", and that is exactly the phrase that
 fetched back flat, cheap-looking shading — it is what most of the
