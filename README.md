@@ -658,6 +658,16 @@ this from the channels it is aimed at, which never show a shot twice.
 No code change fixes it: the run now prints the number of scenes that
 would remove it entirely, and that number goes in `script.txt`.
 
+### The one small package Wan dies without
+
+Wan runs every prompt through `ftfy.fix_text`, and diffusers imports
+`ftfy` only if it is already installed — so a runtime without it gives
+no warning at all, downloads 31GB, loads the model, and then dies on the
+first clip with `NameError: name 'ftfy' is not defined`. That is a very
+long way to travel for a 60KB package. Cell 1 installs it, and cell 2
+puts it back if cell 1 was skipped — before diffusers is first imported,
+because that import is what decides whether ftfy is available.
+
 ### A preview small enough to send
 
 The finished file is 1080p and a couple of hundred megabytes, and most

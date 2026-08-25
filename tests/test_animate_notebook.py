@@ -1260,6 +1260,39 @@ def test_a_preview_small_enough_to_send(root):
     print("\n   [OK] the finished video can always be sent back")
 
 
+def test_the_helper_wan_needs(root):
+
+    heading("26  The one small package Wan dies without")
+
+    notebook = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+
+    packages = "".join(notebook["cells"][1]["source"])
+
+    source = "".join(notebook["cells"][2]["source"])
+
+    # Wan runs every prompt through ftfy.fix_text, and diffusers imports
+    # ftfy only if it is already installed - so a runtime without it
+    # says nothing, downloads 31GB, and dies on the first clip with
+    # "name 'ftfy' is not defined". That is a very long way to travel
+    # for a 60KB package.
+    assert "ftfy" in packages, packages
+
+    print("   cell 1 installs it")
+
+    # And cell 2 puts it back if cell 1 was skipped. This only works
+    # while nothing above it has imported diffusers - that import is
+    # what decides whether ftfy is available.
+    heals = source.index('find_spec("ftfy")')
+
+    first_diffusers = source.index("from diffusers import")
+
+    assert heals < first_diffusers, (heals, first_diffusers)
+
+    print("   cell 2 puts it back, before the first diffusers import")
+
+    print("\n   [OK] neither cell can lose an hour to a missing helper")
+
+
 def test_written_scenes(root):
 
     heading("17  Scenes written as text, with no pictures at all")
@@ -1632,6 +1665,7 @@ def main():
         test_a_small_card_is_sent_away(root)
         test_one_picture_of_him(root)
         test_a_preview_small_enough_to_send(root)
+        test_the_helper_wan_needs(root)
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)
