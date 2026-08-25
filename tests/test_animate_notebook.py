@@ -1300,6 +1300,32 @@ def test_the_helper_wan_needs(root):
     print("\n   [OK] neither cell can lose an hour to a missing helper")
 
 
+def test_it_says_which_notebook_it_is(root):
+
+    heading("27  Every run says which notebook it is")
+
+    drive = make_input(root / "Build", ["Scene01.png", "Scene02.png"])
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    line = [row for row in printed.splitlines()
+            if row.startswith("Notebook")][0]
+
+    print(f"   {line.strip()}")
+
+    # First line of the run, above the card. There is no other way to
+    # tell one notebook from another once it is open in Colab, and a
+    # clip made by an older one looks exactly like a clip the new one
+    # declined to change.
+    assert printed.strip().splitlines()[0].startswith("Notebook"), printed
+
+    assert len(line.split(":", 1)[1].strip()) > 8, line
+
+    print("\n   [OK] a run can be identified from its own output")
+
+
 def test_written_scenes(root):
 
     heading("17  Scenes written as text, with no pictures at all")
@@ -1673,6 +1699,7 @@ def main():
         test_one_picture_of_him(root)
         test_a_preview_small_enough_to_send(root)
         test_the_helper_wan_needs(root)
+        test_it_says_which_notebook_it_is(root)
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)

@@ -649,6 +649,16 @@ motion in his hair, his clothes and the grass" — rather than as a
 negation, because the last time this notebook told a model to be unlike
 a still picture, the face melted at two seconds.
 
+### Every run says which notebook it is
+
+`BUILD` is printed first, above the card, because there is no other way
+to tell one notebook from another once it is open in Colab. A clip made
+by an older one looks exactly like a clip the new one declined to
+change — and an hour went into working out that a video sent back for
+review was byte for byte the one sent the day before. If the line at the
+top of a run is not the one you expect, the notebook in Colab is not the
+notebook you were given.
+
 ### What the first finished clip showed
 
 Four things, and only one of them was the model's doing.
