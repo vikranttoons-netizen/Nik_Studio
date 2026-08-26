@@ -1207,13 +1207,18 @@ def test_one_picture_of_him(root):
 
         assert "chubby cheerful" not in draw["prompt"], draw["prompt"]
         assert "Pixar" in draw["prompt"], draw["prompt"]
-        assert "medium wide shot" in draw["prompt"], draw["prompt"]
+        assert "wide shot" in draw["prompt"], draw["prompt"]
 
         # And somewhere to stand. Without this a drawing came back
         # perfectly lit and perfectly framed against a flat black
         # nothing - and the video model animates what it is given, so
         # no meadow arrives later.
         assert "sunny green meadow" in draw["prompt"], draw["prompt"]
+
+        # And what "full body" means, said in words a drawing can be
+        # checked against - "full body, centred" on its own came back
+        # with his legs cut off at the shins and a hand off the edge.
+        assert "hair to shoes inside the frame" in draw["prompt"]
 
     assert "black background" in DRAW_NEGATIVE_SEEN[0], DRAW_NEGATIVE_SEEN
 
@@ -1338,6 +1343,57 @@ def test_it_says_which_notebook_it_is(root):
     assert len(line.split(":", 1)[1].strip()) > 8, line
 
     print("\n   [OK] a run can be identified from its own output")
+
+
+def test_the_cuts_follow_the_words(root):
+
+    heading("28  The picture changes when the words do")
+
+    beat = [n * 0.5 for n in range(1, 40)]
+
+    drive = make_input(root / "Words", ["Scene01.png", "Scene02.png"],
+                       song_seconds=19)
+
+    (drive / "Input" / "lyrics.txt").write_text(
+        "Clap your hands\nWag your tail\nMeow meow meow\n"
+        "Quack quack quack\nSing with me\nWave goodbye\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive, beats=beat)
+
+    assert not refusal, refusal
+
+    line = [row for row in printed.splitlines()
+            if row.startswith("Editing:")][0]
+
+    print(f"   {line.strip()}")
+
+    # A cut on a beat is right, but a beat is not what anyone hears
+    # change - the line of the song is.
+    assert "cut where each line of the song starts" in printed, printed
+
+    # Six lines over nineteen seconds is about three seconds each,
+    # which is a shot. So the shots should follow the lines, near
+    # enough - not a stopwatch, and not one long take.
+    shots = int(line.split()[1])
+
+    assert 5 <= shots <= 8, line
+
+    print(f"   6 lines of song -> {shots} shots")
+
+    # Without lyrics it falls back to the beat, and says so.
+    plain = make_input(root / "NoWords", ["Scene01.png", "Scene02.png"],
+                       song_seconds=19)
+
+    printed, refusal, calls = run(plain, beats=beat)
+
+    assert not refusal, refusal
+    assert "cut on the beat" in printed, printed
+
+    print("   no lyrics -> back to the beat, and it says so")
+
+    print("\n   [OK] the words and the picture change together")
 
 
 def test_written_scenes(root):
@@ -1714,6 +1770,7 @@ def main():
         test_a_preview_small_enough_to_send(root)
         test_the_helper_wan_needs(root)
         test_it_says_which_notebook_it_is(root)
+        test_the_cuts_follow_the_words(root)
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)

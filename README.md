@@ -649,6 +649,29 @@ motion in his hair, his clothes and the grass" — rather than as a
 negation, because the last time this notebook told a model to be unlike
 a still picture, the face melted at two seconds.
 
+### The cuts follow the words
+
+A cut on a beat is right, but a beat is not the thing anyone *hears*
+change — the line of the song is. Where there are lyrics, the shots now
+change where a line begins, so the picture changes exactly when the
+words do. It is still cut on the beat, because the lyric timings come
+from the beats; it is cut on the beats a line actually starts on. Lines
+too quick to hold a shot are gathered up, a line that outstays one is
+divided inside itself, and with no lyrics it falls back to the beat and
+says so.
+
+**About lip sync.** `MOTION` asks for his mouth to open and close as he
+sings along, and that is what it is — a mouth that moves with the
+singing, not a mouth forming the words. Real lip sync needs MuseTalk,
+which cannot share a runtime with this notebook: it pins
+`diffusers==0.28` where Wan 2.2 needs `>=0.35`. That has to be a
+separate notebook run over the finished MP4, and it has two known
+risks worth stating before anyone spends an afternoon on it — it is
+driven by Whisper, so it needs the vocal stem rather than the full mix
+(Demucs, MIT, does that), and it repaints mouths in a photoreal style
+learned from real faces, so a stylised toddler may work and a puppy
+will not.
+
 ### `PLACE` — somewhere to stand
 
 A drawing came back with Nik perfectly lit and perfectly framed against
