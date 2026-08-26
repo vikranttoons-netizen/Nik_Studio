@@ -649,6 +649,32 @@ motion in his hair, his clothes and the grass" — rather than as a
 negation, because the last time this notebook told a model to be unlike
 a still picture, the face melted at two seconds.
 
+### One scene per line of the song
+
+This is the difference between a video *of* a song and a video with a
+song over it, and the first full episode showed exactly what the gap
+costs. Sixteen scenes against forty-four lyric lines meant the shots had
+to be shared out by the clock, so the video sang **"Meow, meow, meow!"
+over a duckling** and **"Quack, quack, quack!" over a puppy**, all the
+way through. Nothing in the words was wrong and nothing in the pictures
+was wrong. They were simply not the same story, and that is what "no
+engagement with the song" turns out to mean when you go looking for it.
+
+When the counts match, scene four *is* line four — each shot is placed
+by the lyric it belongs to rather than by where the clock happens to be,
+and every picture shows what is being sung, by construction. When they
+do not match the run says so and names the number to write, because no
+amount of prompting fixes an alignment problem.
+
+`colab/script_prompt.txt` is rewritten around this: paste the lyrics in
+first, write one shot per lyric line in the same order, and make each
+shot show what its line says — the kitten is the subject of a "meow"
+line, the puppy of a "wag your tail" line.
+
+It costs GPU time in proportion: forty-four scenes rather than sixteen
+is roughly three times the run. `QUALITY = "draft"` is the cheap way to
+check the alignment is right before paying for it at `"good"`.
+
 ### The cuts follow the words
 
 A cut on a beat is right, but a beat is not the thing anyone *hears*

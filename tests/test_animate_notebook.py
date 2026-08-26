@@ -1396,6 +1396,64 @@ def test_the_cuts_follow_the_words(root):
     print("\n   [OK] the words and the picture change together")
 
 
+def test_a_scene_for_every_line(root):
+
+    heading("29  One scene per line means the picture shows the words")
+
+    beat = [n * 0.5 for n in range(1, 40)]
+
+    words = ["Clap your hands", "Wag your tail", "Meow meow meow",
+             "Quack quack quack", "Sing with me", "Wave goodbye"]
+
+    # Six lines, six scenes, in the same order.
+    drive = make_input(root / "LineForLine", [], song_seconds=19)
+
+    inside = drive / "Input"
+
+    (inside / "lyrics.txt").write_text("\n".join(words) + "\n",
+                                       encoding="utf-8")
+
+    (inside / "script.txt").write_text(
+        "\n".join(f"He does thing number {n}, the puppy beside him"
+                  for n in range(1, len(words) + 1)) + "\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive, beats=beat)
+
+    assert not refusal, refusal
+
+    assert "One scene per line" in printed, printed
+
+    print(f"   {len(words)} lines, {len(calls)} scenes -> lined up "
+          "one to one")
+
+    assert len(calls) == len(words), calls
+
+    # And the complaint when they do not match names the number to
+    # write, because this is the difference between a video of a song
+    # and a video with a song over it.
+    (inside / "script.txt").write_text(
+        "He does one thing, the puppy beside him\n"
+        "He does another, the kitten beside him\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive, beats=beat)
+
+    assert not refusal, refusal
+
+    assert "do not line up" in printed, printed
+    assert f"Write {len(words)} scenes" in printed, printed
+
+    complaint = [row for row in printed.splitlines()
+                 if "Write " in row and "scenes" in row][0]
+
+    print(f"  {complaint}")
+
+    print("\n   [OK] lined up when it can, and says how when it cannot")
+
+
 def test_written_scenes(root):
 
     heading("17  Scenes written as text, with no pictures at all")
@@ -1771,6 +1829,7 @@ def main():
         test_the_helper_wan_needs(root)
         test_it_says_which_notebook_it_is(root)
         test_the_cuts_follow_the_words(root)
+        test_a_scene_for_every_line(root)
         test_written_scenes(root)
         test_a_script_wins_over_pictures(root)
         test_the_vertical_cut(root)

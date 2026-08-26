@@ -8,6 +8,9 @@ THE SONG
   It is an animal-sounds song - a dog, a cat and a duck, and the noises
   they make.
 
+  PASTE THE WHOLE OF lyrics.txt HERE, one line per line, before you
+  send this. Everything below depends on it.
+
 THE CHARACTER (already handled - do not describe him)
   Nik, a 3 year old Indian toddler boy. A separate part of the tool
   already puts his full description and the art style in front of every
@@ -16,7 +19,24 @@ THE CHARACTER (already handled - do not describe him)
   change between shots.
 
 WHAT TO WRITE
-  Exactly 16 lines. One shot per line. Nothing else.
+  ONE LINE FOR EVERY LINE OF THE LYRICS ABOVE. If the song has 44
+  lines, write 44. Not 16, not "about that many" - exactly as many, in
+  exactly the same order.
+
+  This is the most important rule here. Your line 12 is what is on
+  screen while lyric line 12 is being sung, and the tool lines them up
+  one to one. Get the count wrong and it cannot: the last video played
+  "Meow, meow, meow!" over a duckling and "Quack, quack, quack!" over a
+  puppy, because there were sixteen scenes for forty-four lines and the
+  tool had to share them out by the clock.
+
+  EACH LINE MUST SHOW WHAT ITS LYRIC SAYS. If the lyric is "Meow, meow,
+  meow!" the kitten is the subject of that shot. If it is "Wag your
+  tail," the puppy is, and its tail is wagging. If it is "Clap your
+  hands," Nik is clapping. Read the lyric, then write the picture of
+  it.
+
+  One shot per line. Nothing else.
 
   Each line must contain, in this order:
     1. ONE physical action Nik does. One. Not two joined with "and then".
