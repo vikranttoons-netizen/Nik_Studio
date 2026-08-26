@@ -649,6 +649,28 @@ motion in his hair, his clothes and the grass" — rather than as a
 negation, because the last time this notebook told a model to be unlike
 a still picture, the face melted at two seconds.
 
+### `PLACE` — somewhere to stand
+
+A drawing came back with Nik perfectly lit and perfectly framed against
+a flat black nothing, and the question it raised is the right one: does
+the background arrive later? It does not. The video model animates the
+picture it is handed; it does not invent a meadow behind a boy who is
+standing in the dark.
+
+Nothing had told it where he was. `CHARACTER` says who, `STYLE` says how
+it looks, `FRAMING` says how far away — and there was no line saying
+*where*. The script mentions flowers and grass in passing, but as
+details attached to a puppy rather than as a place, and a drawing model
+given no place draws a studio backdrop. This matters twice over once the
+reference is cropped tight to Nik, which is the right thing to do: a
+tight crop takes its own plain background with it.
+
+`PLACE` is now a fixed part of both prompts, and the same place in all
+sixteen for the same reason the character is the same boy — a boy who is
+himself in a different world each time is not a series, it is sixteen
+unrelated pictures. `DRAW_NEGATIVE` names the failure too: plain, black,
+dark, studio backdrop, indoors.
+
 ### Every run says which notebook it is
 
 `BUILD` is printed first, above the card, because there is no other way

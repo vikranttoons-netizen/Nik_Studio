@@ -81,6 +81,8 @@ LIKENESS = []
 
 EYES = []
 
+DRAW_NEGATIVE_SEEN = []
+
 # Every frame identical, so the only thing that can move in the
 # finished video is the camera. Used by the beat-pulse test, which is
 # measuring the camera and nothing else.
@@ -122,6 +124,8 @@ class StandInDrawing:
     def __call__(self, **asked):
 
         DRAWN.append(asked)
+
+        DRAW_NEGATIVE_SEEN.append(asked.get("negative_prompt", ""))
 
         return types.SimpleNamespace(images=[
             Image.new("RGB", (asked["width"], asked["height"]),
@@ -384,6 +388,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     LIKENESS.clear()
 
     EYES.clear()
+
+    DRAW_NEGATIVE_SEEN.clear()
 
     FAIL_FIRST_CALL[0] = out_of_memory
 
@@ -1202,6 +1208,14 @@ def test_one_picture_of_him(root):
         assert "chubby cheerful" not in draw["prompt"], draw["prompt"]
         assert "Pixar" in draw["prompt"], draw["prompt"]
         assert "medium wide shot" in draw["prompt"], draw["prompt"]
+
+        # And somewhere to stand. Without this a drawing came back
+        # perfectly lit and perfectly framed against a flat black
+        # nothing - and the video model animates what it is given, so
+        # no meadow arrives later.
+        assert "sunny green meadow" in draw["prompt"], draw["prompt"]
+
+    assert "black background" in DRAW_NEGATIVE_SEEN[0], DRAW_NEGATIVE_SEEN
 
     print(f"   drawing prompt: {max(len(d['prompt'].split()) for d in DRAWN)}"
           " words at its longest, against the 55 that fit")
