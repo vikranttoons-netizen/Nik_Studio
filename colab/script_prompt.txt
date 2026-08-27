@@ -8,8 +8,14 @@ THE SONG
   It is an animal-sounds song - a dog, a cat and a duck, and the noises
   they make.
 
-  PASTE THE WHOLE OF lyrics.txt HERE, one line per line, before you
-  send this. Everything below depends on it.
+THE LYRICS
+  Paste the whole of lyrics.txt on the lines below before you send
+  this, one line per line, and nothing else. Everything after it
+  depends on this being here and being complete.
+
+  >>>
+
+  <<<
 
 THE CHARACTER (already handled - do not describe him)
   Nik, a 3 year old Indian toddler boy. A separate part of the tool
@@ -66,7 +72,7 @@ WHAT TO WRITE
        slowly".
 
   Start about a third of the lines with "Close up of" or "Wide shot of"
-  so the video is not sixteen identical framings - but "Close up of"
+  so the video is not one framing over and over - but "Close up of"
   is for the ANIMALS only. A close up of Nik comes back with the top of
   his head cut off. For him, use "Wide shot of" or nothing at all.
 
@@ -77,7 +83,8 @@ WHAT TO WRITE
 RULES
   - Plain text only. No numbering, no bullets, no quotes, no bold, no
     headings, no blank lines between them, no commentary before or
-    after. Just the 16 lines.
+    after. Just the lines - one for each line of the lyrics, and the
+    same number of them.
   - No text, words, letters or lyrics appearing in the picture.
   - Nobody enters or leaves a shot. The animals are already beside him
     at the start of the line and still there at the end. They may bark,
