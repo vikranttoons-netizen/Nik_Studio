@@ -584,6 +584,21 @@ instead of by one that is good at moving one. The first Wan clip cut
 the top of his head off and then walked him out of the frame; a drawn
 first frame cannot do either.
 
+**The face only, not the whole picture.** `ip-adapter-plus` carries
+everything it is shown — face, clothes, colours — and hands it to every
+character in the frame, because it has no idea which of them is meant to
+be the one in the reference. At `LIKENESS = 0.5` it put Nik's yellow
+dungarees, his blue t-shirt and his blue sneakers on a kitten standing
+upright on two legs, and gave a duckling the same outfit. `ADAPTER` is
+`ip-adapter-plus-face` now, at 0.4, and his clothes are named in `WHO`
+instead — in the prompt, attached to the boy, where they cannot end up
+on a cat.
+
+The camera clauses are also stripped out of the drawing prompt. A still
+picture has no camera move, so "the camera does not move" was five
+tokens spent saying nothing — and those five were coming out of the
+style words at the far end of a 77-token budget.
+
 Only him. `REFERENCE_NAME` picks out one file and one only — the puppy,
 the kitten and the duckling still come from the words in the line,
 because a reference of a boy should not be asked to decide what a

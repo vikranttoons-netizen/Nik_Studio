@@ -1064,7 +1064,7 @@ def test_the_machine_picks_the_model(root):
     # 480p clip drifts magenta and bends the arms where they do not
     # bend - which is exactly what the first draft clip did.
     for quality, size, steps, shift in (("draft", 832, 25, 3.0),
-                                        ("good", 1024, 30, 3.0),
+                                        ("good", 1024, 30, 5.0),
                                         ("best", 1280, 30, 5.0)):
 
         for clip in (drive / "Output" / "Clips").glob("*"):
@@ -1192,7 +1192,7 @@ def test_one_picture_of_him(root):
     # The reference is in front of the drawing model for every one, and
     # pulling at the strength that was asked for.
     assert all(draw["ip_adapter_image"] is not None for draw in DRAWN)
-    assert {"scale": 0.5} in LIKENESS, LIKENESS
+    assert {"scale": 0.4} in LIKENESS, LIKENESS
 
     # The image encoder is named rather than left to SDXL's default.
     # ip-adapter-plus_sdxl_vit-h wants CLIP ViT-H at 1280 wide; SDXL
@@ -1211,7 +1211,7 @@ def test_one_picture_of_him(root):
 
         words = len(draw["prompt"].split())
 
-        assert words <= 55, (words, draw["prompt"])
+        assert words <= 50, (words, draw["prompt"])
 
         assert "chubby cheerful" not in draw["prompt"], draw["prompt"]
         assert "Pixar" in draw["prompt"], draw["prompt"]
@@ -1221,21 +1221,34 @@ def test_one_picture_of_him(root):
         # perfectly lit and perfectly framed against a flat black
         # nothing - and the video model animates what it is given, so
         # no meadow arrives later.
-        assert "sunny green meadow" in draw["prompt"], draw["prompt"]
+        assert "sunny meadow" in draw["prompt"], draw["prompt"]
 
         # And what "full body" means, said in words a drawing can be
         # checked against - "full body, centred" on its own came back
         # with his legs cut off at the shins and a hand off the edge.
-        assert "hair to shoes inside the frame" in draw["prompt"]
+        assert "whole body in frame" in draw["prompt"], draw["prompt"]
+
+        # His clothes are in the words, attached to the boy, where they
+        # cannot end up on a cat. A whole-image reference put his
+        # dungarees and his sneakers on a kitten standing upright.
+        assert "yellow dungarees" in draw["prompt"], draw["prompt"]
+
+        # And no camera instruction: a still picture has no camera
+        # move, and those five tokens were coming out of the style
+        # words at the far end.
+        assert "camera" not in draw["prompt"], draw["prompt"]
 
     assert "black background" in DRAW_NEGATIVE_SEEN[0], DRAW_NEGATIVE_SEEN
 
     print(f"   drawing prompt: {max(len(d['prompt'].split()) for d in DRAWN)}"
-          " words at its longest, against the 55 that fit")
+          " words at its longest, against the 50 that fit")
 
     weights = [entry for entry in LIKENESS if "weight_name" in entry]
 
-    assert weights and "sdxl" in weights[0]["weight_name"], weights
+    # The face adapter, not the whole-picture one. "plus" carries his
+    # clothes and colours to every character in the frame; "plus-face"
+    # carries the face and leaves the rest to the words.
+    assert weights and "plus-face" in weights[0]["weight_name"], weights
 
     # Drawn at a size SDXL knows, not at the video size.
     assert all(draw["width"] == 1344 and draw["height"] == 768
