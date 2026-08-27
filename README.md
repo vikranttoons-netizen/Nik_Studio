@@ -621,6 +621,26 @@ long enough to overflow anyway is named before the drawing starts.
 Licences: SDXL base is CreativeML Open RAIL++-M, IP-Adapter is Apache
 2.0. Both are free to use commercially.
 
+### `flow_shift` is not one number
+
+A draft clip came back with the boy turning magenta over four seconds
+and his arms bending where a boy has no joints. Neither was the model
+misbehaving: `flow_shift` decides how much of the schedule goes on the
+big shapes rather than on letting the fine detail settle, and Wan is
+tuned at **5.0 for 720p and 3.0 for 480p**. Using the 720p figure on a
+480p clip spends the schedule on shapes and leaves too little for
+anything to resolve — so the colour runs and the limbs warp. It now
+follows the size: 3.0 at 480 and 576, 5.0 at 704.
+
+`"draft"` also ran at 20 steps, which is too few to carry
+`guidance_scale = 5.0` — high guidance with few steps is what burns
+colour. It is 25 now. A draft is meant to be smaller, not to tell a
+different story about what the model does; the full-size run before it
+had no colour drift at all, and a draft that warps cannot be used to
+judge anything.
+
+Both faults are named in `NEGATIVE` as well, which this model reads.
+
 ### `QUALITY`, and why size is most of it
 
 One setting, three answers: `"draft"` (832×480, 20 steps), `"good"`

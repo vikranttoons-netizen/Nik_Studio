@@ -1056,24 +1056,32 @@ def test_the_machine_picks_the_model(root):
     assert all(c["num_frames"] == 97 for c in calls), calls
     assert "forwards only" in printed, printed
 
-    assert SHIFTED and SHIFTED[0]["flow_shift"] == 5.0, SHIFTED
-
     # One setting, three answers, and the finished size is what makes
     # the difference: 832x480 is stretched 2.3 times to reach 1080p.
-    for quality, size, steps in (("draft", 832, 20),
-                                 ("good", 1024, 30),
-                                 ("best", 1280, 30)):
+    #
+    # flow_shift follows the size rather than being one number. Wan is
+    # tuned at 5.0 for 720p and 3.0 for 480p, and the 720p figure on a
+    # 480p clip drifts magenta and bends the arms where they do not
+    # bend - which is exactly what the first draft clip did.
+    for quality, size, steps, shift in (("draft", 832, 25, 3.0),
+                                        ("good", 1024, 30, 3.0),
+                                        ("best", 1280, 30, 5.0)):
 
         for clip in (drive / "Output" / "Clips").glob("*"):
             clip.unlink()
+
+        SHIFTED.clear()
 
         printed, refusal, calls = run(drive, 24, 57, 8, quality=quality)
 
         assert not refusal, refusal
         assert all(c["width"] == size for c in calls), calls
         assert all(c["num_inference_steps"] == steps for c in calls), calls
+        assert SHIFTED and SHIFTED[0]["flow_shift"] == shift, (quality,
+                                                               SHIFTED)
 
-        print(f"   QUALITY {quality:<7}: {size} wide, {steps} steps")
+        print(f"   QUALITY {quality:<7}: {size} wide, {steps} steps, "
+              f"flow_shift {shift}")
 
     for clip in (drive / "Output" / "Clips").glob("*"):
         clip.unlink()
