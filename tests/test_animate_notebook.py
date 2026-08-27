@@ -366,7 +366,7 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
         uploads=None, local=None, fast=False, force="",
-        quality="good"):
+        quality="good", reference=""):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -429,6 +429,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         'QUALITY = "good"',
         f"QUALITY = {quality!r}",
+    ).replace(
+        'REFERENCE_NAME = ""',
+        f"REFERENCE_NAME = {reference!r}",
     )
 
     if not full_size:
@@ -1174,7 +1177,7 @@ def test_one_picture_of_him(root):
         encoding="utf-8",
     )
 
-    printed, refusal, calls = run(drive)
+    printed, refusal, calls = run(drive, reference="nik")
 
     assert not refusal, refusal
 
@@ -1226,12 +1229,17 @@ def test_one_picture_of_him(root):
         # And what "full body" means, said in words a drawing can be
         # checked against - "full body, centred" on its own came back
         # with his legs cut off at the shins and a hand off the edge.
-        assert "whole body in frame" in draw["prompt"], draw["prompt"]
+        assert "full body in frame" in draw["prompt"], draw["prompt"]
 
         # His clothes are in the words, attached to the boy, where they
         # cannot end up on a cat. A whole-image reference put his
         # dungarees and his sneakers on a kitten standing upright.
         assert "yellow dungarees" in draw["prompt"], draw["prompt"]
+
+        # Who he is, in words. Two references both leaked his clothes
+        # or his face onto the kitten, and words cannot: they attach
+        # to the noun beside them, and a cat is a different noun.
+        assert "dark brown hair" in draw["prompt"], draw["prompt"]
 
         # And no camera instruction: a still picture has no camera
         # move, and those five tokens were coming out of the style
@@ -1266,7 +1274,7 @@ def test_one_picture_of_him(root):
     assert len(scenes) == 3, scenes
 
     # Second time round nothing is drawn again.
-    printed, refusal, calls = run(drive)
+    printed, refusal, calls = run(drive, reference="nik")
 
     assert not refusal, refusal
     assert DRAWN == [], "the scenes were drawn a second time"
@@ -1274,6 +1282,54 @@ def test_one_picture_of_him(root):
     print("   a second run drew nothing and animated nothing")
 
     print("\n   [OK] one reference in, the same boy in every scene")
+
+
+def test_drawn_without_a_reference(root):
+
+    heading("30  The scenes are drawn whether or not there is a "
+            "reference")
+
+    drive = make_input(root / "NoReference", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands above his head, the puppy beside him "
+        "wagging its tail, butterflies drifting past, the camera does "
+        "not move\n"
+        "Close up of the kitten meowing twice, leaves swaying behind "
+        "it, the camera does not move\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    # Drawing is what gets the framing right, and it was never the
+    # thing that leaked. Only the reference was, so only the reference
+    # is optional.
+    assert len(DRAWN) == 2, DRAWN
+    assert len(calls) == 2, calls
+
+    assert all("ip_adapter_image" not in draw for draw in DRAWN), DRAWN
+    assert EYES == [], "an image encoder was loaded with no reference"
+    assert LIKENESS == [], "an adapter was loaded with no reference"
+
+    print(f"   {len(DRAWN)} drawn from words alone, "
+          f"{len(calls)} animated from the drawings")
+
+    # The camera and the weather are dropped; the animals are not.
+    assert "camera" not in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
+    assert "butterflies" not in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
+    assert "puppy" in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
+
+    print(f"   {DRAWN[1]['prompt'][:66]}...")
+
+    # One seed for all of them. Different words already make different
+    # pictures; a fixed seed settles the lottery underneath, which is
+    # where a boy stops being the same boy.
+    assert len({len(d["prompt"]) for d in DRAWN}) == 2, "same prompt twice"
+
+    print("\n   [OK] drawn from words, with nothing to leak")
 
 
 def test_a_preview_small_enough_to_send(root):
@@ -1528,8 +1584,14 @@ def test_written_scenes(root):
     # The commented line and the blank one are not scenes.
     assert len(calls) == 3, calls
 
-    # Nothing is sent but words - there is no picture to condition on.
-    assert all("image" not in call for call in calls), calls
+    # A written scene is drawn first and then animated from the
+    # drawing. It used to go straight to the video model from words,
+    # and the framing was whatever that model felt like: a boy with
+    # the top of his head cut off, walking out of the right of the
+    # picture. A model that composes stills is better at composing
+    # than one that moves them.
+    assert all("image" in call for call in calls), calls
+    assert len(DRAWN) == len(calls), (len(DRAWN), len(calls))
 
     # The ACTION leads. Burying it behind sixty words of costume
     # description got back a boy standing still in an empty field, so
@@ -1604,8 +1666,14 @@ def test_a_script_wins_over_pictures(root):
                  if "being ignored" in line][0][:70], "...")
 
     assert len(calls) == 3, calls
-    assert all("image" not in call for call in calls), calls
     assert "being ignored" in printed, printed
+
+    # Animated from drawings made for the script, not from the
+    # pictures sitting in the folder.
+    assert len(DRAWN) == 3, DRAWN
+    assert all("puddle" not in shot["prompt"].lower()
+               or "Nik jumps in a puddle" in shot["prompt"]
+               for shot in DRAWN), DRAWN
 
     print("\n   [OK] the written scenes ran, and it said the pictures are idle")
 
@@ -1860,6 +1928,7 @@ def main():
         test_the_machine_picks_the_model(root)
         test_a_small_card_is_sent_away(root)
         test_one_picture_of_him(root)
+        test_drawn_without_a_reference(root)
         test_a_preview_small_enough_to_send(root)
         test_the_helper_wan_needs(root)
         test_it_says_which_notebook_it_is(root)

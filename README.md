@@ -565,6 +565,41 @@ eleven clips later.
 **One honest limit.** The mouth moves but it is not lip-synced to the
 words. Nothing free does real lip-sync yet.
 
+### Why the reference picture is off
+
+The idea was right and I could not make it work. Two attempts failed the
+same way from opposite directions.
+
+IP-Adapter carries what it is shown into the picture it draws. What it
+cannot do is say **which character** it applies to — there is no such
+control. With Nik alone in frame it is fine. With Nik and a kitten:
+
+| adapter | what came back |
+| --- | --- |
+| `ip-adapter-plus` | the kitten standing upright on two legs in Nik's yellow dungarees, blue t-shirt and blue sneakers, and the duckling dressed to match |
+| `ip-adapter-plus-face` | Nik's **face** on the kitten — a boy's head on a cat's body, with a tail, on all fours |
+
+Weakening it (0.6 → 0.5 → 0.4) only made the leak fainter. The leak is
+the mechanism.
+
+So he is **described** rather than copied. `WHO` says who he is in
+words, and words attach to the noun beside them: "Nik, a 3 year old boy
+… blue t-shirt, yellow dungarees" cannot be applied to a cat by
+accident, because the cat is a different noun. A fixed seed for every
+drawing settles the lottery underneath, which is the other half of a
+boy staying the same boy.
+
+The drawing stage itself stays — it was never what leaked, and it is
+what gets the framing right. `REFERENCE_NAME = "nik"` turns the
+reference back on for anyone who wants it; it is genuinely good for
+shots with nobody else in them.
+
+Paying for `WHO`'s twenty words: a script line is four clauses — the
+action, who else is in it, a piece of background life, and the camera.
+A drawing has no camera and nothing drifts in a still, so both are
+dropped, and any line still over budget loses its trailing clauses
+rather than letting SDXL silently cut the style words off the end.
+
 ### One picture of Nik, and every scene drawn from him
 
 A model asked for sixteen scenes from words alone gives you sixteen
