@@ -1451,6 +1451,20 @@ def test_a_scene_for_every_line(root):
 
     print(f"  {complaint}")
 
+    # And a test run - the cheapest check there is - still answers the
+    # most important question. It drops the song and the words, which
+    # is right, and it used to drop this with them.
+    for clip in (drive / "Output" / "Clips").glob("*"):
+        clip.unlink()
+
+    printed, refusal, calls = run(drive, beats=beat, test_one=True)
+
+    assert not refusal, refusal
+    assert len(calls) == 1, calls
+    assert "do not line up" in printed, printed
+
+    print("   a one-clip test run still says whether they line up")
+
     print("\n   [OK] lined up when it can, and says how when it cannot")
 
 

@@ -660,6 +660,12 @@ way through. Nothing in the words was wrong and nothing in the pictures
 was wrong. They were simply not the same story, and that is what "no
 engagement with the song" turns out to mean when you go looking for it.
 
+A test run reports this too. It drops the song and the words, which is
+right — what comes back should be the model's work and nothing else —
+and it was silently dropping the alignment check with them, so the
+cheapest check in the notebook had stopped answering the most important
+question in it.
+
 When the counts match, scene four *is* line four — each shot is placed
 by the lyric it belongs to rather than by where the clock happens to be,
 and every picture shows what is being sung, by construction. When they
