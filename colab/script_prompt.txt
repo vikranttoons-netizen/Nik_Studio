@@ -2,27 +2,29 @@ You are writing a shot list for a 3D animated nursery rhyme video for
 young children. I will paste your answer straight into a tool, so the
 format matters more than the prose.
 
+Everything in ANGLE BRACKETS is for me to fill in before I send this.
+Nothing else in this brief changes from one video to the next.
+
 THE SONG
-  Title: Animal Sound Parade
-  Length: 125 seconds
-  It is an animal-sounds song - a dog, a cat and a duck, and the noises
-  they make.
+  Title:  <the song's title>
+  Length: <how many seconds>
+  About:  <one line - what happens in it>
 
 THE LYRICS
-  Paste the whole of lyrics.txt on the lines below before you send
-  this, one line per line, and nothing else. Everything after it
-  depends on this being here and being complete.
+  <paste the whole of lyrics.txt below this line, one line per line,
+   and nothing else. Everything after it depends on this being here
+   and being complete.>
 
-  >>>
+THE CHARACTER (already handled - do not describe them)
+  <the character's name, and one line: age, who they are>
 
-  <<<
+  A separate part of the tool already puts their full description and
+  the art style in front of every line you write. If you describe them,
+  or mention colours, lighting or the art style, it will fight that
+  description and the character will change between shots.
 
-THE CHARACTER (already handled - do not describe him)
-  Nik, a 3 year old Indian toddler boy. A separate part of the tool
-  already puts his full description and the art style in front of every
-  line you write. If you describe him, or mention colours, lighting or
-  the art style, it will fight that description and the character will
-  change between shots.
+WHO ELSE IS IN IT
+  <name the other characters, e.g. the puppy, the kitten, the duckling>
 
 WHAT TO WRITE
   ONE LINE FOR EVERY LINE OF THE LYRICS ABOVE. If the song has 44
@@ -31,65 +33,63 @@ WHAT TO WRITE
 
   This is the most important rule here. Your line 12 is what is on
   screen while lyric line 12 is being sung, and the tool lines them up
-  one to one. Get the count wrong and it cannot: the last video played
-  "Meow, meow, meow!" over a duckling and "Quack, quack, quack!" over a
-  puppy, because there were sixteen scenes for forty-four lines and the
-  tool had to share them out by the clock.
+  one to one. Get the count wrong and it cannot: an earlier video
+  played "Meow, meow, meow!" over a duckling and "Quack, quack, quack!"
+  over a puppy, because there were sixteen scenes for forty-four lines
+  and the tool had to share them out by the clock.
 
-  EACH LINE MUST SHOW WHAT ITS LYRIC SAYS. If the lyric is "Meow, meow,
-  meow!" the kitten is the subject of that shot. If it is "Wag your
-  tail," the puppy is, and its tail is wagging. If it is "Clap your
-  hands," Nik is clapping. Read the lyric, then write the picture of
-  it.
+  EACH LINE MUST SHOW WHAT ITS LYRIC SAYS. Read the lyric, then write
+  the picture of it. If the lyric names a character or the sound one of
+  them makes, THAT character is the subject of the shot and it should
+  usually be "Close up of the ..." with them doing the thing the line
+  says - not the main character doing something while they happen to be
+  in the background.
 
-  When a lyric names an animal or its sound - Doggy, Kitty, Duckie,
-  woof, meow, quack, waddle - that animal is the SUBJECT and the shot
-  should usually be "Close up of the ..." with the animal doing the
-  thing the line says. Not Nik doing something while the animal is
-  also present. The last attempt put "Here comes Kitty," over a shot of
-  Nik pointing at the puppy.
-
-  ONE OR TWO ANIMALS PER SHOT, not all three. All three belong only in
-  the lines that call for them - "Animal friends", "Dance, dance,
-  dance!", the ending. A previous attempt named the puppy, the kitten
-  and the duckling in all forty-three lines and every shot came back as
-  the same crowded group picture.
+  ONE OR TWO OTHER CHARACTERS PER SHOT, not all of them. All of them
+  belong only in the lines that call for everybody. An earlier attempt
+  named every animal in every line and each shot came back as the same
+  crowded group picture.
 
   One shot per line. Nothing else.
 
   Each line must contain, in this order:
-    1. ONE physical action Nik does. One. Not two joined with "and then".
-       It must be something a camera could film - "he claps his hands",
-       not "he feels happy".
+    1. ONE physical action the main character does. One. Not two joined
+       with "and then". It must be something a camera could film - "he
+       claps his hands", not "he feels happy".
 
-       It has to happen WHERE HE ALREADY IS. Never write that he walks
-       in, walks over, runs to, comes towards, steps up to or walks
+       It has to happen WHERE THEY ALREADY ARE. Never write that they
+       walk in, walk over, run to, come towards, step up to or walk
        away. A model told to walk someone into the shot walks them out
-       of it again, and the second half of the clip is an empty field -
-       that is exactly what happened to the first one of these.
+       of it again, and the second half of the clip is an empty field.
 
        Make it big, and make it SLOW. Each shot is four seconds long
        and the action has to fill them without hurrying. "He claps his
        hands twice" and "he waves one hand slowly above his head" are
        right. "He claps five times" and anything with "quickly" or
-       "rapidly" in it comes back frantic - the first one did.
+       "rapidly" in it comes back frantic.
 
        Never more than two of anything. Never the words "quickly",
        "rapidly" or "fast".
     2. Who else is in the shot and what they are doing, if anyone.
-       Name them: the puppy, the kitten, the duckling.
-    3. One small piece of background life - flowers nodding, butterflies
-       drifting, leaves swaying, clouds moving, grass rippling.
+       Name them.
+    3. One small piece of background life - and BEGIN THAT CLAUSE WITH
+       THE BACKGROUND ITSELF: "flowers nodding", "butterflies drifting
+       past", "leaves swaying", "clouds drifting slowly", "grass
+       rippling gently". The tool tells a background clause from a
+       character clause by its first word, so "the wind moves the
+       flowers" is read as a character and kept when it should be
+       dropped.
     4. The words "the camera does not move" - unless that shot genuinely
        needs a slow push in, in which case write "the camera pushes in
        slowly".
 
   Start about a third of the lines with "Close up of" or "Wide shot of"
-  so the video is not one framing over and over - but "Close up of"
-  is for the ANIMALS only. A close up of Nik comes back with the top of
-  his head cut off. For him, use "Wide shot of" or nothing at all.
+  so the video is not one framing over and over - but "Close up of" is
+  for the OTHER characters only. A close up of a small child comes back
+  with the top of their head cut off. For them, use "Wide shot of" or
+  nothing at all.
 
-  Write in the present tense. Begin the rest with "He".
+  Write in the present tense.
 
   Keep each line between 18 and 28 words.
 
@@ -99,20 +99,18 @@ RULES
     after. Just the lines - one for each line of the lyrics, and the
     same number of them.
   - No text, words, letters or lyrics appearing in the picture.
-  - Nobody enters or leaves a shot. The animals are already beside him
-    at the start of the line and still there at the end. They may bark,
-    hop on the spot, flap, sit, wag - not run to him or waddle over.
-  - Every animal you DO put in a shot must be doing something. The
-    first video moved the boy and left the puppy sitting like an
+  - Nobody enters or leaves a shot. Whoever is in it is there at the
+    start of the line and still there at the end. They may bark, hop on
+    the spot, flap, sit, wag - not run over or waddle in.
+  - Every character you DO put in a shot must be doing something. An
+    earlier video moved the child and left the puppy sitting like an
     ornament, because the line only said the puppy was there. "the
     puppy beside him" is not enough; "the puppy beside him wagging its
-    tail" is. This is not a reason to put all three in every shot - see
+    tail" is. This is not a reason to put everybody in every shot - see
     the rule about one or two.
   - COUNT YOUR LINES BEFORE YOU SEND. It must be exactly the number of
-    lyric lines. The last attempt came back one short, and one short
+    lyric lines. An earlier attempt came back one short, and one short
     means every line after the gap is on the wrong lyric.
   - Nothing violent, nothing frightening, nothing sad.
-  - The shots should follow one another as a little story: he greets
-    each animal in turn, they play, they end together. Not "he
-    arrives" - see the rule about walking in.
-  - Give each of the three animals at least one close up of its own.
+  - The shots should follow one another as a little story.
+  - Give each of the other characters at least one close up of its own.

@@ -565,6 +565,40 @@ eleven clips later.
 **One honest limit.** The mouth moves but it is not lip-synced to the
 words. Nothing free does real lip-sync yet.
 
+### One show is a setting; the next show is a different setting
+
+There will be more videos than this one, so nothing about *this* one is
+allowed to live in the code. Six settings sit together under a **THE
+SHOW** heading and everything below them is indifferent to what they
+say:
+
+| | |
+| --- | --- |
+| `WHO` | who the character is, short — for the drawings |
+| `CHARACTER` | the same person at length — for the video |
+| `PLACE` | where the whole video happens |
+| `SCENERY` | words that mean weather rather than somebody |
+| `DRAW_FRAMING` | how far away the camera stands |
+| `DRAW_STYLE` | what it looks like |
+
+`WHO` and `CHARACTER` are the same person twice at two lengths, because
+the drawing model reads 77 tokens and the video model reads 512. They
+have to agree — a colour in one and not the other is two children.
+
+The one piece of real cleverness is `SCENERY`, and it is deliberately
+the safe kind. A drawing does not need "butterflies drifting past", so
+background clauses are dropped — but "the puppy bouncing on the grass
+beside him" mentions grass without being about grass. So only the
+**first word** of a clause decides, because a background clause names
+the background first and a character clause names the character first.
+Anything unrecognised is assumed to be somebody and kept, which is the
+safe way round to be wrong: a script about a wizard and a dragon this
+notebook has never heard of keeps both and drops the clouds.
+
+`colab/script_prompt.txt` is a template now too — the song, the
+character, the cast and the setting are in angle brackets, and
+everything else in it is the same from one video to the next.
+
 ### Why the reference picture is off
 
 The idea was right and I could not make it work. Two attempts failed the

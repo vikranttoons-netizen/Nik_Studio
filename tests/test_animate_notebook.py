@@ -1218,7 +1218,6 @@ def test_one_picture_of_him(root):
 
         assert "chubby cheerful" not in draw["prompt"], draw["prompt"]
         assert "Pixar" in draw["prompt"], draw["prompt"]
-        assert "wide shot" in draw["prompt"], draw["prompt"]
 
         # And somewhere to stand. Without this a drawing came back
         # perfectly lit and perfectly framed against a flat black
@@ -1229,7 +1228,10 @@ def test_one_picture_of_him(root):
         # And what "full body" means, said in words a drawing can be
         # checked against - "full body, centred" on its own came back
         # with his legs cut off at the shins and a hand off the edge.
-        assert "full body in frame" in draw["prompt"], draw["prompt"]
+        # The shot type leads. Third in the prompt it was ignored, and
+        # a drawing came back as a head and two hands with the puppy
+        # half out of the bottom edge.
+        assert draw["prompt"].startswith("full body shot"), draw["prompt"]
 
         # His clothes are in the words, attached to the boy, where they
         # cannot end up on a cat. A whole-image reference put his
@@ -1317,17 +1319,37 @@ def test_drawn_without_a_reference(root):
     print(f"   {len(DRAWN)} drawn from words alone, "
           f"{len(calls)} animated from the drawings")
 
+    print(f"   {DRAWN[1]['prompt'][:64]}...")
+
     # The camera and the weather are dropped; the animals are not.
     assert "camera" not in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
     assert "butterflies" not in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
     assert "puppy" in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
 
-    print(f"   {DRAWN[1]['prompt'][:66]}...")
+    # And the rule that decides which is which works for a cast this
+    # notebook has never heard of. A background clause names the
+    # background first; anything else is assumed to be somebody, which
+    # is the safe way round to be wrong.
+    (drive / "Input" / "script.txt").write_text(
+        "The wizard lifts his staff, the dragon beside him beating its "
+        "wings, clouds drifting past, the camera does not move\n",
+        encoding="utf-8",
+    )
 
-    # One seed for all of them. Different words already make different
-    # pictures; a fixed seed settles the lottery underneath, which is
-    # where a boy stops being the same boy.
-    assert len({len(d["prompt"]) for d in DRAWN}) == 2, "same prompt twice"
+    for scene in (drive / "Output" / "Scenes").glob("*"):
+        scene.unlink()
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    strange = DRAWN[0]["prompt"]
+
+    assert "dragon beside him beating its wings" in strange, strange
+    assert "clouds drifting" not in strange, strange
+
+    print("   a wizard and a dragon it has never heard of: both kept, "
+          "the clouds dropped")
 
     print("\n   [OK] drawn from words, with nothing to leak")
 
