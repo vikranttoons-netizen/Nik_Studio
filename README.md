@@ -565,6 +565,42 @@ eleven clips later.
 **One honest limit.** The mouth moves but it is not lip-synced to the
 words. Nothing free does real lip-sync yet.
 
+### One character per shot
+
+A drawing came back as the boy with **a cat's ears on his head** and no
+kitten anywhere, from a line about a kitten. An earlier one was a duck
+with a dog's face. Two distinct characters in one frame is the thing a
+picture model is worst at — it merges them — and there is no wording
+that fixes it. So the script does not ask: **one character per shot**,
+either the lead alone or one of the others alone, intercut. That is also
+how the big children's channels cut.
+
+Three things follow from it, all of them in code rather than in a
+prompt:
+
+**The lead's description goes only into the lead's shots.** `WHO` was in
+every drawing prompt, so a description of a boy was in front of the
+model while it drew a cat — and it drew a cat with a boy in it. It is
+now added only when the line mentions the character by name or by
+pronoun. (`LEAD` is read off the front of `WHO`, so this needs no
+editing for a different show.)
+
+**The framing follows the line.** `DRAW_FRAMING` says "long shot, full
+body" — "wide shot" and "full body shot" both came back as head and
+shoulders; "long shot" is the term the model was trained on. But a line
+that begins "Close up of the puppy…" gets `DRAW_CLOSE` instead, because
+telling a model to do and not do the same thing lets it pick, and a
+"Meow, meow, meow!" line wants a close up of a cat.
+
+**The negative follows it too.** The head-and-shoulders words —
+`close-up, portrait, headshot, bust, upper body, waist up` — are pushed
+away on every shot that is *not* meant to be a close up, and left out of
+the ones that are.
+
+One bug worth recording: `STANDS_FOR` matched `"he "` as a substring,
+and `"the"` contains it — so every line with the word "the" counted as a
+line about the boy. It is a word-boundary match now.
+
 ### Every drawing on one page, before the hours start
 
 Drawing every scene takes about ten minutes. Animating them takes three

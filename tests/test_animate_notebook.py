@@ -1234,7 +1234,7 @@ def test_one_picture_of_him(root):
         # The shot type leads. Third in the prompt it was ignored, and
         # a drawing came back as a head and two hands with the puppy
         # half out of the bottom edge.
-        assert draw["prompt"].startswith("full body shot"), draw["prompt"]
+        assert draw["prompt"].startswith("long shot"), draw["prompt"]
 
         # His clothes are in the words, attached to the boy, where they
         # cannot end up on a cat. A whole-image reference put his
@@ -1246,10 +1246,12 @@ def test_one_picture_of_him(root):
         # to the noun beside them, and a cat is a different noun.
         assert "dark brown hair" in draw["prompt"], draw["prompt"]
 
-        # And no camera instruction: a still picture has no camera
-        # move, and those five tokens were coming out of the style
-        # words at the far end.
-        assert "camera" not in draw["prompt"], draw["prompt"]
+        # And no camera instruction out of the script line: a still
+        # picture has no camera move, and those five tokens were coming
+        # out of the style words at the far end. ("far from the camera"
+        # is the framing, and is a distance rather than a move.)
+        assert "camera does not move" not in draw["prompt"], draw["prompt"]
+        assert "pushes in" not in draw["prompt"], draw["prompt"]
 
     assert "black background" in DRAW_NEGATIVE_SEEN[0], DRAW_NEGATIVE_SEEN
 
@@ -1325,7 +1327,7 @@ def test_drawn_without_a_reference(root):
     print(f"   {DRAWN[1]['prompt'][:64]}...")
 
     # The camera and the weather are dropped; the animals are not.
-    assert "camera" not in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
+    assert "camera does not move" not in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
     assert "butterflies" not in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
     assert "puppy" in DRAWN[0]["prompt"], DRAWN[0]["prompt"]
 

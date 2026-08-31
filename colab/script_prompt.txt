@@ -45,10 +45,20 @@ WHAT TO WRITE
   says - not the main character doing something while they happen to be
   in the background.
 
-  ONE OR TWO OTHER CHARACTERS PER SHOT, not all of them. All of them
-  belong only in the lines that call for everybody. An earlier attempt
-  named every animal in every line and each shot came back as the same
-  crowded group picture.
+  ONE CHARACTER PER SHOT. One. Either the main character on their own,
+  or ONE of the others on their own - never two of them in the same
+  line.
+
+  This is not a style preference, it is what the picture model can
+  actually draw. Asked for a boy and a kitten it merges them: one
+  drawing came back as the boy with a cat's ears on his head and no
+  kitten anywhere, another as a duck with a dog's face. Two subjects
+  in one frame is the thing it is worst at, and there is no wording
+  that fixes it - so do not ask.
+
+  It is also how the big children's channels cut: single subjects,
+  intercut. A shot of the puppy, then a shot of the boy, reads better
+  than both of them squeezed into one frame.
 
   One shot per line. Nothing else.
 
@@ -70,8 +80,7 @@ WHAT TO WRITE
 
        Never more than two of anything. Never the words "quickly",
        "rapidly" or "fast".
-    2. Who else is in the shot and what they are doing, if anyone.
-       Name them.
+    2. NOTHING. There is nobody else in the shot - see the rule above.
     3. One small piece of background life - and BEGIN THAT CLAUSE WITH
        THE BACKGROUND ITSELF: "flowers nodding", "butterflies drifting
        past", "leaves swaying", "clouds drifting slowly", "grass
@@ -102,12 +111,10 @@ RULES
   - Nobody enters or leaves a shot. Whoever is in it is there at the
     start of the line and still there at the end. They may bark, hop on
     the spot, flap, sit, wag - not run over or waddle in.
-  - Every character you DO put in a shot must be doing something. An
-    earlier video moved the child and left the puppy sitting like an
-    ornament, because the line only said the puppy was there. "the
-    puppy beside him" is not enough; "the puppy beside him wagging its
-    tail" is. This is not a reason to put everybody in every shot - see
-    the rule about one or two.
+  - Whoever is in a shot must be DOING something, described. An earlier
+    video left the puppy sitting like an ornament because the line only
+    said it was there. "the puppy in the grass" is not enough; "the
+    puppy in the grass wagging its tail" is.
   - COUNT YOUR LINES BEFORE YOU SEND. It must be exactly the number of
     lyric lines. An earlier attempt came back one short, and one short
     means every line after the gap is on the wrong lyric.
