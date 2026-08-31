@@ -565,6 +565,23 @@ eleven clips later.
 **One honest limit.** The mouth moves but it is not lip-synced to the
 words. Nothing free does real lip-sync yet.
 
+### Every drawing on one page, before the hours start
+
+Drawing every scene takes about ten minutes. Animating them takes three
+and a half hours. So the run stops in between, writes `Output/Scenes.jpg`
+— every drawing on one numbered page, well under a megabyte — and shows
+it.
+
+This replaced showing the *first* drawing, which was showing one
+forty-fourth of the answer. A fault that is in all of them takes one
+look at a contact sheet and forty rounds of "send me a clip" the other
+way, and that is not a way to make a series.
+
+Wrong ones: fix those lines in `script.txt`, delete just those files
+from `Output/Scenes`, run again — only what you deleted is drawn afresh.
+Happy with them: `CHECK_DRAWINGS = False` and run again, which costs
+nothing because nothing is drawn twice.
+
 ### One show is a setting; the next show is a different setting
 
 There will be more videos than this one, so nothing about *this* one is

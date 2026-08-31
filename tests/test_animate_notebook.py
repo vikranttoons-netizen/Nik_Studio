@@ -366,7 +366,7 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
         uploads=None, local=None, fast=False, force="",
-        quality="good", reference=""):
+        quality="good", reference="", check_drawings=False):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -432,6 +432,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         'REFERENCE_NAME = ""',
         f"REFERENCE_NAME = {reference!r}",
+    ).replace(
+        "CHECK_DRAWINGS = True",
+        f"CHECK_DRAWINGS = {check_drawings}",
     )
 
     if not full_size:
@@ -1354,6 +1357,57 @@ def test_drawn_without_a_reference(root):
     print("\n   [OK] drawn from words, with nothing to leak")
 
 
+def test_every_drawing_on_one_page(root):
+
+    heading("31  Every drawing on one page, before the hours start")
+
+    drive = make_input(root / "Sheet", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "\n".join(f"He does thing number {n}, the puppy beside him "
+                  f"wagging its tail" for n in range(1, 8)) + "\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive, check_drawings=True)
+
+    # Drawing takes ten minutes and animating takes three hours, so
+    # this is where to look - and looking at one of forty-four was
+    # looking at one forty-fourth of the answer.
+    assert refusal, "it animated them without showing them"
+    assert calls == [], calls
+    assert len(DRAWN) == 7, DRAWN
+
+    assert "Stopped after the drawings" in refusal, refusal
+    assert "CHECK_DRAWINGS = False" in refusal, refusal
+
+    sheet = drive / "Output" / "Scenes.jpg"
+
+    assert sheet.exists(), "no contact sheet was written"
+
+    with Image.open(sheet) as page:
+        size = page.size
+
+    print(f"   7 scenes -> {sheet.name} at {size[0]}x{size[1]}, "
+          f"{sheet.stat().st_size / 1e3:.0f}KB")
+
+    # Six across, so seven scenes wrap onto a second row.
+    assert size[0] == 6 * 380, size
+    assert size[1] > 380 * 9 / 16, size
+
+    # And then it carries on from where it stopped, drawing nothing
+    # twice.
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+    assert DRAWN == [], "the drawings were made again"
+    assert len(calls) == 7, calls
+
+    print("   run again with it off: nothing redrawn, 7 clips animated")
+
+    print("\n   [OK] one page, one look, before the three hours")
+
+
 def test_a_preview_small_enough_to_send(root):
 
     heading("25  A copy small enough to send back")
@@ -1951,6 +2005,7 @@ def main():
         test_a_small_card_is_sent_away(root)
         test_one_picture_of_him(root)
         test_drawn_without_a_reference(root)
+        test_every_drawing_on_one_page(root)
         test_a_preview_small_enough_to_send(root)
         test_the_helper_wan_needs(root)
         test_it_says_which_notebook_it_is(root)
