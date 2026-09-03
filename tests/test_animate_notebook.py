@@ -1410,6 +1410,78 @@ def test_every_drawing_on_one_page(root):
     print("\n   [OK] one page, one look, before the three hours")
 
 
+def test_two_of_them_share_a_frame(root):
+
+    heading("32  Two clips side by side, without asking the model")
+
+    drive = make_input(root / "Split", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands above his head, flowers nodding, the "
+        "camera does not move\n"
+        "Close up of the puppy wagging its tail, grass rippling, the "
+        "camera does not move\n"
+        "Split of Scene01 and Scene02, butterflies drifting, the "
+        "camera does not move\n"
+        "Close up of the kitten meowing twice, leaves swaying, the "
+        "camera does not move\n"
+        "Split of Scene01, Scene02 and Scene04, flowers nodding, the "
+        "camera does not move\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive, full_size=True)
+
+    assert not refusal, refusal
+
+    # Every drawing has one character in it, because that is the only
+    # way a picture model draws them without merging them into each
+    # other. This is how they share a frame anyway - by cutting up
+    # clips that already exist, which costs no GPU and cannot make a
+    # hybrid, because nothing is generated.
+    assert len(calls) == 3, calls
+    assert len(DRAWN) == 3, DRAWN
+
+    print(f"   5 scenes: {len(calls)} animated, "
+          f"{5 - len(calls)} cut from those")
+
+    clips = drive / "Output" / "Clips"
+
+    for name, across in (("Scene03", 2), ("Scene05", 3)):
+
+        made = clips / f"{name}.mp4"
+
+        assert made.exists(), f"{name} was not made"
+
+        wide = int(probe(made, "stream=width")[0])
+        tall = int(probe(made, "stream=height")[0])
+
+        print(f"   {name}: {across} side by side -> {wide}x{tall}")
+
+        assert (wide, tall) == (1024, 576), (wide, tall)
+
+    # And a split of a scene that is not there stops the run before the
+    # GPU, rather than failing halfway through it.
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands above his head, flowers nodding, the "
+        "camera does not move\n"
+        "Split of Scene01 and Scene40, grass rippling, the camera does "
+        "not move\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert refusal, "it went ahead with a scene that is not there"
+    assert "there is no Scene40" in refusal, refusal
+    assert calls == [], calls
+
+    print("   a split naming a scene that is not there: stopped, "
+          "nothing spent")
+
+    print("\n   [OK] they share a frame without the model merging them")
+
+
 def test_a_preview_small_enough_to_send(root):
 
     heading("25  A copy small enough to send back")
@@ -2008,6 +2080,7 @@ def main():
         test_one_picture_of_him(root)
         test_drawn_without_a_reference(root)
         test_every_drawing_on_one_page(root)
+        test_two_of_them_share_a_frame(root)
         test_a_preview_small_enough_to_send(root)
         test_the_helper_wan_needs(root)
         test_it_says_which_notebook_it_is(root)

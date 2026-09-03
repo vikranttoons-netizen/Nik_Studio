@@ -601,6 +601,28 @@ One bug worth recording: `STANDS_FOR` matched `"he "` as a substring,
 and `"the"` contains it — so every line with the word "the" counted as a
 line about the boy. It is a word-boundary match now.
 
+### `Split of …` — two of them in one frame anyway
+
+One character per shot is what the picture model can draw, but a lyric
+like "Animal friends are here today!" genuinely wants more than one on
+screen. So a script line may read:
+
+```
+Split of Scene07, Scene11 and Scene19, flowers nodding, the camera does not move
+```
+
+Two or three scene numbers. The picture model is not asked for that
+shot at all — the finished clips of those scenes are cropped to their
+share of the width from the centre (where every subject is framed) and
+stacked side by side. It costs one ffmpeg call, no GPU, and it cannot
+merge anybody into anybody because nothing is generated.
+
+The named scenes may come *later* in the script than the split does:
+everything that needs the model is animated first, and the splits are
+cut afterwards. A split naming a scene that does not exist, or naming
+another split, stops the run in the pre-flight check rather than
+halfway through the GPU time.
+
 ### Every drawing on one page, before the hours start
 
 Drawing every scene takes about ten minutes. Animating them takes three

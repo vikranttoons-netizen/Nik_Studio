@@ -60,6 +60,21 @@ WHAT TO WRITE
   intercut. A shot of the puppy, then a shot of the boy, reads better
   than both of them squeezed into one frame.
 
+  WHEN A LINE REALLY NEEDS TWO OF THEM ON SCREEN - "Animal friends are
+  here today!", the ending - write it as:
+
+      Split of Scene07 and Scene11, flowers nodding, the camera does not move
+      Split of Scene07, Scene11 and Scene19, leaves swaying, the camera does not move
+
+  Two or three scene numbers, side by side. The tool does not ask the
+  picture model for that shot at all - it cuts the finished clips of
+  those scenes into one frame, so it costs nothing and cannot merge
+  anybody into anybody. Name scenes that show ONE character each, and
+  they may come later in the script than the split does.
+
+  Use it sparingly - three or four times in a song. It is a device, not
+  a default.
+
   One shot per line. Nothing else.
 
   Each line must contain, in this order:
