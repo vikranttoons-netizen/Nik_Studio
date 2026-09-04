@@ -601,6 +601,61 @@ One bug worth recording: `STANDS_FOR` matched `"he "` as a substring,
 and `"the"` contains it — so every line with the word "the" counted as a
 line about the boy. It is a word-boundary match now.
 
+### The clap on the clap
+
+A model given four seconds and "he claps his hands twice" decides for
+itself whether the clap falls at 1.2s or 3.4s, and it does not know the
+song. So the clap did not land on the word — which is most of what "no
+engagement" means for a nursery rhyme.
+
+The timing cannot be asked for. It can be measured afterwards and
+moved. Every clip's motion is measured frame by frame, the **first**
+big movement is found (not the biggest — "claps twice" has two peaks,
+and the first clap on the first word is both nearer and more musical),
+and the edit starts the clip late enough that it lands `LAND_ON` (0.12s
+— about three frames) after the cut, where the cut is already on the
+first word of the line.
+
+The room to slide is the difference between the clip and the shot,
+about a second. When a model puts the movement further in than that,
+the run says so and names `CLIP_SECONDS` as the knob, rather than
+quietly doing half the job. Measured on a clip with a known burst at
+0.83s: it lands at 0.08s in the finished shot.
+
+### A repeated line borrows its clip
+
+A song repeats itself. In this one "Clap, clap, clap!" is sung four
+times, "Tap, tap, tap!" four, "Come back, come back!" three — 44 lyric
+lines, 29 distinct. Generating four separate clips of the same clap is
+an hour of GPU spent on something the song has already said is the same
+moment, and when the words repeat a repeated picture reads as the song
+repeating rather than as a video running out of ideas.
+
+`Same as Scene05` on its own line borrows that scene's clip. No GPU, no
+copy on disk. The example script uses it thirteen times: **44 scenes,
+30 animated**.
+
+Not for every repeat, though — "Animal friends," is sung three times and
+introduces a different animal each time. That is a judgement the writer
+makes, so it is in the brief rather than automatic.
+
+### `PREVIEW_ONLY`
+
+While the video is still being decided on, the 1080p master and the
+vertical Short are minutes of encoding spent on something nobody keeps.
+`PREVIEW_ONLY = True` (the default) works at 854×480 and writes the
+small preview only. Turn it off for the one you upload.
+
+### Clothes stay on the boy
+
+The puppy came back in a blue t-shirt and the kitten in blue sneakers,
+on shots where the boy is not mentioned and his description is not in
+the prompt. That is not a leak from anywhere in this notebook — it is
+what a picture model does with "Pixar" and an animal, because most of
+the Pixar animals it has ever seen wore clothes. `NOT_DRESSED` pushes it
+away, and only on the shots with no person in them: doing it on a shot
+of the boy would be asking for a naked child.
+
 ### `Split of …` — two of them in one frame anyway
 
 One character per shot is what the picture model can draw, but a lyric

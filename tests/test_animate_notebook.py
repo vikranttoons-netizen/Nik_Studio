@@ -88,6 +88,11 @@ DRAW_NEGATIVE_SEEN = []
 # measuring the camera and nothing else.
 STILL_FRAMES = [False]
 
+# Still, except for one burst of movement at this frame. Lets a test
+# know where the movement in a clip is, so it can check the edit slid
+# it onto the beat.
+BURST_AT = [None]
+
 
 def textured(width, height):
     """A still picture with enough detail in it to see a zoom."""
@@ -165,7 +170,18 @@ class StandInPipeline:
 
         width, height = asked["width"], asked["height"]
 
-        if STILL_FRAMES[0]:
+        if BURST_AT[0] is not None:
+
+            calm = textured(width, height)
+
+            loud = textured(width, height).point(lambda v: 255 - v)
+
+            frames = [
+                (loud if abs(n - BURST_AT[0]) <= 2 else calm).copy()
+                for n in range(asked["num_frames"])
+            ]
+
+        elif STILL_FRAMES[0]:
             one = textured(width, height)
             frames = [one.copy() for _ in range(asked["num_frames"])]
         else:
@@ -366,7 +382,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
         uploads=None, local=None, fast=False, force="",
-        quality="good", reference="", check_drawings=False):
+        quality="good", reference="", check_drawings=False,
+        preview_only=False):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -435,6 +452,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         "CHECK_DRAWINGS = True",
         f"CHECK_DRAWINGS = {check_drawings}",
+    ).replace(
+        "PREVIEW_ONLY = True",
+        f"PREVIEW_ONLY = {preview_only}",
     )
 
     if not full_size:
@@ -1482,6 +1502,180 @@ def test_two_of_them_share_a_frame(root):
     print("\n   [OK] they share a frame without the model merging them")
 
 
+def test_a_repeated_line_borrows_its_clip(root):
+
+    heading("34  A repeated line borrows the clip, it does not pay again")
+
+    drive = make_input(root / "SameAs", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He claps his hands twice, flowers nodding, the camera does "
+        "not move\n"
+        "Close up of the puppy barking twice, grass rippling, the "
+        "camera does not move\n"
+        "Same as Scene01\n"
+        "Same as Scene02\n"
+        "Same as Scene01\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    # A song repeats itself - "Clap, clap, clap!" four times in this
+    # one - and generating four separate clips of the same clap is an
+    # hour of GPU spent on something the song has already told you is
+    # the same moment.
+    assert len(calls) == 2, calls
+    assert len(DRAWN) == 2, DRAWN
+
+    print(f"   5 scenes, {len(calls)} animated, "
+          f"{5 - len(calls)} borrowed")
+
+    assert "3 shot(s) borrow a clip" in printed, printed
+
+    clips = drive / "Output" / "Clips"
+
+    assert not (clips / "Scene03.mp4").exists(), "it made a copy"
+
+    # The clothes go on the boy and not on the puppy, and only the
+    # shots with nobody in them are told so.
+    boy, puppy = DRAWN[0], DRAWN[1]
+
+    assert "dressed animal" not in boy["negative_prompt"]
+    assert "dressed animal" in puppy["negative_prompt"]
+
+    print("   the puppy is told not to wear clothes; the boy is not")
+
+    # And a borrowed line pointing nowhere stops the run.
+    (drive / "Input" / "script.txt").write_text(
+        "He claps his hands twice, flowers nodding, the camera does "
+        "not move\n"
+        "Same as Scene09\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert refusal, "it went ahead borrowing from nowhere"
+    assert "there is no Scene09" in refusal, refusal
+
+    print("   borrowing a scene that is not there: stopped")
+
+    print("\n   [OK] the song repeats, the GPU does not")
+
+
+def test_the_movement_lands_on_the_words(root):
+
+    heading("33  The clap lands on the clap")
+
+    beat = [n * 0.475 for n in range(1, 44)]
+
+    drive = make_input(root / "OnTheBeat", [], song_seconds=19)
+
+    (drive / "Input" / "lyrics.txt").write_text(
+        "Clap your hands\nClap, clap, clap!\nTap, tap, tap!\n"
+        "Sing with me\nWave goodbye\nCome back soon\n",
+        encoding="utf-8",
+    )
+
+    (drive / "Input" / "script.txt").write_text(
+        "\n".join("He claps his hands twice, flowers nodding, the "
+                  "camera does not move" for _ in range(6)) + "\n",
+        encoding="utf-8",
+    )
+
+    # A clip that is still except for one burst two thirds of the way
+    # in, which is exactly the problem: a model given four seconds and
+    # "he claps twice" decides for itself when the clap happens, and it
+    # does not know the song.
+    BURST_AT[0] = 20
+
+    printed, refusal, calls = run(drive, beats=beat, full_size=True)
+
+    BURST_AT[0] = None
+
+    assert not refusal, refusal
+
+    line = [row for row in printed.splitlines()
+            if "start late" in row][0]
+
+    print(f"  {line.strip()}")
+
+    def peak_of(video):
+        out = subprocess.run(
+            [find_ffmpeg(), "-v", "error", "-i", str(video), "-vf",
+             "scale=160:90,format=gray,tblend=all_mode=difference,"
+             "signalstats,metadata=print:file=-",
+             "-f", "null", "-"],
+            capture_output=True, text=True,
+        )
+        rows = [float(r.rsplit("=", 1)[-1])
+                for r in (out.stdout or "").splitlines()
+                if "signalstats.YAVG" in r]
+        rows[0] = 0.0
+        return rows.index(max(rows)) / 24
+
+    cut = sorted((drive / "Output" / "Edit").glob("0*.mp4"))[0]
+
+    where = peak_of(cut)
+
+    print(f"   burst generated at {20 / 24:.2f}s in the clip, "
+          f"lands at {where:.2f}s in the shot")
+
+    # LAND_ON is 0.12 and a frame is 0.042, so within a couple of
+    # frames of the cut rather than two and a half seconds after it.
+    assert where < 0.30, where
+
+    # And when the movement is further into the clip than the spare
+    # second allows, it says so rather than quietly doing half a job.
+    BURST_AT[0] = 88
+
+    for clip in (drive / "Output" / "Clips").glob("*"):
+        clip.unlink()
+
+    printed, refusal, calls = run(drive, beats=beat, full_size=True)
+
+    BURST_AT[0] = None
+
+    assert not refusal, refusal
+    assert "only be slid part of the way" in printed, printed
+
+    print("   a burst too far in to reach: said so, not hidden")
+
+    print("\n   [OK] the movement was slid onto the word, not left "
+          "where it fell")
+
+
+def test_preview_only(root):
+
+    heading("35  Preview only, while you are still deciding")
+
+    drive = make_input(root / "PreviewOnly", ["Scene01.png",
+                                              "Scene02.png"])
+
+    printed, refusal, calls = run(drive, preview_only=True, short=True)
+
+    assert not refusal, refusal
+
+    output = drive / "Output"
+
+    # The 1080p master and the vertical cut are minutes of encoding
+    # spent on something nobody is going to keep while the video is
+    # still being decided on.
+    assert (output / "Episode_Preview.mp4").exists()
+    assert not (output / "Episode_Short.mp4").exists(), "made a Short"
+
+    wide = int(probe(output / "Episode.mp4", "stream=width")[0])
+
+    print(f"   Episode.mp4 at {wide} wide, no Short, preview written")
+
+    assert wide == 854, wide
+
+    print("\n   [OK] the small one only, until it is worth the minutes")
+
+
 def test_a_preview_small_enough_to_send(root):
 
     heading("25  A copy small enough to send back")
@@ -2081,6 +2275,9 @@ def main():
         test_drawn_without_a_reference(root)
         test_every_drawing_on_one_page(root)
         test_two_of_them_share_a_frame(root)
+        test_a_repeated_line_borrows_its_clip(root)
+        test_the_movement_lands_on_the_words(root)
+        test_preview_only(root)
         test_a_preview_small_enough_to_send(root)
         test_the_helper_wan_needs(root)
         test_it_says_which_notebook_it_is(root)

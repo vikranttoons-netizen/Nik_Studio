@@ -75,6 +75,25 @@ WHAT TO WRITE
   Use it sparingly - three or four times in a song. It is a device, not
   a default.
 
+  WHEN A LYRIC LINE REPEATS EXACTLY and the same picture would do,
+  write:
+
+      Same as Scene05
+
+  Nothing else on the line. That scene's clip is used again, and no
+  GPU is spent on it. A song repeats itself - if "Clap, clap, clap!"
+  is sung four times, write the shot once and borrow it three times.
+  When the words repeat, a repeated picture reads as the song
+  repeating rather than as a video running out of ideas.
+
+  Only borrow from a scene that was written out in full - not from
+  another "Same as" line and not from a "Split of" line.
+
+  Do NOT borrow when the repeated lyric is meant to show something
+  different each time. "Animal friends," sung three times should
+  introduce a different animal each time; "Clap, clap, clap!" is the
+  same clap.
+
   One shot per line. Nothing else.
 
   Each line must contain, in this order:
