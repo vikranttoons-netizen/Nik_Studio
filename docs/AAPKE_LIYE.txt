@@ -1,0 +1,132 @@
+NIK STUDIO - AAPKE LIYE HIDAYATEIN
+==================================
+Notebook: 2026-09-05 - a repeated line repeats its picture, by itself
+
+
+DRIVE MEIN KYA HONA CHAHIYE
+---------------------------
+My Drive / NikStudio / input /
+      script.txt        <- 44 lines (mera bheja hua)
+      lyrics.txt        <- 44 lines
+      song.mp3          <- gaana
+      (nik.png ki ab zaroorat nahi - notebook use dekhti hi nahi)
+
+Windows extension chhupa deta hai. File "script.txt.txt" nahi honi chahiye.
+
+
+HAR NAYE RUN SE PEHLE
+---------------------
+Script badla hai       -> Output/Scenes AUR Output/Clips dono khaali
+Sirf QUALITY badla hai -> sirf Output/Clips khaali (Scenes rehne dijiye)
+Kuch nahi badla        -> kuch mat hataiye, notebook khud sab skip kar degi
+
+
+=== KADAM 1 : DRAWINGS (7 minute) ===
+
+Cell 2 mein ye settings:
+
+    QUALITY         = "draft"
+    CHECK_DRAWINGS  = True
+    PREVIEW_ONLY    = True
+    TEST_ONE_PICTURE = False
+
+Runtime > Change runtime type > L4 GPU
+Cell 1 chalayiye, phir Cell 2.
+
+Pehli line YE honi chahiye:
+    Notebook : 2026-09-05 - a repeated line repeats its picture, by itself
+Nahi aayi -> purani notebook hai. RUK JAIYE.
+
+Aur ye do line bhi dikhni chahiye:
+    One scene per line - every picture shows what is being sung
+    Repeats : N line(s) come back, and so do their pictures
+
+Notebook 29 drawings banayegi, Scenes.jpg dikhayegi, aur RUK JAAYEGI.
+
+
+=== KADAM 2 : SHEET DEKHIYE ===
+
+Scenes.jpg mein chaar cheezein:
+  1. Poora body frame mein? (close-up sirf wahan jahan "Close up of" likha hai)
+  2. Har scene apni lyric line dikha raha hai?
+  3. Koi janwar Nik ke kapde to nahi pehne?
+  4. Koi hybrid jeev - billi ke kaan wala ladka - to nahi?
+
+GALAT WALI DRAWINGS:
+  - Output/Scenes se sirf UNKI file delete kijiye (jaise Scene14.png)
+  - script.txt mein unki line badaliye
+  - Cell 2 dobara chalayiye - sirf wahi dobara banengi
+
+SAB THEEK LAGE:
+  - Scenes.jpg mujhe bhej dijiye (chhoti hai, upload ho jaayegi)
+  - Kadam 3 par jaiye
+
+
+=== KADAM 3 : VIDEO (~2 ghante) ===
+
+    QUALITY        = "good"       <- draft se good
+    CHECK_DRAWINGS = False        <- ab rukna nahi hai
+    PREVIEW_ONLY   = True
+
+Cell 2 chalayiye.
+
+Drawings DOBARA NAHI banengi - wo QUALITY se nahi badalti. Sidha clips.
+Pehli clip ke baad notebook khud bata degi kitna time lagega.
+
+Tab khula rakhiye. Session toota to sirf ek clip ka nuksaan - dobara
+chalane par wahin se aage badhega.
+
+
+=== KADAM 4 : MUJHE KYA BHEJNA HAI ===
+
+1. Output/Episode_Preview.mp4   (30MB se choti)
+2. Run ki aakhri do line:
+
+   Editing: __ shot(s) across 125.5s, cut where each line of the song starts
+   Movement: __ in the finished video, __ from the model alone
+
+
+=== JAB VIDEO PASAND AA JAAYE ===
+
+    PREVIEW_ONLY = False
+
+Cell 2 dobara. Clips dobara nahi banengi - sirf 1080p Episode.mp4 aur
+Episode_Short.mp4 banengi. 5-10 minute.
+
+
+SETTINGS - LINE NUMBER KE SAATH
+-------------------------------
+Colab mein Ctrl+F se dhoondhiye. Line number chalu karne ke liye:
+Tools > Settings > Editor > Show line numbers
+
+  QUALITY           "draft" / "good" / "best"
+  CHECK_DRAWINGS    True  = drawings ke baad ruko
+  PREVIEW_ONLY      True  = sirf chhoti preview, 1080p aur Short nahi
+  BORROW_REPEATS    True  = ek jaisi lyric line = ek hi clip
+  TEST_ONE_PICTURE  True  = sirf ek clip banao
+  REFERENCE_NAME    ""    = reference picture band (jaan-boojh kar)
+  LAND_ON           0.12  = movement cut ke kitne baad gire
+  CLIP_SECONDS      badhaiye agar "could only be slid part of the way" aaye
+
+
+SCRIPT MEIN TEEN TAREEQE
+------------------------
+Normal line:
+    He claps his hands twice, flowers nodding, the camera does not move
+
+Ek hi picture dobara (lyric line dohrati ho):
+    Same as Scene05
+
+Do-teen character ek frame mein (GPU zero):
+    Split of Scene07, Scene11 and Scene19, flowers nodding, the camera does not move
+
+Niyam: ek shot mein EK character. Do maangne par model unhe mila deta hai.
+
+
+AGAR YE DIKHE
+-------------
+"do not line up"                 -> script aur lyrics ki ginti alag hai
+"there is no Scene40"            -> Split/Same as galat scene maang raha hai
+"only be slid part of the way"   -> CLIP_SECONDS badhaiye (GPU zyada lagega)
+"could not be set"               -> chhod dijiye, chalta rahega
+"It can only run the 2B model"   -> GPU T4 hai, L4 chahiye
