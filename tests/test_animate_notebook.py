@@ -383,7 +383,7 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         beats=None, short=False, full_size=False,
         uploads=None, local=None, fast=False, force="",
         quality="good", reference="", check_drawings=False,
-        preview_only=False):
+        preview_only=False, borrow_repeats=True):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -455,6 +455,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         "PREVIEW_ONLY = True",
         f"PREVIEW_ONLY = {preview_only}",
+    ).replace(
+        "BORROW_REPEATS = True",
+        f"BORROW_REPEATS = {borrow_repeats}",
     )
 
     if not full_size:
@@ -1566,6 +1569,114 @@ def test_a_repeated_line_borrows_its_clip(root):
     print("\n   [OK] the song repeats, the GPU does not")
 
 
+def test_a_repeated_line_repeats_its_picture(root):
+
+    heading("36  A line that comes back brings its picture back")
+
+    drive = make_input(root / "Repeats", [], song_seconds=19)
+
+    inside = drive / "Input"
+
+    (inside / "lyrics.txt").write_text(
+        "Clap your hands\nClap, clap, clap!\nHere comes Doggy\n"
+        "Clap, clap, clap!\nAnimal friends\nClap, clap, clap!\n",
+        encoding="utf-8",
+    )
+
+    # Nothing in this script says "Same as". Small children watch for
+    # the bit they know, and a song that sings a line three times is
+    # saying those are the same moment - so the pictures are made once
+    # without anyone having to remember to ask.
+    (inside / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not move\n"
+        "He claps his hands twice, grass rippling, the camera does not move\n"
+        "Close up of the puppy barking, leaves swaying, the camera does not move\n"
+        "He claps his hands twice, clouds drifting, the camera does not move\n"
+        "Split of Scene01 and Scene03, flowers nodding, the camera does not move\n"
+        "He claps his hands twice, grass rippling, the camera does not move\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+
+    # Six scenes: four distinct lyrics, one of which is sung three
+    # times. So three animated, one cut together, two borrowed.
+    print(f"   6 scenes, 4 distinct lines -> {len(calls)} animated")
+
+    assert len(calls) == 3, calls
+    assert "2 line(s) come back" in printed, printed
+
+    # And the scenes a split needs are never turned into borrowers -
+    # the split would show the same clip twice.
+    assert (drive / "Output" / "Clips" / "Scene01.mp4").exists()
+    assert (drive / "Output" / "Clips" / "Scene03.mp4").exists()
+
+    print("   the two scenes the split needs were left whole")
+
+    # Turned off, every line pays for itself again.
+    for clip in (drive / "Output" / "Clips").glob("*"):
+        clip.unlink()
+
+    printed, refusal, calls = run(drive, borrow_repeats=False)
+
+    assert not refusal, refusal
+    assert len(calls) == 5, calls
+
+    print(f"   BORROW_REPEATS = False -> {len(calls)} animated instead")
+
+    print("\n   [OK] the song repeats itself and the GPU does not")
+
+
+def test_a_model_you_do_not_need_is_not_fetched(root):
+
+    heading("37  A second run fetches neither model")
+
+    drive = make_input(root / "NoFetch", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not move\n"
+        "Close up of the puppy barking, grass rippling, the camera does "
+        "not move\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+    assert len(DRAWN) == 2 and len(calls) == 2, (DRAWN, calls)
+
+    first = list(LOADED)
+
+    print(f"   first run loaded: "
+          f"{', '.join(m.split('/')[-1] for m in first)}")
+
+    assert len(first) == 2, first
+
+    # Everything is in Drive now. Seven gigabytes of SDXL and thirty-one
+    # of Wan were being downloaded and unpacked anyway, on a card
+    # charged by the minute, to then skip every scene.
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+    assert DRAWN == [] and calls == [], (DRAWN, calls)
+
+    print(f"   second run loaded: {LOADED or 'nothing'}")
+
+    assert LOADED == [], LOADED
+
+    assert "drawing model is not loaded at all" in printed, printed
+    assert "video model is not loaded at all" in printed, printed
+
+    # And it still cut the video together from what was there.
+    assert (drive / "Output" / "Episode.mp4").exists()
+
+    print("   and the edit was rebuilt from what was already there")
+
+    print("\n   [OK] nothing is fetched to be skipped")
+
+
 def test_the_movement_lands_on_the_words(root):
 
     heading("33  The clap lands on the clap")
@@ -2276,6 +2387,8 @@ def main():
         test_every_drawing_on_one_page(root)
         test_two_of_them_share_a_frame(root)
         test_a_repeated_line_borrows_its_clip(root)
+        test_a_repeated_line_repeats_its_picture(root)
+        test_a_model_you_do_not_need_is_not_fetched(root)
         test_the_movement_lands_on_the_words(root)
         test_preview_only(root)
         test_a_preview_small_enough_to_send(root)

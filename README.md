@@ -622,6 +622,41 @@ the run says so and names `CLIP_SECONDS` as the knob, rather than
 quietly doing half the job. Measured on a clip with a known burst at
 0.83s: it lands at 0.08s in the finished shot.
 
+### Nothing is fetched to be skipped
+
+Two models were being downloaded and unpacked on every run whether they
+were needed or not: seven gigabytes of SDXL plus two and a half of CLIP,
+and thirty-one gigabytes of Wan. On a run where every drawing and every
+clip was already in Drive, that was several minutes of a card charged by
+the minute, spent arriving at "already made, skipping" forty-four times.
+
+What is missing is now worked out from the stamps *before* either model
+is loaded, and neither is touched if there is nothing for it to do. A
+second run says so:
+
+```
+All 30 scene(s) are already drawn - the drawing model is not loaded at all.
+All 44 shot(s) are already made - the video model is not loaded at all.
+```
+
+### A line that comes back brings its picture back
+
+Small children do not want variety, they want the bit they know.
+Repetition is what a one-to-three year old watches for, and a song that
+sings "Clap, clap, clap!" four times is saying those four moments are
+the same moment.
+
+So identical lyric lines share a clip **on their own** — no `Same as`
+needed in the script, which means it works for the next song without
+anyone remembering anything. `BORROW_REPEATS = False` turns it off.
+
+Two scenes are never turned into borrowers: one a `Split of` line needs
+(the split would show the same clip twice), and one whose own line is a
+split.
+
+For this song: **44 scenes, 29 animated** — a `"good"` run of about 2.2
+hours where the same script cost 3.3.
+
 ### A repeated line borrows its clip
 
 A song repeats itself. In this one "Clap, clap, clap!" is sung four
