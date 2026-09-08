@@ -622,6 +622,17 @@ the run says so and names `CLIP_SECONDS` as the knob, rather than
 quietly doing half the job. Measured on a clip with a known burst at
 0.83s: it lands at 0.08s in the finished shot.
 
+### An Input folder is not a folder full of pictures any more
+
+`looks_like_input` required a picture, from when pictures were the only
+way in. The moment the reference picture was turned off, a script-and-
+song folder had no pictures in it at all — and the folder finder stopped
+recognising the very folder it was standing in, reporting "nothing with
+pictures in it was found anywhere in this Drive" about a `NikStudio`
+folder it had just listed by name two lines above.
+
+Any of pictures, a `.txt` or an audio file is enough now.
+
 ### Nothing is fetched to be skipped
 
 Two models were being downloaded and unpacked on every run whether they

@@ -861,7 +861,7 @@ def test_finds_a_folder_that_moved(root):
     )
 
     print("  ", [line.strip() for line in printed.splitlines()
-                 if "Found your pictures" in line][0])
+                 if "Found your files" in line][0])
 
     assert not refusal, refusal
     assert len(calls) == 2, calls
@@ -1629,6 +1629,61 @@ def test_a_repeated_line_repeats_its_picture(root):
     print("\n   [OK] the song repeats itself and the GPU does not")
 
 
+def test_a_folder_with_no_pictures_in_it(root):
+
+    heading("38  A script and a song are enough to find the folder")
+
+    # Its own Drive, because the hunt looks at everything under the
+    # mount point and the other tests have left folders all over this
+    # one.
+    with tempfile.TemporaryDirectory() as alone:
+        _a_folder_with_no_pictures(Path(alone))
+
+
+def _a_folder_with_no_pictures(root):
+
+    # The folder is at "input", lower case, and FOLDER points at
+    # "NikStudio/Input". Finding it is the whole job here - and with
+    # the reference picture gone there is not one picture in it.
+    drive = root / "Lower"
+
+    inside = drive / "input"
+
+    inside.mkdir(parents=True)
+
+    (inside / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not move\n"
+        "He claps his hands twice, grass rippling, the camera does not "
+        "move\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [find_ffmpeg(), "-y", "-loglevel", "error", "-f", "lavfi",
+         "-i", "sine=frequency=440:duration=19",
+         str(inside / "song.mp3")],
+        check=True,
+    )
+
+    assert not list(inside.glob("*.png")), "this test needs no pictures"
+
+    printed, refusal, calls = run(drive, mounted=str(root))
+
+    assert not refusal, refusal
+
+    assert "Found your files in" in printed, printed
+
+    print("  ", [row.strip() for row in printed.splitlines()
+                 if "Found your" in row][0][:70])
+
+    assert len(calls) == 2, calls
+
+    print(f"   {len(calls)} scene(s) made from a folder with no picture "
+          f"in it")
+
+    print("\n   [OK] a script is enough - it used to want a picture")
+
+
 def test_a_model_you_do_not_need_is_not_fetched(root):
 
     heading("37  A second run fetches neither model")
@@ -2388,6 +2443,7 @@ def main():
         test_two_of_them_share_a_frame(root)
         test_a_repeated_line_borrows_its_clip(root)
         test_a_repeated_line_repeats_its_picture(root)
+        test_a_folder_with_no_pictures_in_it(root)
         test_a_model_you_do_not_need_is_not_fetched(root)
         test_the_movement_lands_on_the_words(root)
         test_preview_only(root)
