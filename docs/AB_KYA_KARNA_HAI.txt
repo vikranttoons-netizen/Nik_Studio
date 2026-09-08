@@ -33,16 +33,38 @@ Quaternius par kuch cheezon par daam likha hota hai - wo "premium"
 extra hai. Neeche free download ka button hota hai, wahi dabaiye.
 
 
-KADAM 2 - DRIVE MEIN 3 CHEEZEIN RAKHIYE
----------------------------------------
-Google Drive mein aise banaiye:
+KADAM 2 - ZIP KO DRIVE MEIN RAKHIYE
+-----------------------------------
+Download ek ZIP file hai. Use pehle KHOLIYE (unzip):
 
-  My Drive / NikStudio / nik_blender.py      <- maine bheji hai
-  My Drive / NikStudio / from_mixamo.py      <- maine bheji hai
-  My Drive / NikStudio / Mixamo / <aapki download ki hui file>
+  Windows: zip par right-click -> "Extract All..." -> Extract
 
-Haan, folder ka naam "Mixamo" hi rakhiye - chahe file Quaternius se
-aayi ho. Naam sirf ek naam hai, code wahi folder dhoondhta hai.
+Ek folder ban jayega. Uske andar chhote folder honge - FBX, glTF,
+Blend, OBJ. UNHE CHHEDNA NAHI HAI. Andar jaakar file dhoondhne ki
+zaroorat nahi - code khud neeche tak dhoondh leta hai.
+
+Ab Google Drive mein bilkul aisa banaiye:
+
+  My Drive / NikStudio / nik_blender.py    <- maine bheji hai
+  My Drive / NikStudio / from_mixamo.py    <- maine bheji hai
+  My Drive / NikStudio / Mixamo /          <- ye folder banaiye
+
+Aur us khuli hui (extracted) poori folder ko "Mixamo" ke andar
+daal dijiye. Bas.
+
+  - Folder ka naam "Mixamo" hi rakhiye, chahe file Quaternius se
+    aayi ho. Naam sirf ek naam hai, code wahi folder dhoondhta hai.
+  - Kisi file ka naam badalna NAHI hai.
+  - ZIP file khud upload mat kijiye - kholi hui folder upload kijiye.
+  - Upload mein waqt lagega. Poora hone dijiye.
+
+PACK MEIN 50 CHARACTER HAIN - EK CHUNNA HAI
+Code apne aap pehla (naam ke hisaab se) le lega. Agar aapko koi khaas
+character chahiye, to notebook mein ye line bharaiye:
+
+      CHARACTER = "Boy"
+
+File ke naam ka koi bhi hissa kaafi hai. Khaali chhodi to pehla wala.
 
 
 KADAM 3 - RIGGED NOTEBOOK CHALAIYE
@@ -52,8 +74,12 @@ Colab mein kholiye:  colab/NikStudio_Rigged.ipynb
   Cell 1 chalaiye  -> Blender install (~2 minute)
   Cell 2 chalaiye  -> Nik.blend banega, phir 3 clips
 
-GPU ki zaroorat NAHI hai. T4 bhi chalega. Kuch setting badalni
-nahi hai.
+GPU ki zaroorat NAHI hai. T4 bhi chalega.
+
+Cell 2 chalte hi wo bata dega usne kaun sa character uthaya, aur
+kaun kaun si movement us file mein mili. Wo line padh lijiye - agar
+character galat lage to CHARACTER = "..." bhar kar, REBUILD = True
+kar ke dobara chalaiye.
 
 
 KADAM 4 - MUJHE BHEJIYE

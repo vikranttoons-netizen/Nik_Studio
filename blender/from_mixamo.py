@@ -2,8 +2,15 @@
 Nik Studio - build a .blend out of downloaded character files.
 
     python blender/from_mixamo.py Downloads/ Nik.blend
+    python blender/from_mixamo.py Downloads/ Nik.blend Boy
 
 So that nobody has to open Blender.
+
+The folder is searched all the way down, so an unzipped pack can go in
+whole - the FBX/ and glTF/ folders inside it do not have to be dug out.
+
+A third argument is part of a file name, and picks which character to
+use when a pack has fifty of them. Without it, the first one by name.
 
 It takes .fbx, .glb and .gltf, and it does not care which way the
 animations arrive:
@@ -109,13 +116,28 @@ def clear():
 READABLE = (".fbx", ".glb", ".gltf")
 
 
-def model_files(folder):
-    """The character files in a folder, in a sensible order."""
+def model_files(folder, wanted=""):
+    """
+    The character files in a folder and everything under it.
+
+    A downloaded pack is a zip, and a zip unpacks into folders - FBX/,
+    glTF/, Blend/ - so looking only at the top level finds nothing.
+
+    `wanted` is part of a file name. Anything matching it is put first,
+    which is how a pack of fifty characters is told which one is ours:
+    the character is the first file with a body in it.
+    """
+
+    low = wanted.strip().lower()
+
+    found = [path for path in Path(folder).rglob("*")
+             if path.suffix.lower() in READABLE
+             and not any(part.startswith("__") for part in path.parts)]
 
     return sorted(
-        (path for path in Path(folder).iterdir()
-         if path.suffix.lower() in READABLE),
-        key=lambda path: path.name.lower(),
+        found,
+        key=lambda path: (0 if low and low in path.name.lower() else 1,
+                          str(path).lower()),
     )
 
 
@@ -185,10 +207,10 @@ def build_cameras(height=1.6):
     return aim
 
 
-def build(folder, target):
+def build(folder, target, wanted=""):
     """A folder of downloads -> one .blend the renderer can use."""
 
-    files = model_files(folder)
+    files = model_files(folder, wanted)
 
     if not files:
         raise SystemExit(
@@ -240,6 +262,32 @@ def build(folder, target):
             print(f"  {path.name}: the character"
                   + (f", and {len(named)} movement(s): "
                      + ", ".join(sorted(named)) if named else ""))
+
+            # A file that arrived with a body AND its own movements is a
+            # whole character in one file, which is how the CC0 packs
+            # ship. The rest of the folder is then forty-nine OTHER
+            # characters, not more movements for this one, and their
+            # actions are posed for their own skeletons.
+            if len(named) > 1 and len(files) > 1:
+
+                print(f"            {len(files) - 1} other file(s) in "
+                      f"the folder are other characters -\n"
+                      f"            ignored. To use one of those "
+                      f"instead, pass part of its\n"
+                      f"            file name as the third argument.")
+
+                break
+
+            continue
+
+        if has_mesh(arrived) and len(actions) > 1:
+
+            # Same reasoning, for when the character we took had no
+            # movements of its own: this one is another character.
+            print(f"  {path.name}: another character - skipped")
+
+            for item in arrived:
+                bpy.data.objects.remove(item, do_unlink=True)
 
             continue
 
@@ -320,7 +368,7 @@ def main(argv):
     if len(argv) < 2:
         raise SystemExit(__doc__.strip())
 
-    build(argv[0], argv[1])
+    build(argv[0], argv[1], argv[2] if len(argv) > 2 else "")
 
     return 0
 

@@ -415,6 +415,87 @@ def test_names_are_cleaned_up(root):
     print("\n   [OK] the decoration comes off, the movement stays")
 
 
+def test_an_unzipped_pack_of_many_characters(root):
+
+    heading("10  A pack of many characters, unzipped, subfolders and all")
+
+    import bpy, from_mixamo
+
+    # What actually arrives: a zip that unpacks into FBX/ and glTF/,
+    # with fifty characters in it, each one carrying its own
+    # animations. Nothing at the top level, and the other forty-nine
+    # are not more movements for ours - their actions are posed for
+    # their own skeletons.
+    folder = root / "BigPack"
+
+    inside = folder / "glTF"
+
+    inside.mkdir(parents=True, exist_ok=True)
+
+    def a_character(path, lift):
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+
+        bpy.ops.object.armature_add(location=(0, 0, 0))
+
+        rig = bpy.context.active_object
+
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.7,
+                                             location=(0, 0, 0.9))
+
+        bpy.context.active_object.parent = rig
+
+        rig.animation_data_create()
+
+        for name in ("Idle", "Walk"):
+
+            action = bpy.data.actions.new(name)
+
+            action.use_fake_user = True
+
+            rig.animation_data.action = action
+
+            for frame, height in ((1, 0.0), (12, lift), (24, 0.0)):
+                rig.location.z = height
+                rig.keyframe_insert("location", frame=frame)
+
+            track = rig.animation_data.nla_tracks.new()
+            track.name = name
+            track.strips.new(name, 1, action)
+
+            rig.animation_data.action = None
+
+        bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB")
+
+    a_character(inside / "Astronaut.glb", 0.3)
+    a_character(inside / "Boy.glb", 0.5)
+
+    # No argument: the first by name, and the other one left alone.
+    made = from_mixamo.build(folder, root / "First.blend")
+
+    bpy.ops.wm.open_mainfile(filepath=str(made))
+
+    actions = {action.name for action in bpy.data.actions}
+
+    print(f"   default    : {', '.join(sorted(actions))}")
+
+    assert actions == {"idle", "walk"}, actions
+
+    # Named: the same two movements, but taken from the one asked for.
+    made = from_mixamo.build(folder, root / "Chosen.blend", "Boy")
+
+    bpy.ops.wm.open_mainfile(filepath=str(made))
+
+    actions = {action.name for action in bpy.data.actions}
+
+    print(f"   asked 'Boy': {', '.join(sorted(actions))}")
+
+    assert actions == {"idle", "walk"}, actions
+
+    print("\n   [OK] found in subfolders, one character taken, the "
+          "rest ignored")
+
+
 def test_a_folder_with_no_character_is_refused(root):
 
     heading("7  A folder with no character in it says so")
@@ -461,6 +542,7 @@ def main():
         test_one_file_with_every_movement_in_it(root)
         test_names_are_cleaned_up(root)
         test_a_folder_with_no_character_is_refused(root)
+        test_an_unzipped_pack_of_many_characters(root)
 
     print("\nALL BLENDER TESTS PASSED")
 
