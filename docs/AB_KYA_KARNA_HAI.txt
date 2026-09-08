@@ -1,0 +1,66 @@
+AB KYA KARNA HAI - SIRF YE, AUR KUCH NAHI
+=========================================
+
+Aapko abhi 4 kadam karne hain. Bas. Neeche jo nahi likha, wo abhi
+mat kijiye.
+
+Animate wali notebook ko abhi HAATH MAT LAGAIYE. Uski baari baad
+mein aayegi (Kadam 5, aur wo mai bataungi).
+
+
+KADAM 1 - EK CHARACTER DOWNLOAD KIJIYE
+--------------------------------------
+Browser mein kholiye:
+
+      https://quaternius.com
+
+Wahan "Animated" ya character wale pack dhoondhiye. Koi bhi ek
+cartoon character pack, jisme animation ho (walk, idle, jump...).
+
+Download kijiye. File .glb ya .fbx hogi.
+
+  - Account nahi banana
+  - Paisa nahi lagta
+  - Naam badalne ki zaroorat NAHI
+
+Agar Quaternius pasand na aaye to kenney.nl/assets ya sketchfab.com
+(filter: Downloadable + CC0). Ek hi file kaafi hai.
+
+
+KADAM 2 - DRIVE MEIN 3 CHEEZEIN RAKHIYE
+---------------------------------------
+Google Drive mein aise banaiye:
+
+  My Drive / NikStudio / nik_blender.py      <- maine bheji hai
+  My Drive / NikStudio / from_mixamo.py      <- maine bheji hai
+  My Drive / NikStudio / Mixamo / <aapki download ki hui file>
+
+Haan, folder ka naam "Mixamo" hi rakhiye - chahe file Quaternius se
+aayi ho. Naam sirf ek naam hai, code wahi folder dhoondhta hai.
+
+
+KADAM 3 - RIGGED NOTEBOOK CHALAIYE
+----------------------------------
+Colab mein kholiye:  colab/NikStudio_Rigged.ipynb
+
+  Cell 1 chalaiye  -> Blender install (~2 minute)
+  Cell 2 chalaiye  -> Nik.blend banega, phir 3 clips
+
+GPU ki zaroorat NAHI hai. T4 bhi chalega. Kuch setting badalni
+nahi hai.
+
+
+KADAM 4 - MUJHE BHEJIYE
+-----------------------
+Output / Clips / se jo 3 video banengi, wo mujhe bhej dijiye,
+aur screen par jo "Movement: __" wali line aaye wo bhi.
+
+Yahin ruk jaiye. Aage kya karna hai, wo mai clips dekh kar bataungi.
+
+
+AGAR ATAK JAYEIN
+----------------
+"no character file found"  -> file Mixamo folder ke andar nahi hai
+"no movements found"       -> pack mein animation nahi thi, dusra
+                              pack lijiye
+Kuch aur error aaye        -> screenshot bhej dijiye, jhelna mat
