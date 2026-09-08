@@ -10,21 +10,27 @@ mein aayegi (Kadam 5, aur wo mai bataungi).
 
 KADAM 1 - EK CHARACTER DOWNLOAD KIJIYE
 --------------------------------------
-Browser mein kholiye:
+Koi bhi pack NAHI chalega. Sirf wo chalega jisme DONO cheezein hon:
 
-      https://quaternius.com
+      character ka SHAREER  +  uski ANIMATION
 
-Wahan "Animated" ya character wale pack dhoondhiye. Koi bhi ek
-cartoon character pack, jisme animation ho (walk, idle, jump...).
+Isliye seedha ye kijiye - quaternius.com ke search box mein likhiye:
 
-Download kijiye. File .glb ya .fbx hogi.
+      Ultimate Animated Character
 
-  - Account nahi banana
-  - Paisa nahi lagta
-  - Naam badalne ki zaroorat NAHI
+Pack ka naam: "Ultimate Animated Character Pack"
+50+ animated character, CC0 (free, commercial allowed), FBX format.
 
-Agar Quaternius pasand na aaye to kenney.nl/assets ya sketchfab.com
-(filter: Downloadable + CC0). Ek hi file kaafi hai.
+Download karte waqt FBX chuniye (.blend mat lijiye).
+
+JO AAPKI SCREEN PAR DIKH RAHA HAI, USME SE KOI NAHI CHALEGA:
+  All In One File          -> $3 ka hai, paisa nahi dena
+  Bestiary Dungeon Monsters-> daraawne monster, bachchon ke liye nahi
+  Downtown City MegaKit    -> sirf buildings, character hai hi nahi
+  Universal Animation Lib 2-> sirf animations hain, character nahi
+
+Quaternius par kuch cheezon par daam likha hota hai - wo "premium"
+extra hai. Neeche free download ka button hota hai, wahi dabaiye.
 
 
 KADAM 2 - DRIVE MEIN 3 CHEEZEIN RAKHIYE
