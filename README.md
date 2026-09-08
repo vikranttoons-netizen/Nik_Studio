@@ -622,6 +622,29 @@ the run says so and names `CLIP_SECONDS` as the knob, rather than
 quietly doing half the job. Measured on a clip with a known burst at
 0.83s: it lands at 0.08s in the finished shot.
 
+### The negative prompt was being thrown away
+
+Every run printed `Token indices sequence length is longer than the
+specified maximum sequence length for this model (130 > 77)` and carried
+on. That was the **negative** prompt: it had grown to 107 words, SDXL
+reads 77 tokens of it, and everything past roughly the fiftieth word was
+discarded without a word.
+
+What sat past it was the whole of `NOT_CLOSE` and the whole of
+`NOT_DRESSED` — so the last three things added to stop the close-ups,
+keep the boy's clothes off the puppy and get rid of grey skies **never
+reached the model at all**. Every one of the boy's drawings came back as
+a head and shoulders while the words telling it not to were being
+binned.
+
+The positive prompt has been counted since the day the style words were
+silently cut off the end of it. The negative one had not, which is how a
+fault gets fixed three times with nothing to show for it. Both are
+counted now, against one `BUDGET`, and a run stops rather than starts if
+either overflows.
+
+The negative is 46 words at its worst now, from 107.
+
 ### An Input folder is not a folder full of pictures any more
 
 `looks_like_input` required a picture, from when pictures were the only

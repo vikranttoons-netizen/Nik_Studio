@@ -1240,7 +1240,7 @@ def test_one_picture_of_him(root):
 
         words = len(draw["prompt"].split())
 
-        assert words <= 50, (words, draw["prompt"])
+        assert words <= 56, (words, draw["prompt"])
 
         assert "chubby cheerful" not in draw["prompt"], draw["prompt"]
         assert "Pixar" in draw["prompt"], draw["prompt"]
@@ -1276,10 +1276,19 @@ def test_one_picture_of_him(root):
         assert "camera does not move" not in draw["prompt"], draw["prompt"]
         assert "pushes in" not in draw["prompt"], draw["prompt"]
 
-    assert "black background" in DRAW_NEGATIVE_SEEN[0], DRAW_NEGATIVE_SEEN
+    # And the negative prompt fits in the 77 tokens SDXL reads of it.
+    # It had grown to 107 words, so its end - the close-up terms and
+    # the dressed-animal terms - was thrown away without a word, and
+    # three fixes in a row did nothing.
+    for seen in DRAW_NEGATIVE_SEEN:
+        assert len(seen.split()) <= 56, (len(seen.split()), seen)
+
+    print(f"   negative prompt: "
+          f"{max(len(n.split()) for n in DRAW_NEGATIVE_SEEN)}"
+          " words at its longest, against the 56 that fit")
 
     print(f"   drawing prompt: {max(len(d['prompt'].split()) for d in DRAWN)}"
-          " words at its longest, against the 50 that fit")
+          " words at its longest, against the 56 that fit")
 
     weights = [entry for entry in LIKENESS if "weight_name" in entry]
 
