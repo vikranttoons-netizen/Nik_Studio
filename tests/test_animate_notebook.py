@@ -1267,7 +1267,14 @@ def test_one_picture_of_him(root):
         # Who he is, in words. Two references both leaked his clothes
         # or his face onto the kitten, and words cannot: they attach
         # to the noun beside them, and a cat is a different noun.
-        assert "dark brown hair" in draw["prompt"], draw["prompt"]
+        #
+        # And nothing above the neck. Every shot with a face described
+        # in it came back a head and shoulders; every shot without one
+        # was framed correctly. Asking for a face in detail is asking
+        # to be shown the face.
+        assert "3 year old boy" in draw["prompt"], draw["prompt"]
+        assert "hair" not in draw["prompt"], draw["prompt"]
+        assert "eyes" not in draw["prompt"], draw["prompt"]
 
         # And no camera instruction out of the script line: a still
         # picture has no camera move, and those five tokens were coming

@@ -622,6 +622,26 @@ the run says so and names `CLIP_SECONDS` as the knob, rather than
 quietly doing half the job. Measured on a clip with a known burst at
 0.83s: it lands at 0.08s in the finished shot.
 
+### Nothing above the neck
+
+The contact sheet is an experiment, and it has now been run twice with
+the same result. **Every shot with a character description in it came
+back a head and shoulders. Every shot without one — all the animals,
+whose prompts never describe a face — came back framed correctly, full
+body, at a distance.**
+
+The only difference between those two halves is `WHO`. Eighteen of its
+words were his skin, his hair and his eyes, and asking a picture model
+for a face in that much detail is asking it to show you the face. The
+framing words lost that argument four times running.
+
+So `WHO` is his age and his clothes and nothing above the neck. What
+holds his face together instead is the fixed seed and the fixed style,
+which are the same in every drawing.
+
+This is the fourth attempt at the framing and the first one that
+removes a cause rather than adding a word.
+
 ### The negative prompt was being thrown away
 
 Every run printed `Token indices sequence length is longer than the
