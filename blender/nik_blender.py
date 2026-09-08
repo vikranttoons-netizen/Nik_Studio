@@ -233,12 +233,40 @@ def report(rig):
 # Rendering
 # ======================================================================
 
+# Whether this Blender can write video, once it has been found out.
+_WRITES_VIDEO = None
+
+
 def writes_video():
-    """Was this Blender built with ffmpeg inside it?"""
+    """
+    Was this Blender built with ffmpeg inside it?
 
-    formats = bpy.types.ImageFormatSettings.bl_rna.properties["file_format"]
+    By trying it, not by asking. The list of formats RNA reports is the
+    one Blender was compiled to know about, not the one this build can
+    actually write, and it says FFMPEG either way - so asking gets a
+    yes and the assignment still throws.
+    """
 
-    return "FFMPEG" in formats.enum_items.keys()
+    global _WRITES_VIDEO
+
+    if _WRITES_VIDEO is None:
+
+        settings = bpy.context.scene.render.image_settings
+
+        before = settings.file_format
+
+        try:
+            settings.file_format = "FFMPEG"
+
+        except TypeError:
+            _WRITES_VIDEO = False
+
+        else:
+            _WRITES_VIDEO = True
+
+            settings.file_format = before
+
+    return _WRITES_VIDEO
 
 
 def ffmpeg():
@@ -251,6 +279,18 @@ def ffmpeg():
 
     except Exception:
         return "ffmpeg"
+
+
+def as_video(scene, target):
+    """Point the render at an mp4. TypeError if this build cannot."""
+
+    scene.render.filepath = str(target)
+
+    scene.render.image_settings.file_format = "FFMPEG"
+
+    scene.render.ffmpeg.format = "MPEG4"
+    scene.render.ffmpeg.codec = "H264"
+    scene.render.ffmpeg.constant_rate_factor = "HIGH"
 
 
 def join(pictures, target):
@@ -326,37 +366,42 @@ def render_scene(rig, line, target, seconds=CLIP_SECONDS):
 
     if writes_video():
 
-        scene.render.filepath = str(target)
+        try:
+            as_video(scene, target)
 
-        scene.render.image_settings.file_format = "FFMPEG"
-        scene.render.ffmpeg.format = "MPEG4"
-        scene.render.ffmpeg.codec = "H264"
-        scene.render.ffmpeg.constant_rate_factor = "HIGH"
+        except TypeError:
 
-        bpy.ops.render.render(animation=True)
+            # It said it could and then it could not. Fall through
+            # rather than stop 44 clips over an encoder.
+            global _WRITES_VIDEO
 
-    else:
+            _WRITES_VIDEO = False
 
-        # Blender installed with pip is built without ffmpeg in it, so
-        # it can only write stills. Write them, then join them with the
-        # ffmpeg that comes with imageio - which is the same encoder
-        # the rest of the pipeline uses anyway.
-        pictures = Path(target).with_suffix("")
+        else:
+            bpy.ops.render.render(animation=True)
 
-        if pictures.exists():
-            shutil.rmtree(pictures)
+            return name, camera_name, frames
 
-        pictures.mkdir(parents=True)
+    # Blender installed with pip is built without ffmpeg in it, so it
+    # can only write stills. Write them, then join them with the ffmpeg
+    # that comes with imageio - the same encoder the rest of the
+    # pipeline uses anyway.
+    pictures = Path(target).with_suffix("")
 
-        scene.render.filepath = str(pictures / "f")
-
-        scene.render.image_settings.file_format = "PNG"
-
-        bpy.ops.render.render(animation=True)
-
-        join(pictures, target)
-
+    if pictures.exists():
         shutil.rmtree(pictures)
+
+    pictures.mkdir(parents=True)
+
+    scene.render.filepath = str(pictures / "f")
+
+    scene.render.image_settings.file_format = "PNG"
+
+    bpy.ops.render.render(animation=True)
+
+    join(pictures, target)
+
+    shutil.rmtree(pictures)
 
     return name, camera_name, frames
 

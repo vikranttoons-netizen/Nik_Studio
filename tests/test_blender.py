@@ -710,6 +710,45 @@ def test_renders_without_ffmpeg_inside_blender(root):
     finally:
         nik_blender.writes_video = was
 
+    # And the other way round: a Blender that claims it can encode and
+    # then throws when asked must not take 44 clips down with it. This
+    # is what Colab actually did.
+    into_lied = root / "LiedClips"
+
+    nik_blender._WRITES_VIDEO = True
+
+    told = {"asked": 0}
+
+    real = nik_blender.as_video
+
+    def refuse(scene, target):
+
+        told["asked"] += 1
+
+        raise TypeError('bpy_struct: enum "FFMPEG" not found')
+
+    try:
+        nik_blender.as_video = refuse
+
+        nik_blender.render(blend, script, into_lied, width=160,
+                           height=96, seconds=0.5,
+                           engine="BLENDER_WORKBENCH")
+
+    finally:
+        nik_blender.as_video = real
+
+        nik_blender._WRITES_VIDEO = None
+
+    lied = sorted(into_lied.glob("Scene*.mp4"))
+
+    print(f"   after a lie: {', '.join(path.name for path in lied)} "
+          f"(refused {told['asked']}x)")
+
+    assert len(lied) == 2, [path.name for path in lied]
+
+    # It should stop asking after the first refusal, not once a clip.
+    assert told["asked"] == 1, told
+
     made = sorted(into.glob("Scene*.mp4"))
 
     print(f"   made    : {', '.join(path.name for path in made)}")
