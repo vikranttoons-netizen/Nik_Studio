@@ -678,6 +678,58 @@ def test_movements_from_a_second_folder(root):
           "the movements")
 
 
+def test_renders_without_ffmpeg_inside_blender(root):
+
+    heading("13  A Blender built without ffmpeg still makes mp4s")
+
+    import bpy, nik_blender
+
+    # Blender installed with pip - which is the only way to have it in
+    # Colab - is built without ffmpeg, so FFMPEG is not among the
+    # formats it will write and asking for it is a TypeError. This
+    # container's Blender does have it, so the other path is forced.
+    blend = root / "NoFF.blend"
+
+    nik_blender.template(blend)
+
+    script = root / "two.txt"
+
+    script.write_text("\n".join(SCRIPT.splitlines()[:2]) + "\n",
+                      encoding="utf-8")
+
+    into = root / "NoFFClips"
+
+    was = nik_blender.writes_video
+
+    nik_blender.writes_video = lambda: False
+
+    try:
+        nik_blender.render(blend, script, into, width=160, height=96,
+                           seconds=0.5, engine="BLENDER_WORKBENCH")
+
+    finally:
+        nik_blender.writes_video = was
+
+    made = sorted(into.glob("Scene*.mp4"))
+
+    print(f"   made    : {', '.join(path.name for path in made)}")
+
+    assert len(made) == 2, [path.name for path in made]
+
+    for path in made:
+        assert path.stat().st_size > 0, path
+
+    # The frames were a means, not an output.
+    leftover = [item.name for item in into.iterdir() if item.is_dir()]
+
+    print(f"   leftover: {leftover or 'none'}")
+
+    assert not leftover, leftover
+
+    print("\n   [OK] stills out of Blender, mp4 out of ffmpeg, "
+          "nothing left behind")
+
+
 # ======================================================================
 
 def main():
@@ -698,6 +750,7 @@ def main():
         test_an_unzipped_pack_of_many_characters(root)
         test_one_file_per_movement_per_character(root)
         test_movements_from_a_second_folder(root)
+        test_renders_without_ffmpeg_inside_blender(root)
 
     print("\nALL BLENDER TESTS PASSED")
 

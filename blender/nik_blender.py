@@ -36,6 +36,8 @@ and is left alone.
 
 import json
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -231,6 +233,46 @@ def report(rig):
 # Rendering
 # ======================================================================
 
+def writes_video():
+    """Was this Blender built with ffmpeg inside it?"""
+
+    formats = bpy.types.ImageFormatSettings.bl_rna.properties["file_format"]
+
+    return "FFMPEG" in formats.enum_items.keys()
+
+
+def ffmpeg():
+    """Wherever ffmpeg is - the one imageio carries, or the system's."""
+
+    try:
+        import imageio_ffmpeg
+
+        return imageio_ffmpeg.get_ffmpeg_exe()
+
+    except Exception:
+        return "ffmpeg"
+
+
+def join(pictures, target):
+    """A folder of numbered PNGs -> one mp4."""
+
+    made = subprocess.run(
+        [ffmpeg(), "-y", "-v", "error",
+         "-framerate", str(FPS),
+         "-i", str(Path(pictures) / "f%04d.png"),
+         "-c:v", "libx264", "-crf", "18",
+         "-pix_fmt", "yuv420p",
+         str(target)],
+        capture_output=True, text=True,
+    )
+
+    if made.returncode != 0 or not Path(target).exists():
+        raise SystemExit(
+            "The frames rendered but ffmpeg would not join them:\n"
+            + (made.stderr or "").strip()
+        )
+
+
 def play(rig, action_name):
     """Put an action on the rig, and say how long it runs."""
 
@@ -279,16 +321,44 @@ def render_scene(rig, line, target, seconds=CLIP_SECONDS):
     scene.frame_end = start + min(wanted, length)
 
     scene.render.fps = FPS
-    scene.render.filepath = str(target)
 
-    scene.render.image_settings.file_format = "FFMPEG"
-    scene.render.ffmpeg.format = "MPEG4"
-    scene.render.ffmpeg.codec = "H264"
-    scene.render.ffmpeg.constant_rate_factor = "HIGH"
+    frames = scene.frame_end - scene.frame_start + 1
 
-    bpy.ops.render.render(animation=True)
+    if writes_video():
 
-    return name, camera_name, scene.frame_end - scene.frame_start + 1
+        scene.render.filepath = str(target)
+
+        scene.render.image_settings.file_format = "FFMPEG"
+        scene.render.ffmpeg.format = "MPEG4"
+        scene.render.ffmpeg.codec = "H264"
+        scene.render.ffmpeg.constant_rate_factor = "HIGH"
+
+        bpy.ops.render.render(animation=True)
+
+    else:
+
+        # Blender installed with pip is built without ffmpeg in it, so
+        # it can only write stills. Write them, then join them with the
+        # ffmpeg that comes with imageio - which is the same encoder
+        # the rest of the pipeline uses anyway.
+        pictures = Path(target).with_suffix("")
+
+        if pictures.exists():
+            shutil.rmtree(pictures)
+
+        pictures.mkdir(parents=True)
+
+        scene.render.filepath = str(pictures / "f")
+
+        scene.render.image_settings.file_format = "PNG"
+
+        bpy.ops.render.render(animation=True)
+
+        join(pictures, target)
+
+        shutil.rmtree(pictures)
+
+    return name, camera_name, frames
 
 
 def render(blend, script, into, width=960, height=544,
