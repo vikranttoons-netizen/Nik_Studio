@@ -1268,13 +1268,11 @@ def test_one_picture_of_him(root):
         # or his face onto the kitten, and words cannot: they attach
         # to the noun beside them, and a cat is a different noun.
         #
-        # And nothing above the neck. Every shot with a face described
-        # in it came back a head and shoulders; every shot without one
-        # was framed correctly. Asking for a face in detail is asking
-        # to be shown the face.
-        assert "3 year old boy" in draw["prompt"], draw["prompt"]
-        assert "hair" not in draw["prompt"], draw["prompt"]
-        assert "eyes" not in draw["prompt"], draw["prompt"]
+        # Taking the face words out was tried, on the theory that
+        # describing a face is what framed the face. Ten of his eleven
+        # shots came back head and chest exactly as before, and his
+        # hair went blond - so it cost his likeness and bought nothing.
+        assert "dark brown hair" in draw["prompt"], draw["prompt"]
 
         # And no camera instruction out of the script line: a still
         # picture has no camera move, and those five tokens were coming

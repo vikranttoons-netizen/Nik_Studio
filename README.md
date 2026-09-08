@@ -622,25 +622,35 @@ the run says so and names `CLIP_SECONDS` as the knob, rather than
 quietly doing half the job. Measured on a clip with a known burst at
 0.83s: it lands at 0.08s in the finished shot.
 
-### Nothing above the neck
+### Five goes at the framing, and a stop
 
-The contact sheet is an experiment, and it has now been run twice with
-the same result. **Every shot with a character description in it came
-back a head and shoulders. Every shot without one — all the animals,
-whose prompts never describe a face — came back framed correctly, full
-body, at a distance.**
+Every one of the boy's shots comes back head-and-chest. Every animal
+shot is framed correctly. Five things have been tried:
 
-The only difference between those two halves is `WHO`. Eighteen of its
-words were his skin, his hair and his eyes, and asking a picture model
-for a face in that much detail is asking it to show you the face. The
-framing words lost that argument four times running.
+| | result |
+| --- | --- |
+| `medium wide shot, the whole of him in frame…` | head and shoulders |
+| `wide shot, full body, centred` | head and shoulders |
+| `full body shot from a distance, head to toe` | head and shoulders |
+| `long shot, full length, small in the frame` | head and shoulders |
+| removing the face words from `WHO` entirely | head and chest — **and his hair went blond** |
 
-So `WHO` is his age and his clothes and nothing above the neck. What
-holds his face together instead is the fixed seed and the fixed style,
-which are the same in every drawing.
+The last one looked like a clean experiment: the animals have no
+description and are framed correctly, so describing a face was the
+obvious suspect. It was run on all twenty-nine and it failed both ways
+— the framing did not move and the likeness did. The face words are
+back.
 
-This is the fourth attempt at the framing and the first one that
-removes a cause rather than adding a word.
+Whatever causes this, the prompt does not have a word for it, and a
+sixth phrase is not a plan. What is left is either accepting it — close
+faces are ordinary in this kind of video, and for the audience it is
+aimed at they may be right — or a character LoRA, which holds a face
+without spending prompt on it.
+
+Everything that was actually complained about is fixed: the wrong
+animal on the word, the character walking out of frame, the clothes on
+the animals, the clap that missed the beat. This is the one that
+didn't move.
 
 ### The negative prompt was being thrown away
 
