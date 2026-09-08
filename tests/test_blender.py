@@ -206,6 +206,154 @@ def test_an_unrigged_file_is_refused(root):
 
 # ======================================================================
 
+def make_fbx(folder):
+    """
+    Real FBX files, exported by Blender itself.
+
+    Not a stand-in: from_mixamo.py has to survive an actual import, and
+    an import is most of what it does.
+    """
+
+    import bpy
+
+    folder.mkdir(parents=True, exist_ok=True)
+
+    def fresh():
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    # The character: a rig with a body on it, and no animation, which
+    # is what Mixamo calls a T-Pose download.
+    fresh()
+
+    bpy.ops.object.armature_add(location=(0, 0, 0))
+
+    rig = bpy.context.active_object
+
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.8, location=(0, 0, 0.9))
+
+    bpy.context.active_object.parent = rig
+
+    bpy.ops.export_scene.fbx(filepath=str(folder / "nik_character.fbx"))
+
+    # The movements: a rig each, animated, no body.
+    for name, lift in (("idle", 0.05), ("clap", 0.2), ("jump", 0.9)):
+
+        fresh()
+
+        bpy.ops.object.armature_add(location=(0, 0, 0))
+
+        made = bpy.context.active_object
+
+        made.animation_data_create()
+
+        made.animation_data.action = bpy.data.actions.new("Take 001")
+
+        for frame, height in ((1, 0.0), (12, lift), (24, 0.0)):
+            made.location.z = height
+            made.keyframe_insert("location", frame=frame)
+
+        bpy.ops.export_scene.fbx(filepath=str(folder / f"{name}.fbx"))
+
+    return folder
+
+
+def test_a_folder_of_downloads_becomes_a_blend(root):
+
+    heading("6  A folder of Mixamo downloads becomes a .blend")
+
+    import from_mixamo
+
+    folder = make_fbx(root / "Mixamo")
+
+    made = from_mixamo.build(folder, root / "FromMixamo.blend")
+
+    assert made.exists(), "no .blend was written"
+
+    import bpy
+
+    bpy.ops.wm.open_mainfile(filepath=str(made))
+
+    actions = {action.name for action in bpy.data.actions}
+
+    cameras = {item.name for item in bpy.data.objects
+               if item.type == "CAMERA"}
+
+    print(f"   actions : {', '.join(sorted(actions))}")
+    print(f"   cameras : {', '.join(sorted(cameras))}")
+
+    # The file name is the action name, because the action name is what
+    # a line of the script is matched against. That is the whole of the
+    # naming work anybody has to do.
+    assert {"idle", "clap", "jump"} <= actions, actions
+
+    assert cameras == {"Cam_Wide", "Cam_Medium", "Cam_Close"}, cameras
+
+    # One armature, the one with the body on it. The rigs that came
+    # attached to the animations are gone.
+    rigs = [item for item in bpy.data.objects if item.type == "ARMATURE"]
+
+    assert len(rigs) == 1, [r.name for r in rigs]
+
+    print(f"   one rig : {rigs[0].name}")
+
+    # Fake users, or Blender drops an action nothing is playing the
+    # moment the file is saved.
+    assert all(bpy.data.actions[name].use_fake_user
+               for name in ("idle", "clap", "jump"))
+
+    # And it renders, which is the only thing that matters.
+    script = root / "mixamo.txt"
+
+    script.write_text("He claps his hands twice\n"
+                      "He jumps up and down twice\n", encoding="utf-8")
+
+    nik_blender.render(
+        made,
+        script,
+        root / "MixamoClips",
+        width=160, height=90, seconds=1.0, engine="BLENDER_WORKBENCH",
+    )
+
+    clips = sorted((root / "MixamoClips").glob("Scene*.mp4"))
+
+    print(f"   rendered: {', '.join(c.name for c in clips)}")
+
+    assert len(clips) == 2, clips
+
+    print("\n   [OK] downloads in, a .blend out, nobody opened Blender")
+
+
+def test_a_folder_with_no_character_is_refused(root):
+
+    heading("7  A folder with no character in it says so")
+
+    import from_mixamo, bpy
+
+    folder = root / "NoBody"
+
+    folder.mkdir(parents=True, exist_ok=True)
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    bpy.ops.object.armature_add(location=(0, 0, 0))
+
+    bpy.ops.export_scene.fbx(filepath=str(folder / "clap.fbx"))
+
+    try:
+        from_mixamo.build(folder, root / "Nothing.blend")
+
+    except SystemExit as stop:
+        print("  ", str(stop).splitlines()[0])
+        assert "has a body in it" in str(stop), stop
+
+    else:
+        raise AssertionError("a folder with no character was accepted")
+
+    print("\n   [OK] refused, and said what to download")
+
+
+# ======================================================================
+
 def main():
 
     with tempfile.TemporaryDirectory() as temporary:
@@ -217,6 +365,8 @@ def main():
         test_renders_a_clip_per_scene(root)
         test_says_what_is_missing(root)
         test_an_unrigged_file_is_refused(root)
+        test_a_folder_of_downloads_becomes_a_blend(root)
+        test_a_folder_with_no_character_is_refused(root)
 
     print("\nALL BLENDER TESTS PASSED")
 

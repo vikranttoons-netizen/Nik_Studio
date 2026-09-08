@@ -1,0 +1,97 @@
+RIGGED 3D - AAPKO KYA KARNA HAI
+===============================
+
+Ye us raaste ka pehla kadam hai jahan character sach mein animate hota
+hai - AI se nahi. Blender kholne ki zaroorat NAHI hai.
+
+
+AAPKA KAAM: MIXAMO SE DOWNLOAD (lagbhag 15 minute, free)
+--------------------------------------------------------
+1. mixamo.com par jaiye, free Adobe account bana lijiye
+   (commercial use allowed hai - character aur animation dono)
+
+2. CHARACTERS tab -> ek character chuniye
+   Bachche jaisa / cartoon jaisa dhoondhiye. Ye "Nik" ban jaayega.
+   DOWNLOAD dabaiye:
+      Format    : FBX Binary
+      Pose      : T-Pose          <- ZAROORI, animation ke bina
+   File ka naam kuch bhi rakhiye, jaise nik_character.fbx
+
+3. ANIMATIONS tab -> wahi character select rehne dijiye
+   Ye animations dhoondh kar download kijiye (har ek alag file):
+
+      Mixamo par dhoondhiye        File ka naam rakhiye
+      -------------------------    --------------------
+      Idle / Breathing Idle    ->  idle.fbx      <- ZAROORI
+      Clapping                 ->  clap.fbx
+      Waving                   ->  wave.fbx
+      Jumping / Jump           ->  jump.fbx
+      Walking                  ->  walk.fbx
+      Dancing / Samba          ->  sway.fbx
+      Pointing                 ->  point.fbx
+      Sitting / Crouch         ->  crouch.fbx
+      Nodding / Head Nod       ->  nod.fbx
+      Spin / Turn              ->  spin.fbx
+
+   Har download par:
+      Format         : FBX Binary
+      Skin           : Without Skin   (chhoti file, kaam wahi)
+      Frames per Sec : 24
+      Keyframe Redu. : none
+
+   SABSE ZAROORI: file ka naam upar wali dayi taraf wala rakhiye.
+   Mixamo unhe "Clapping.fbx" kehta hai - aapko "clap.fbx" karna hai.
+   Yahi ek naam wala kaam hai. Action ka naam hi wo cheez hai jisse
+   script ki line milaayi jaati hai.
+
+4. Saari FBX files Drive mein daal dijiye:
+
+      My Drive / NikStudio / Mixamo /
+            nik_character.fbx
+            idle.fbx  clap.fbx  wave.fbx  jump.fbx  ...
+
+
+MERA KAAM: BAAKI SAB
+--------------------
+Ye do command sab kar deti hain:
+
+  python blender/from_mixamo.py Mixamo/ Nik.blend
+      -> FBX files se ek .blend banata hai: character, saare actions,
+         teen camera (Cam_Wide, Cam_Medium, Cam_Close), light, zameen
+
+  python blender/nik_blender.py render Nik.blend script.txt Clips/
+      -> WAHI script.txt jo abhi chal raha hai, se clips banata hai
+         "He claps his hands twice"      -> clap action, Cam_Medium
+         "Wide shot of the puppy..."     -> Cam_Wide
+         "Close up of the kitten..."     -> Cam_Close
+
+Uske baad ka sab kuch waisa hi hai - beat par cut, lyrics, gaana,
+preview. Wo pipeline pehle se bani hai.
+
+
+IMAANDAAR BAATEIN - PEHLE JAAN LIJIYE
+-------------------------------------
+1. Wo character NIK NAHI HOGA. Mixamo ka jo bhi character aap chunengi,
+   wahi ab aapka character hai. Nik ki shakal rig karwane ke liye 3D
+   modelling chahiye, jo na aapko aati hai na mujhe.
+   Badle mein: wo hamesha ke liye bilkul wahi rahega.
+
+2. JANWAR abhi nahi hain. Mixamo par sirf insaani rig hain. Puppy,
+   kitten, duckling ke liye alag model chahiye honge (Sketchfab CC0),
+   ya un shots ke liye AI hi chalta rahe - dono mila kar bhi ho sakta
+   hai.
+
+3. BACKGROUND khaali hoga - sirf zameen aur aasman. Ek dikhne laayak
+   set banana asli mehnat hai, aur wo abhi baaki hai.
+
+4. LIP SYNC ab MUMKIN ho jaata hai. Rig par muh repaint nahi hota,
+   pose hota hai - Rhubarb (MIT, free) audio se viseme timing deta hai
+   aur wo seedha muh ke aakar chalate hain. Cartoon par yahi chalta hai.
+   Ye baad ka kaam hai, par ab raasta band nahi hai.
+
+
+AGLA KADAM
+----------
+Files Drive mein daal kar bata dijiye. Main Colab notebook bana dungi
+jo bpy install karke poora kaam kar de - aapko Blender kholna hi nahi
+padega.
