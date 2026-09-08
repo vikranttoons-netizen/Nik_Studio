@@ -3,6 +3,7 @@ Nik Studio - build a .blend out of downloaded character files.
 
     python blender/from_mixamo.py Downloads/ Nik.blend
     python blender/from_mixamo.py Downloads/ Nik.blend Boy
+    python blender/from_mixamo.py Downloads/ Nik.blend Boy Animations/
 
 So that nobody has to open Blender.
 
@@ -11,6 +12,10 @@ whole - the FBX/ and glTF/ folders inside it do not have to be dug out.
 
 A third argument is part of a file name, and picks which character to
 use when a pack has fifty of them. Without it, the first one by name.
+
+A fourth is a second folder, read for movements only. Character packs
+are built for games and ship death and punching; a nursery rhyme needs
+clapping and waving, which come from an animation library instead.
 
 It takes .fbx, .glb and .gltf, and it does not care which way the
 animations arrive:
@@ -73,29 +78,60 @@ ALIASES = {
     "swaying": "sway", "sway": "sway",
     "pointing": "point", "point": "point",
     "crouching": "crouch", "crouch": "crouch", "sitting": "crouch",
-    "sit": "crouch", "kneeling": "crouch",
-    "nodding": "nod", "nod": "nod", "yes": "nod",
+    "sit": "crouch", "kneeling": "crouch", "sit down": "crouch",
+    "sitdown": "crouch",
+    # What the game packs call things. A nursery rhyme has no word for
+    # "victory", but a victory pose is arms up and cheering, which is
+    # the nearest thing they ship to a clap.
+    "victory": "clap", "cheer": "clap", "cheering": "clap",
+    "celebrate": "clap", "yes": "nod",
+    "nodding": "nod", "nod": "nod",
     "spinning": "spin", "spin": "spin", "turning": "turn",
 }
+
+
+# Words that are the exporter talking, not the movement. Matched
+# whole, or as the tail of a word: Blender's FBX importer writes
+# "CharacterArmature|CharacterArmature|Idle", and "characterarmature"
+# is one word, so looking for "armature" on its own finds nothing.
+NOISE = {"action", "mixamo", "com", "take", "root", "avatar", "anim",
+         "animation", "clip", "default"}
+
+TAILS = ("armature", "rig", "skeleton")
 
 
 def our_name_for(name):
     """Their name for a movement -> ours."""
 
-    plain = name.strip().lower()
+    # Blender adds ".001" when a name is taken. Off first, so that it
+    # is not mistaken for a word.
+    plain = re.sub(r"\.\d+$", "", name.strip())
 
-    # Every exporter decorates the name. Mixamo calls a single download
-    # "mixamo.com"; the FBX importer writes "Armature|Walk"; the glTF
-    # importer writes "Walk_Armature"; Blender adds ".001" when a name
-    # is taken. None of that is the movement.
-    plain = re.sub(r"\.\d+$", "", plain)
+    words = []
 
-    plain = re.sub(r"[|_\-.]+", " ", plain)
+    for word in re.split(r"[|_\-. ]+", plain):
 
-    plain = re.sub(r"\b(armature|rig|action|mixamo com|take \d+)\b",
-                   " ", plain)
+        if not word or word.isdigit():
+            continue
 
-    plain = " ".join(plain.split())
+        low = word.lower()
+
+        if low in NOISE or low.endswith(TAILS):
+            continue
+
+        # "SitDown" is two words. The split has to happen after the
+        # noise check, so that "CharacterArmature" is still one word
+        # and can be thrown away whole.
+        for piece in re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", word).split():
+
+            piece = piece.lower()
+
+            if words and piece == words[-1]:
+                continue
+
+            words.append(piece)
+
+    plain = " ".join(words)
 
     return ALIASES.get(plain, plain or "idle")
 
@@ -195,6 +231,28 @@ def bring_in(path):
     return arrived, rig, actions
 
 
+def worn_by(item, rig):
+    """Is this object part of that character?"""
+
+    parent = item.parent
+
+    while parent:
+
+        if parent is rig:
+            return True
+
+        parent = parent.parent
+
+    # A body is usually driven by the armature rather than parented to
+    # it, and the modifier is what says so.
+    for change in getattr(item, "modifiers", ()):
+
+        if change.type == "ARMATURE" and change.object is rig:
+            return True
+
+    return False
+
+
 def has_mesh(objects):
     """A character comes with a body; an animation does not have to."""
 
@@ -220,7 +278,13 @@ def build_cameras(height=1.6):
 
         bpy.context.scene.collection.objects.link(made)
 
-        made.location = (where[0], where[1], where[2] * height / 1.6)
+        # The whole camera rig scales with the character, not only its
+        # height: a file that imports four units tall needs the camera
+        # further back as well as higher up, or the shot is a kneecap.
+        grown = height / 1.6
+
+        made.location = (where[0] * grown, where[1] * grown,
+                         where[2] * grown)
 
         # Pointed by a constraint rather than by arithmetic, so moving
         # a camera in Blender later keeps it aimed.
@@ -232,10 +296,20 @@ def build_cameras(height=1.6):
     return aim
 
 
-def build(folder, target, wanted=""):
-    """A folder of downloads -> one .blend the renderer can use."""
+def build(folder, target, wanted="", movements=""):
+    """
+    A folder of downloads -> one .blend the renderer can use.
+
+    `movements` is a second folder, read for its animations only. A
+    character pack ships the movements a game wants - death, punch,
+    sword slash - and a nursery rhyme wants clapping and waving, which
+    come from an animation library instead. Whatever is in there is
+    taken as a movement whether it has a body attached or not.
+    """
 
     files = model_files(folder, wanted)
+
+    library = model_files(movements) if movements else []
 
     if not files:
         raise SystemExit(
@@ -366,6 +440,30 @@ def build(folder, target, wanted=""):
         for item in arrived:
             bpy.data.objects.remove(item, do_unlink=True)
 
+    for path in library:
+
+        arrived, rig, actions = bring_in(path)
+
+        if not actions:
+
+            print(f"  {path.name}: nothing animated in it - skipped")
+
+        elif len(actions) == 1:
+
+            print(f"  {path.name}: '{keep(actions[0], path.stem)}'")
+
+        else:
+
+            named = [keep(action, action.name) for action in actions]
+
+            print(f"  {path.name}: {len(named)} movement(s): "
+                  + ", ".join(sorted(named)))
+
+        # Only the animation was wanted; the body it arrived on is a
+        # mannequin and goes.
+        for item in arrived:
+            bpy.data.objects.remove(item, do_unlink=True)
+
     if character is None:
         raise SystemExit(
             "None of those files has a body in it.\n\n"
@@ -373,6 +471,19 @@ def build(folder, target, wanted=""):
             "the T-Pose\ndownload; from a character pack it is usually "
             "the only file."
         )
+
+    # An importer leaves things behind - a node it could not place, a
+    # mannequin's stray part. Anything that is not the character and
+    # does not hang off the character is not wanted in the shot.
+    strays = [item for item in bpy.data.objects
+              if item is not character and not worn_by(item, character)]
+
+    for item in strays:
+        bpy.data.objects.remove(item, do_unlink=True)
+
+    if strays:
+        print(f"  {len(strays)} stray object(s) the importer left - "
+              f"removed")
 
     tall = max(0.5, character.dimensions.z or 1.6)
 
@@ -419,7 +530,9 @@ def main(argv):
     if len(argv) < 2:
         raise SystemExit(__doc__.strip())
 
-    build(argv[0], argv[1], argv[2] if len(argv) > 2 else "")
+    build(argv[0], argv[1],
+          argv[2] if len(argv) > 2 else "",
+          argv[3] if len(argv) > 3 else "")
 
     return 0
 

@@ -397,6 +397,15 @@ def test_names_are_cleaned_up(root):
 
     for given, wanted in (
         ("Armature|Walk", "walk"),
+        # What Quaternius's pack actually contained, through Blender's
+        # FBX importer. "characterarmature" is one word, so looking for
+        # "armature" inside it found nothing and every movement came
+        # out called "characterarmature characterarmature idle".
+        ("CharacterArmature|CharacterArmature|Idle", "idle"),
+        ("CharacterArmature|CharacterArmature|Walk", "walk"),
+        ("CharacterArmature|CharacterArmature|SitDown", "crouch"),
+        ("CharacterArmature|CharacterArmature|Victory", "clap"),
+        ("CharacterArmature|CharacterArmature|SwordSlash", "sword slash"),
         ("Walk_Armature", "walk"),
         ("mixamo.com", "idle"),
         ("Breathing Idle", "idle"),
@@ -585,6 +594,90 @@ def test_one_file_per_movement_per_character(root):
     print("\n   [OK] the folder decides whose movement it is")
 
 
+def test_movements_from_a_second_folder(root):
+
+    heading("12  Movements from a library, character from a pack")
+
+    import bpy, from_mixamo
+
+    # A game character pack ships what a game wants. A nursery rhyme
+    # wants clapping and waving, and those come from an animation
+    # library built on the same rig - a different folder, read for its
+    # movements only, mannequin thrown away.
+    pack = root / "GamePack"
+
+    library = root / "Library"
+
+    pack.mkdir(parents=True, exist_ok=True)
+
+    library.mkdir(parents=True, exist_ok=True)
+
+    def a_file(path, names, mesh=True):
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+
+        bpy.ops.object.armature_add(location=(0, 0, 0))
+
+        rig = bpy.context.active_object
+
+        if mesh:
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.7,
+                                                 location=(0, 0, 0.9))
+            bpy.context.active_object.parent = rig
+
+        rig.animation_data_create()
+
+        for index, name in enumerate(names):
+
+            action = bpy.data.actions.new(name)
+
+            action.use_fake_user = True
+
+            rig.animation_data.action = action
+
+            for frame, height in ((1, 0.0), (12, 0.2 + index * 0.1),
+                                  (24, 0.0)):
+                rig.location.z = height
+                rig.keyframe_insert("location", frame=frame)
+
+            track = rig.animation_data.nla_tracks.new()
+            track.name = name
+            track.strips.new(name, 1, action)
+
+            rig.animation_data.action = None
+
+        bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB")
+
+    a_file(pack / "BaseCharacter.glb", ["Idle", "Jump", "SwordSlash"])
+
+    # The mannequin has a body too, and it must not be mistaken for
+    # another character and skipped.
+    a_file(library / "Gestures.glb", ["Clapping", "Waving"])
+
+    made = from_mixamo.build(pack, root / "Both.blend",
+                             movements=library)
+
+    bpy.ops.wm.open_mainfile(filepath=str(made))
+
+    actions = {action.name for action in bpy.data.actions}
+
+    print(f"   actions : {', '.join(sorted(actions))}")
+
+    assert {"idle", "jump", "clap", "wave"} <= actions, actions
+
+    # One body in the file, not two, and nothing the importer left
+    # lying about. Ground is ours and is meant to be there.
+    bodies = [item.name for item in bpy.data.objects
+              if item.type == "MESH" and item.name != "Ground"]
+
+    print(f"   bodies  : {', '.join(bodies)}")
+
+    assert len(bodies) == 1, bodies
+
+    print("\n   [OK] the game pack lends the body, the library lends "
+          "the movements")
+
+
 # ======================================================================
 
 def main():
@@ -604,6 +697,7 @@ def main():
         test_a_folder_with_no_character_is_refused(root)
         test_an_unzipped_pack_of_many_characters(root)
         test_one_file_per_movement_per_character(root)
+        test_movements_from_a_second_folder(root)
 
     print("\nALL BLENDER TESTS PASSED")
 
