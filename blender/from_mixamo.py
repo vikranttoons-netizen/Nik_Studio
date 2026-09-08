@@ -1,13 +1,29 @@
 """
-Nik Studio - build a .blend out of Mixamo downloads.
+Nik Studio - build a .blend out of downloaded character files.
 
-    python blender/from_mixamo.py Mixamo/ Nik.blend
+    python blender/from_mixamo.py Downloads/ Nik.blend
 
 So that nobody has to open Blender.
 
+It takes .fbx, .glb and .gltf, and it does not care which way the
+animations arrive:
+
+  ONE FILE PER MOVEMENT      how Mixamo hands them over. The file name
+                             becomes the action name.
+
+  ONE FILE, MANY MOVEMENTS   how the CC0 character packs ship -
+                             Quaternius, Kenney. The names inside the
+                             file are used, mapped to ours where they
+                             are recognisable.
+
+Mixamo is still there and still free, but Adobe has not updated it in
+years and its support calls it unsupported, so it is worth knowing it
+is not the only door.
+
 WHAT TO PUT IN THE FOLDER
 -------------------------
-From mixamo.com, free account, everything free for commercial use:
+Either a character pack with its animations in one file, or, from
+mixamo.com with a free account:
 
   1. A character, downloaded with NO animation ("T-Pose"). Name the
      file for the character, anything you like.
@@ -28,6 +44,7 @@ The character is whichever file has a mesh in it. Everything else is
 read for its animation and thrown away.
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -36,6 +53,46 @@ import bpy
 
 # Where the three cameras sit, relative to a character about 1.6 units
 # tall standing at the origin, and how much of them each one holds.
+# What the world calls a movement, and what we call it. Anything not
+# in here keeps its own name lowercased, which is usually fine - the
+# script is matched on the verb, not on this list.
+ALIASES = {
+    "breathing idle": "idle", "idle": "idle", "standing": "idle",
+    "clapping": "clap", "clap": "clap", "applaud": "clap",
+    "waving": "wave", "wave": "wave", "hello": "wave",
+    "jumping": "jump", "jump": "jump", "jumping up": "jump",
+    "walking": "walk", "walk": "walk", "running": "walk", "run": "walk",
+    "dancing": "sway", "dance": "sway", "samba dancing": "sway",
+    "swaying": "sway", "sway": "sway",
+    "pointing": "point", "point": "point",
+    "crouching": "crouch", "crouch": "crouch", "sitting": "crouch",
+    "sit": "crouch", "kneeling": "crouch",
+    "nodding": "nod", "nod": "nod", "yes": "nod",
+    "spinning": "spin", "spin": "spin", "turning": "turn",
+}
+
+
+def our_name_for(name):
+    """Their name for a movement -> ours."""
+
+    plain = name.strip().lower()
+
+    # Every exporter decorates the name. Mixamo calls a single download
+    # "mixamo.com"; the FBX importer writes "Armature|Walk"; the glTF
+    # importer writes "Walk_Armature"; Blender adds ".001" when a name
+    # is taken. None of that is the movement.
+    plain = re.sub(r"\.\d+$", "", plain)
+
+    plain = re.sub(r"[|_\-.]+", " ", plain)
+
+    plain = re.sub(r"\b(armature|rig|action|mixamo com|take \d+)\b",
+                   " ", plain)
+
+    plain = " ".join(plain.split())
+
+    return ALIASES.get(plain, plain or "idle")
+
+
 CAMERAS = {
     "Cam_Wide":   ((0.0, -7.0, 1.6), 0.8),
     "Cam_Medium": ((0.0, -4.2, 1.4), 1.1),
@@ -49,38 +106,46 @@ def clear():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def fbx_files(folder):
-    """The .fbx in a folder, in a sensible order."""
+READABLE = (".fbx", ".glb", ".gltf")
+
+
+def model_files(folder):
+    """The character files in a folder, in a sensible order."""
 
     return sorted(
         (path for path in Path(folder).iterdir()
-         if path.suffix.lower() == ".fbx"),
+         if path.suffix.lower() in READABLE),
         key=lambda path: path.name.lower(),
     )
 
 
 def bring_in(path):
     """
-    Import one FBX and say what arrived.
+    Import one file and say what arrived.
 
-    Returns (objects, armature, action) - the action being whatever
-    animation came with it, or None for a plain T-pose character.
+    Returns (objects, armature, actions) - every action the file
+    brought, which is one for a Mixamo download and several for a
+    character pack.
     """
 
     before = set(bpy.data.objects)
 
-    bpy.ops.import_scene.fbx(filepath=str(path))
+    known = set(bpy.data.actions)
+
+    if path.suffix.lower() == ".fbx":
+        bpy.ops.import_scene.fbx(filepath=str(path))
+    else:
+        bpy.ops.import_scene.gltf(filepath=str(path))
 
     arrived = [item for item in bpy.data.objects if item not in before]
 
     rig = next((item for item in arrived if item.type == "ARMATURE"), None)
 
-    action = None
+    # Every action the file brought, not just the one currently
+    # playing: a pack ships several and only one of them is assigned.
+    actions = [act for act in bpy.data.actions if act not in known]
 
-    if rig and rig.animation_data and rig.animation_data.action:
-        action = rig.animation_data.action
-
-    return arrived, rig, action
+    return arrived, rig, actions
 
 
 def has_mesh(objects):
@@ -121,15 +186,15 @@ def build_cameras(height=1.6):
 
 
 def build(folder, target):
-    """A folder of Mixamo downloads -> one .blend the renderer can use."""
+    """A folder of downloads -> one .blend the renderer can use."""
 
-    files = fbx_files(folder)
+    files = model_files(folder)
 
     if not files:
         raise SystemExit(
-            f"No .fbx files in {folder}.\n\n"
-            "Download a character and its movements from mixamo.com and "
-            "put them there."
+            f"No .fbx, .glb or .gltf files in {folder}.\n\n"
+            "Download a character - with its animations, or with one "
+            "file each - and\nput them there."
         )
 
     clear()
@@ -138,11 +203,31 @@ def build(folder, target):
 
     kept = {}
 
+    def keep(action, called):
+        """Name an action ours, without treading on one already kept."""
+
+        name = our_name_for(called)
+
+        if name in kept:
+
+            number = 2
+
+            while f"{name}{number}" in kept:
+                number += 1
+
+            name = f"{name}{number}"
+
+        action.name = name
+
+        action.use_fake_user = True
+
+        kept[name] = action
+
+        return name
+
     for path in files:
 
-        arrived, rig, action = bring_in(path)
-
-        wanted = path.stem.lower()
+        arrived, rig, actions = bring_in(path)
 
         if character is None and rig and has_mesh(arrived):
 
@@ -150,41 +235,45 @@ def build(folder, target):
 
             character.name = "Rig"
 
-            if action:
-                action.name = wanted
-                kept[wanted] = action
+            named = [keep(action, action.name) for action in actions]
 
             print(f"  {path.name}: the character"
-                  + (f", and a '{wanted}' action" if action else ""))
+                  + (f", and {len(named)} movement(s): "
+                     + ", ".join(sorted(named)) if named else ""))
 
             continue
 
-        if action:
+        if not actions:
 
-            action.name = wanted
-
-            action.use_fake_user = True
-
-            kept[wanted] = action
-
-            print(f"  {path.name}: '{wanted}'")
-
-        else:
             print(f"  {path.name}: nothing animated in it - skipped")
 
-        # The rig that came with the animation has served its purpose.
+        elif len(actions) == 1:
+
+            # One movement in the file, so the file name is what it is
+            # called. This is the Mixamo case, where the name inside is
+            # always "mixamo.com".
+            name = keep(actions[0], path.stem)
+
+            print(f"  {path.name}: '{name}'")
+
+        else:
+
+            named = [keep(action, action.name) for action in actions]
+
+            print(f"  {path.name}: {len(named)} movement(s): "
+                  + ", ".join(sorted(named)))
+
+        # The rig that came with the animations has served its purpose.
         for item in arrived:
             bpy.data.objects.remove(item, do_unlink=True)
 
     if character is None:
         raise SystemExit(
             "None of those files has a body in it.\n\n"
-            "One of them has to be the character, downloaded from Mixamo "
-            "as a T-Pose."
+            "One of them has to be the character. From Mixamo that is "
+            "the T-Pose\ndownload; from a character pack it is usually "
+            "the only file."
         )
-
-    for action in kept.values():
-        action.use_fake_user = True
 
     tall = max(0.5, character.dimensions.z or 1.6)
 
@@ -219,9 +308,9 @@ def build(folder, target):
     print(f"  cameras   : {', '.join(CAMERAS)}")
 
     if "idle" not in kept:
-        print("\n  ! No 'idle'. It is the one that plays for a line with "
-              "no verb in it,\n    so download one and call the file "
-              "idle.fbx.")
+        print("\n  ! No 'idle'. It is the one that plays for a line "
+              "with no verb in it.\n    Rename one of the above to "
+              "idle, or download a standing one.")
 
     return target
 

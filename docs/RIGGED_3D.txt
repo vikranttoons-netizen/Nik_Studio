@@ -5,51 +5,77 @@ Ye us raaste ka pehla kadam hai jahan character sach mein animate hota
 hai - AI se nahi. Blender kholne ki zaroorat NAHI hai.
 
 
-AAPKA KAAM: MIXAMO SE DOWNLOAD (lagbhag 15 minute, free)
---------------------------------------------------------
-1. mixamo.com par jaiye, free Adobe account bana lijiye
-   (commercial use allowed hai - character aur animation dono)
+CHARACTER KAHAN SE LAAYEIN
+--------------------------
+Do shakl mein files aati hain, aur tool dono samajhta hai:
 
-2. CHARACTERS tab -> ek character chuniye
-   Bachche jaisa / cartoon jaisa dhoondhiye. Ye "Nik" ban jaayega.
-   DOWNLOAD dabaiye:
-      Format    : FBX Binary
-      Pose      : T-Pose          <- ZAROORI, animation ke bina
-   File ka naam kuch bhi rakhiye, jaise nik_character.fbx
+  (A) EK FILE, SAARI ANIMATIONS ANDAR   <- ye aasan hai
+  (B) HAR MOVEMENT KI ALAG FILE          <- Mixamo aise deta hai
 
-3. ANIMATIONS tab -> wahi character select rehne dijiye
-   Ye animations dhoondh kar download kijiye (har ek alag file):
 
-      Mixamo par dhoondhiye        File ka naam rakhiye
+(A) CC0 CHARACTER PACK - koi account nahi, sabse aasan
+------------------------------------------------------
+Ye sabse seedha raasta hai. Ek file download kijiye, bas.
+
+  quaternius.com          CC0, cartoon jaise character, animations
+                          andar hi (idle, walk, run, jump, wave...)
+  kenney.nl/assets        CC0, isi tarah ke pack
+  sketchfab.com           filter: Downloadable + CC0
+
+  CC0 ka matlab: koi licence nahi, koi naam dena nahi, kuch bhi
+  kariye. Mixamo se bhi saaf.
+
+Download ki hui .glb ya .fbx file seedha Mixamo folder mein daal
+dijiye. Naam badalne ki zaroorat NAHI - file ke andar ke naam padhe
+jaate hain aur hamare naamon se mila diye jaate hain:
+
+     "Walk_Armature"  -> walk
+     "Armature|Walk"  -> walk
+     "Breathing Idle" -> idle
+     "Samba Dancing"  -> sway
+     "Clapping.001"   -> clap
+
+
+(B) MIXAMO - agar khul jaye
+---------------------------
+Mixamo band nahi hua hai, par Adobe ne use saalon se update nahi kiya
+aur unka support use "unsupported" kehta hai. Kabhi-kabhi down rehta
+hai. Isliye ispar tikna theek nahi - par chal jaye to theek hai.
+
+1. mixamo.com, free Adobe account (commercial use allowed)
+
+2. CHARACTERS tab -> ek character -> DOWNLOAD
+      Format : FBX Binary
+      Pose   : T-Pose          <- ZAROORI, animation ke bina
+   Naam: nik_character.fbx
+
+3. ANIMATIONS tab -> har movement alag download:
+
+      Mixamo par                   File ka naam
       -------------------------    --------------------
       Idle / Breathing Idle    ->  idle.fbx      <- ZAROORI
       Clapping                 ->  clap.fbx
       Waving                   ->  wave.fbx
-      Jumping / Jump           ->  jump.fbx
+      Jumping                  ->  jump.fbx
       Walking                  ->  walk.fbx
-      Dancing / Samba          ->  sway.fbx
+      Samba Dancing            ->  sway.fbx
       Pointing                 ->  point.fbx
-      Sitting / Crouch         ->  crouch.fbx
-      Nodding / Head Nod       ->  nod.fbx
-      Spin / Turn              ->  spin.fbx
+      Sitting                  ->  crouch.fbx
+      Nodding                  ->  nod.fbx
+      Turning                  ->  spin.fbx
 
-   Har download par:
-      Format         : FBX Binary
-      Skin           : Without Skin   (chhoti file, kaam wahi)
-      Frames per Sec : 24
-      Keyframe Redu. : none
+      Format : FBX Binary,  Skin : Without Skin,  24 fps
 
-   SABSE ZAROORI: file ka naam upar wali dayi taraf wala rakhiye.
-   Mixamo unhe "Clapping.fbx" kehta hai - aapko "clap.fbx" karna hai.
-   Yahi ek naam wala kaam hai. Action ka naam hi wo cheez hai jisse
-   script ki line milaayi jaati hai.
+   Yahan file ka naam hi action ka naam banta hai, kyunki Mixamo
+   andar sab ko "mixamo.com" kehta hai.
 
-4. Saari FBX files Drive mein daal dijiye:
+
+DONO SOORAT MEIN
+----------------
+Saari files ek folder mein:
 
       My Drive / NikStudio / Mixamo /
-            nik_character.fbx
-            idle.fbx  clap.fbx  wave.fbx  jump.fbx  ...
-
+            ...jo bhi download kiya ho...
 
 MERA KAAM: BAAKI SAB
 --------------------

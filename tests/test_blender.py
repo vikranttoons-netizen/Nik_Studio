@@ -16,6 +16,7 @@ Run from the project root:
 """
 
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -323,6 +324,97 @@ def test_a_folder_of_downloads_becomes_a_blend(root):
     print("\n   [OK] downloads in, a .blend out, nobody opened Blender")
 
 
+def test_one_file_with_every_movement_in_it(root):
+
+    heading("8  One file with all the movements in it")
+
+    import bpy, from_mixamo
+
+    folder = root / "Pack"
+
+    folder.mkdir(parents=True, exist_ok=True)
+
+    # How the CC0 character packs ship - Quaternius, Kenney: one file,
+    # the character and several animations, each on its own NLA track.
+    # Mixamo's one-file-per-movement is the other shape and is already
+    # covered; this is the one that needs no account anywhere.
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    bpy.ops.object.armature_add(location=(0, 0, 0))
+
+    rig = bpy.context.active_object
+
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.7, location=(0, 0, 0.9))
+
+    bpy.context.active_object.parent = rig
+
+    rig.animation_data_create()
+
+    for name, lift in (("Idle", 0.05), ("Walk", 0.3), ("Jump", 0.9)):
+
+        action = bpy.data.actions.new(name)
+
+        action.use_fake_user = True
+
+        rig.animation_data.action = action
+
+        for frame, height in ((1, 0.0), (12, lift), (24, 0.0)):
+            rig.location.z = height
+            rig.keyframe_insert("location", frame=frame)
+
+        track = rig.animation_data.nla_tracks.new()
+        track.name = name
+        track.strips.new(name, 1, action)
+
+        rig.animation_data.action = None
+
+    bpy.ops.export_scene.gltf(filepath=str(folder / "character_pack.glb"),
+                              export_format="GLB")
+
+    made = from_mixamo.build(folder, root / "Pack.blend")
+
+    bpy.ops.wm.open_mainfile(filepath=str(made))
+
+    actions = {action.name for action in bpy.data.actions}
+
+    print(f"   actions : {', '.join(sorted(actions))}")
+
+    # The glTF importer calls them "Walk_Armature", the FBX one calls
+    # them "Armature|Walk", and Mixamo calls a single download
+    # "mixamo.com". None of that is the movement, and the movement is
+    # what the script is matched against.
+    assert {"idle", "walk", "jump"} <= actions, actions
+
+    print("\n   [OK] one download, no account, every movement named "
+          "right")
+
+
+def test_names_are_cleaned_up(root):
+
+    heading("9  Whatever the exporter called it")
+
+    import from_mixamo
+
+    for given, wanted in (
+        ("Armature|Walk", "walk"),
+        ("Walk_Armature", "walk"),
+        ("mixamo.com", "idle"),
+        ("Breathing Idle", "idle"),
+        ("Samba Dancing", "sway"),
+        ("Clapping.001", "clap"),
+        ("Waving", "wave"),
+        ("Running", "walk"),
+        ("twirl", "twirl"),
+    ):
+        got = from_mixamo.our_name_for(given)
+
+        print(f"   {given:<18} -> {got}")
+
+        assert got == wanted, (given, got, wanted)
+
+    print("\n   [OK] the decoration comes off, the movement stays")
+
+
 def test_a_folder_with_no_character_is_refused(root):
 
     heading("7  A folder with no character in it says so")
@@ -366,10 +458,20 @@ def main():
         test_says_what_is_missing(root)
         test_an_unrigged_file_is_refused(root)
         test_a_folder_of_downloads_becomes_a_blend(root)
+        test_one_file_with_every_movement_in_it(root)
+        test_names_are_cleaned_up(root)
         test_a_folder_with_no_character_is_refused(root)
 
     print("\nALL BLENDER TESTS PASSED")
 
 
 if __name__ == "__main__":
+
     main()
+
+    # bpy as a module segfaults on interpreter teardown after a run
+    # like this one - the tests have already passed by then, and an
+    # exit code of 139 on a green run is worse than useless.
+    sys.stdout.flush()
+
+    os._exit(0)
