@@ -450,11 +450,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         'REFERENCE_NAME = ""',
         f"REFERENCE_NAME = {reference!r}",
     ).replace(
-        "CHECK_DRAWINGS = True",
-        f"CHECK_DRAWINGS = {check_drawings}",
-    ).replace(
-        "PREVIEW_ONLY = True",
-        f"PREVIEW_ONLY = {preview_only}",
+        'RUN = "drawings"',
+        'RUN = "drawings"' if check_drawings
+        else ('RUN = "video"' if preview_only else 'RUN = "final"'),
     ).replace(
         "BORROW_REPEATS = True",
         f"BORROW_REPEATS = {borrow_repeats}",

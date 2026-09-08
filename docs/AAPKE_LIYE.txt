@@ -21,77 +21,57 @@ Sirf QUALITY badla hai -> sirf Output/Clips khaali (Scenes rehne dijiye)
 Kuch nahi badla        -> kuch mat hataiye, notebook khud sab skip kar degi
 
 
-=== KADAM 1 : DRAWINGS (7 minute) ===
+SIRF EK SETTING
+---------------
+Cell 2 mein sabse upar:
 
-Cell 2 mein ye settings:
+    RUN = "drawings"
 
-    QUALITY         = "draft"
-    CHECK_DRAWINGS  = True
-    PREVIEW_ONLY    = True
-    TEST_ONE_PICTURE = False
-
-Runtime > Change runtime type > L4 GPU
-Cell 1 chalayiye, phir Cell 2.
-
-Pehli line YE honi chahiye:
-    Notebook : 2026-09-05 - a repeated line repeats its picture, by itself
-Nahi aayi -> purani notebook hai. RUK JAIYE.
-
-Aur ye do line bhi dikhni chahiye:
-    One scene per line - every picture shows what is being sung
-    Repeats : N line(s) come back, and so do their pictures
-
-Notebook 29 drawings banayegi, Scenes.jpg dikhayegi, aur RUK JAAYEGI.
+Teen shabd, isi kram mein. Har ek ek run hai.
 
 
-=== KADAM 2 : SHEET DEKHIYE ===
+=== 1. RUN = "drawings"  (~10 minute) ===
 
-Scenes.jpg mein chaar cheezein:
-  1. Poora body frame mein? (close-up sirf wahan jahan "Close up of" likha hai)
+Sab scenes ki drawing banti hai, Scenes.jpg par sab ek saath dikhti
+hain, aur notebook ruk jaati hai.
+
+Sheet mein chaar cheezein dekhiye:
+  1. Poora character frame mein? (close-up sirf jahan script ne maanga)
   2. Har scene apni lyric line dikha raha hai?
-  3. Koi janwar Nik ke kapde to nahi pehne?
-  4. Koi hybrid jeev - billi ke kaan wala ladka - to nahi?
+  3. Koi janwar kisi aur ke kapde to nahi pehne?
+  4. Koi flat grey aasman?
 
-GALAT WALI DRAWINGS:
+GALAT WALI:
   - Output/Scenes se sirf UNKI file delete kijiye (jaise Scene14.png)
   - script.txt mein unki line badaliye
-  - Cell 2 dobara chalayiye - sirf wahi dobara banengi
+  - Cell 2 dobara - sirf wahi dobara banengi
 
-SAB THEEK LAGE:
-  - Scenes.jpg mujhe bhej dijiye (chhoti hai, upload ho jaayegi)
-  - Kadam 3 par jaiye
+SAB THEEK:
+  - Scenes.jpg mujhe bhej dijiye
+  - Agle kadam par jaiye
 
 
-=== KADAM 3 : VIDEO (~2 ghante) ===
+=== 2. RUN = "video"  (~2 ghante) ===
 
-    QUALITY        = "good"       <- draft se good
-    CHECK_DRAWINGS = False        <- ab rukna nahi hai
-    PREVIEW_ONLY   = True
+Clips banti hain aur chhoti video cut hoti hai.
 
-Cell 2 chalayiye.
-
-Drawings DOBARA NAHI banengi - wo QUALITY se nahi badalti. Sidha clips.
-Pehli clip ke baad notebook khud bata degi kitna time lagega.
+Drawings DOBARA NAHI banti. Pehli clip ke baad notebook khud bata degi
+kitna time lagega.
 
 Tab khula rakhiye. Session toota to sirf ek clip ka nuksaan - dobara
-chalane par wahin se aage badhega.
+chalane par wahin se aage.
 
-
-=== KADAM 4 : MUJHE KYA BHEJNA HAI ===
-
-1. Output/Episode_Preview.mp4   (30MB se choti)
-2. Run ki aakhri do line:
+Aakhir mein Output/Episode_Preview.mp4 (30MB se choti) aur ye do line:
 
    Editing: __ shot(s) across 125.5s, cut where each line of the song starts
    Movement: __ in the finished video, __ from the model alone
 
 
-=== JAB VIDEO PASAND AA JAAYE ===
+=== 3. RUN = "final"  (~10 minute) ===
 
-    PREVIEW_ONLY = False
+Wahi video 1080p par, aur Episode_Short.mp4.
 
-Cell 2 dobara. Clips dobara nahi banengi - sirf 1080p Episode.mp4 aur
-Episode_Short.mp4 banengi. 5-10 minute.
+Clips dobara nahi banti. Ye tab kijiye jab video pasand aa jaye.
 
 
 SETTINGS - LINE NUMBER KE SAATH
@@ -99,9 +79,8 @@ SETTINGS - LINE NUMBER KE SAATH
 Colab mein Ctrl+F se dhoondhiye. Line number chalu karne ke liye:
 Tools > Settings > Editor > Show line numbers
 
+  RUN               "drawings" / "video" / "final"   <- ZYADATAR YAHI
   QUALITY           "draft" / "good" / "best"
-  CHECK_DRAWINGS    True  = drawings ke baad ruko
-  PREVIEW_ONLY      True  = sirf chhoti preview, 1080p aur Short nahi
   BORROW_REPEATS    True  = ek jaisi lyric line = ek hi clip
   TEST_ONE_PICTURE  True  = sirf ek clip banao
   REFERENCE_NAME    ""    = reference picture band (jaan-boojh kar)
