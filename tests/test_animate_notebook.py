@@ -383,7 +383,7 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         beats=None, short=False, full_size=False,
         uploads=None, local=None, fast=False, force="",
         quality="good", reference="", check_drawings=False,
-        preview_only=False, borrow_repeats=True):
+        preview_only=False, borrow_repeats=True, source="ai"):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -456,6 +456,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         "BORROW_REPEATS = True",
         f"BORROW_REPEATS = {borrow_repeats}",
+    ).replace(
+        'SOURCE = "ai"',
+        f"SOURCE = {source!r}",
     )
 
     if not full_size:
@@ -1744,6 +1747,61 @@ def test_a_model_you_do_not_need_is_not_fetched(root):
     print("\n   [OK] nothing is fetched to be skipped")
 
 
+def test_clips_made_somewhere_else(root):
+
+    heading("39  Clips made elsewhere go through the same edit")
+
+    drive = make_input(root / "Elsewhere", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not move\n"
+        "He claps his hands twice, grass rippling, the camera does not "
+        "move\n"
+        "Close up of the puppy barking, leaves swaying, the camera does "
+        "not move\n",
+        encoding="utf-8",
+    )
+
+    # Made by the AI half first, which is a stand-in here for the
+    # rigged half putting its renders in the same folder.
+    printed, refusal, calls = run(drive)
+
+    assert not refusal, refusal
+    assert len(calls) == 3, calls
+
+    # Now the edit alone. There is one edit and it does not care what
+    # made the pictures - the beat cut, the words on screen, the song
+    # and the preview are the same either way.
+    printed, refusal, calls = run(drive, source="clips")
+
+    assert not refusal, refusal
+    assert calls == [] and DRAWN == [], (calls, DRAWN)
+    assert LOADED == [], LOADED
+
+    assert "nothing is generated" in printed, printed
+
+    print(f"   3 clips already there -> {len(calls)} generated, "
+          f"{len(LOADED)} model(s) loaded")
+
+    assert (drive / "Output" / "Episode.mp4").exists()
+
+    print("   and the video was cut from them")
+
+    # A clip that is not there is said out loud, not quietly made.
+    (drive / "Output" / "Clips" / "Scene02.mp4").unlink()
+
+    printed, refusal, calls = run(drive, source="clips")
+
+    assert refusal, "it carried on with a clip missing"
+    assert "Scene02" in refusal, refusal
+    assert calls == [], calls
+
+    print("   a missing one: named, and nothing generated behind your "
+          "back")
+
+    print("\n   [OK] one edit, whatever made the clips")
+
+
 def test_the_movement_lands_on_the_words(root):
 
     heading("33  The clap lands on the clap")
@@ -2457,6 +2515,7 @@ def main():
         test_a_repeated_line_repeats_its_picture(root)
         test_a_folder_with_no_pictures_in_it(root)
         test_a_model_you_do_not_need_is_not_fetched(root)
+        test_clips_made_somewhere_else(root)
         test_the_movement_lands_on_the_words(root)
         test_preview_only(root)
         test_a_preview_small_enough_to_send(root)

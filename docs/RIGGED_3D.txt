@@ -90,8 +90,38 @@ IMAANDAAR BAATEIN - PEHLE JAAN LIJIYE
    Ye baad ka kaam hai, par ab raasta band nahi hai.
 
 
-AGLA KADAM
-----------
-Files Drive mein daal kar bata dijiye. Main Colab notebook bana dungi
-jo bpy install karke poora kaam kar de - aapko Blender kholna hi nahi
-padega.
+COLAB PAR KAISE CHALEGA
+-----------------------
+Notebook ban gayi hai: colab/NikStudio_Rigged.ipynb
+
+Drive mein ye teen cheezein daaliye:
+
+    My Drive / NikStudio /
+          nik_blender.py        <- repo ke blender/ folder se
+          from_mixamo.py        <- repo ke blender/ folder se
+          Mixamo/               <- aapki FBX files
+          input/script.txt      <- pehle se hai
+
+Phir:
+
+  1. NikStudio_Rigged.ipynb kholiye
+     Cell 1 -> Blender install (~2 min)
+     Cell 2 -> Nik.blend banega, aur pehli 3 clips render hongi
+
+     Shuru mein GPU ki zaroorat NAHI - ENGINE = "BLENDER_WORKBENCH"
+     CPU par chalta hai aur tez hai. Achha dikhne ke liye baad mein
+     ENGINE = "BLENDER_EEVEE_NEXT" aur GPU on.
+
+     FIRST_ONLY = 3 rakha hai - pehle teen clips dekh lijiye. Sab
+     banane ke liye FIRST_ONLY = 0.
+
+  2. Clips theek lagein to NikStudio_Animate.ipynb kholiye aur do
+     setting badaliye:
+
+         SOURCE = "clips"
+         RUN    = "video"
+
+     Wo un clips se video kaat degi - beat par cut, lyrics, gaana,
+     preview. Kuch generate nahi hoga.
+
+     EK HI EDIT HAI. Use farq nahi padta ki pictures kisne banayi.
