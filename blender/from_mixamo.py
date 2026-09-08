@@ -100,6 +100,31 @@ def our_name_for(name):
     return ALIASES.get(plain, plain or "idle")
 
 
+def first_word(stem):
+    """The leading word of a file name, which is usually who it is."""
+
+    parts = [part for part in re.split(r"[|_\-. ]+", stem.strip()) if part]
+
+    return parts[0].lower() if parts else ""
+
+
+def without(stem, word):
+    """The same name with that leading word taken off."""
+
+    parts = [part for part in re.split(r"[|_\-. ]+", stem.strip()) if part]
+
+    if parts and parts[0].lower() == word and len(parts) > 1:
+        parts = parts[1:]
+
+    return " ".join(parts) or stem
+
+
+def a_movement(stem):
+    """True if the file is named for a movement we know."""
+
+    return our_name_for(stem) in set(ALIASES.values())
+
+
 CAMERAS = {
     "Cam_Wide":   ((0.0, -7.0, 1.6), 0.8),
     "Cam_Medium": ((0.0, -4.2, 1.4), 1.1),
@@ -223,6 +248,17 @@ def build(folder, target, wanted=""):
 
     character = None
 
+    # The leading word of the character's file name. In a pack that
+    # gives one file per movement per character - Astronaut_Idle.fbx,
+    # Astronaut_Walk.fbx - it is what says which files are still ours.
+    family = ""
+
+    # And the folder it was found in. A pack that gives every character
+    # its own folder names the files inside them for the movement only
+    # - Astronaut/Walk.fbx, Boy/Walk.fbx - so the folder is the only
+    # thing that says whose walk it is.
+    home = None
+
     kept = {}
 
     def keep(action, called):
@@ -257,7 +293,18 @@ def build(folder, target, wanted=""):
 
             character.name = "Rig"
 
-            named = [keep(action, action.name) for action in actions]
+            family = first_word(path.stem)
+
+            home = path.parent
+
+            if len(actions) == 1:
+
+                # One movement in the character's own file, so the file
+                # name says which - "Astronaut_Idle.fbx" is the idle.
+                named = [keep(actions[0], without(path.stem, family))]
+
+            else:
+                named = [keep(action, action.name) for action in actions]
 
             print(f"  {path.name}: the character"
                   + (f", and {len(named)} movement(s): "
@@ -280,10 +327,14 @@ def build(folder, target, wanted=""):
 
             continue
 
-        if has_mesh(arrived) and len(actions) > 1:
+        ours = path.parent == home and (a_movement(path.stem)
+                                        or first_word(path.stem) == family)
 
-            # Same reasoning, for when the character we took had no
-            # movements of its own: this one is another character.
+        if has_mesh(arrived) and not ours:
+
+            # It brought its own body and its name says nothing about
+            # ours, so it is one of the other forty-nine characters in
+            # the pack. Its animations are posed for its own skeleton.
             print(f"  {path.name}: another character - skipped")
 
             for item in arrived:
@@ -300,7 +351,7 @@ def build(folder, target, wanted=""):
             # One movement in the file, so the file name is what it is
             # called. This is the Mixamo case, where the name inside is
             # always "mixamo.com".
-            name = keep(actions[0], path.stem)
+            name = keep(actions[0], without(path.stem, family))
 
             print(f"  {path.name}: '{name}'")
 

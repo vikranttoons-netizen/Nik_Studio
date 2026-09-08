@@ -525,6 +525,66 @@ def test_a_folder_with_no_character_is_refused(root):
     print("\n   [OK] refused, and said what to download")
 
 
+def test_one_file_per_movement_per_character(root):
+
+    heading("11  A pack with a file per movement, per character")
+
+    import bpy, from_mixamo
+
+    # The other shape a big pack comes in, and the dangerous one: every
+    # character has a folder, and inside it the files are named for the
+    # movement only. "Walk.fbx" appears fifty times, once per character,
+    # and every one of those walks is posed for its own skeleton.
+    folder = root / "PerMovement"
+
+    def a_clip(path, lift, mesh=True):
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+
+        bpy.ops.object.armature_add(location=(0, 0, 0))
+
+        rig = bpy.context.active_object
+
+        if mesh:
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.7,
+                                                 location=(0, 0, 0.9))
+            bpy.context.active_object.parent = rig
+
+        rig.animation_data_create()
+
+        action = bpy.data.actions.new("Take 001")
+
+        rig.animation_data.action = action
+
+        for frame, height in ((1, 0.0), (12, lift), (24, 0.0)):
+            rig.location.z = height
+            rig.keyframe_insert("location", frame=frame)
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB")
+
+    a_clip(folder / "Astronaut" / "Idle.glb", 0.05)
+    a_clip(folder / "Astronaut" / "Walk.glb", 0.3)
+    a_clip(folder / "Astronaut" / "Jump.glb", 0.9)
+
+    # Somebody else's walk, in somebody else's folder.
+    a_clip(folder / "Zombie" / "Walk.glb", 0.4)
+
+    made = from_mixamo.build(folder, root / "PerMovement.blend")
+
+    bpy.ops.wm.open_mainfile(filepath=str(made))
+
+    actions = {action.name for action in bpy.data.actions}
+
+    print(f"   actions : {', '.join(sorted(actions))}")
+
+    # One walk, not two. "walk2" would mean the zombie's got in.
+    assert actions == {"idle", "walk", "jump"}, actions
+
+    print("\n   [OK] the folder decides whose movement it is")
+
+
 # ======================================================================
 
 def main():
@@ -543,6 +603,7 @@ def main():
         test_names_are_cleaned_up(root)
         test_a_folder_with_no_character_is_refused(root)
         test_an_unzipped_pack_of_many_characters(root)
+        test_one_file_per_movement_per_character(root)
 
     print("\nALL BLENDER TESTS PASSED")
 
