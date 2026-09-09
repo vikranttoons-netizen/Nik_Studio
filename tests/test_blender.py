@@ -998,6 +998,18 @@ def test_a_grown_up_rig_becomes_a_child(root):
     print(f"   grown up: {tall:.2f} tall, head {head:.2f} "
           f"= {head / tall:.0%} of it")
 
+    # Which bone it worked around, said out loud. Going into edit mode
+    # invalidates every reference into rig.data.bones without
+    # complaining, so a name read afterwards can name a different bone
+    # entirely - and then the head is not the head and nothing grows.
+    bpy.ops.wm.open_mainfile(filepath=str(grown))
+
+    around = from_mixamo.childlike(nik_blender.armature_in(), 1.0)
+
+    print(f"   worked around: {around}")
+
+    assert around == "Head", around
+
     kid = from_mixamo.build(folder, root / "Kid.blend", child=1.0)
 
     small, big_head = proportions(kid)

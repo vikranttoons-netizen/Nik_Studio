@@ -405,7 +405,20 @@ def childlike(rig, amount=1.0):
     head = head_bone_of(rig)
 
     if head is None:
+
+        print("  child     : no bone with 'head' in its name, so the "
+              "proportions are\n              left alone. The bones "
+              "are: "
+              + ", ".join(sorted(bone.name for bone in rig.data.bones))
+              [:400])
+
         return None
+
+    # Its name, kept as text. Going into edit mode throws away
+    # rig.data.bones and every reference into it - the pointer stays
+    # usable and quietly means a different bone, which is how the head
+    # became a foot.
+    called = head.name
 
     # How much shorter the body gets, and how much bigger the head.
     shorter = 1.0 - 0.30 * amount
@@ -460,7 +473,7 @@ def childlike(rig, amount=1.0):
         if item.type != "MESH" or not worn_by(item, rig):
             continue
 
-        group = item.vertex_groups.get(head.name)
+        group = item.vertex_groups.get(called)
 
         for vertex in item.data.vertices:
 
@@ -476,12 +489,17 @@ def childlike(rig, amount=1.0):
 
             vertex.co = moved(vertex.co, weight)
 
+        # Otherwise the bounding box still describes the grown-up, and
+        # everything measured from it - the height, the framing, the
+        # ground - is measured on a body that is no longer there.
+        item.data.update()
+
         moved_count += len(item.data.vertices)
 
     print(f"  child     : body {shorter:.0%}, head {bigger:.0%}, "
-          f"around '{head.name}' ({moved_count} points)")
+          f"around '{called}' ({moved_count} points)")
 
-    return head.name
+    return called
 
 
 def build(folder, target, wanted="", movements="", child=0.0):
