@@ -1043,6 +1043,95 @@ def test_a_grown_up_rig_becomes_a_child(root):
     print("\n   [OK] shorter body, bigger head, and it still moves")
 
 
+def test_a_missing_movement_does_not_freeze_the_shot(root):
+
+    heading("16  A movement the pack has not got is not a frozen shot")
+
+    import bpy, nik_blender
+
+    # Two clips came back measuring 0.06 - a character standing dead
+    # still for four seconds - because the line asked for a wave, the
+    # game pack has no wave, and the fallback was 'idle', which in that
+    # pack is a statue. Standing still is the last resort now.
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    for name, length in (("idle", 4), ("clap", 30), ("walk", 24),
+                         ("sword slash", 60), ("death", 90)):
+
+        action = bpy.data.actions.new(name)
+
+        action.use_fake_user = True
+
+        curve = action.fcurves.new("location", index=2)
+
+        curve.keyframe_points.insert(1, 0.0)
+
+        curve.keyframe_points.insert(length, 1.0)
+
+    for asked, wanted in (("wave", "clap"), ("clap", "clap"),
+                          ("sway", "walk"), ("spin", "walk"),
+                          ("nod", "clap"), ("walk", "walk")):
+
+        got, instead = nik_blender.stand_in_for(asked)
+
+        print(f"   {asked:<6} -> {got.name}"
+              + (f"  (asked for {instead})" if instead else ""))
+
+        assert got.name == wanted, (asked, got.name, wanted)
+
+    # Never the violent ones, however long they are and however little
+    # else there is.
+    for banned in ("death", "sword slash", "punch"):
+
+        got, _ = nik_blender.stand_in_for(banned)
+
+        assert nik_blender.allowed(got.name), (banned, got.name)
+
+    print("\n   [OK] something that moves, and never the sword")
+
+
+def test_the_notebook_carries_the_code_it_runs(root):
+
+    heading("17  The notebook cannot be out of step with the scripts")
+
+    import base64, json
+
+    # Three files had to be kept in step by hand - the notebook and the
+    # two scripts uploaded beside it in Drive - and a run went wrong
+    # every time one of them was the old one. The notebook is generated
+    # from the scripts now, so this checks it was regenerated.
+    made = json.loads(
+        (PROJECT_ROOT / "colab" / "NikStudio_Rigged.ipynb").read_text(
+            encoding="utf-8"))
+
+    code = [cell for cell in made["cells"] if cell["cell_type"] == "code"]
+
+    assert len(code) == 1, f"{len(code)} code cells, should be one"
+
+    cell = "".join(code[0]["source"])
+
+    inside = {}
+
+    exec(cell[cell.index("MODULES = {"):cell.index("import base64")],
+         inside)
+
+    for name, blob in inside["MODULES"].items():
+
+        carried = base64.b64decode(blob).decode("utf-8")
+
+        onshelf = (PROJECT_ROOT / "blender" / name).read_text(
+            encoding="utf-8")
+
+        print(f"   {name:<18} {len(carried)} chars, same as blender/: "
+              f"{carried == onshelf}")
+
+        assert carried == onshelf, (
+            f"{name} in the notebook is not the one in blender/. "
+            f"Run: python colab/build_rigged_notebook.py")
+
+    print("\n   [OK] one cell, and it carries exactly what is tested")
+
+
 # ======================================================================
 
 def main():
@@ -1066,6 +1155,8 @@ def main():
         test_renders_without_ffmpeg_inside_blender(root)
         test_a_tall_character_still_fits_in_the_frame(root)
         test_a_grown_up_rig_becomes_a_child(root)
+        test_a_missing_movement_does_not_freeze_the_shot(root)
+        test_the_notebook_carries_the_code_it_runs(root)
 
     print("\nALL BLENDER TESTS PASSED")
 

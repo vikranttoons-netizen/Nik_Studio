@@ -221,6 +221,38 @@ def clear():
 READABLE = (".fbx", ".glb", ".gltf")
 
 
+# Which character to reach for when nobody said. A pack sorts
+# BaseCharacter first and that one is the featureless mannequin; the
+# rest of the shelf is a game's cast, and a children's channel cannot
+# use most of it.
+RATHER_NOT = ("base", "zombie", "goblin", "skeleton", "knight", "ninja",
+              "pirate", "soldier", "witch", "wizard", "viking", "orc",
+              "monster", "demon", "devil", "ghost", "mummy", "hat",
+              "helmet", "hair", "beard", "cow", "pug", "dog", "cat")
+
+RATHER = ("kid", "child", "boy", "toddler", "baby", "casual")
+
+# Nik is a boy, so where everything else is equal a boy is picked.
+# Whole words only: "female" has "male" inside it.
+LEANS = {"male", "man", "boy", "m"}
+
+
+def liking(path):
+    """How much this file looks like the character we are after."""
+
+    name = path.stem.lower()
+
+    words = set(re.split(r"[^a-z]+", name))
+
+    if any(word in name for word in RATHER_NOT):
+        return 3
+
+    if any(word in name for word in RATHER):
+        return 0 if words & LEANS else 1
+
+    return 2
+
+
 def model_files(folder, wanted=""):
     """
     The character files in a folder and everything under it.
@@ -242,6 +274,7 @@ def model_files(folder, wanted=""):
     return sorted(
         found,
         key=lambda path: (0 if low and low in path.name.lower() else 1,
+                          liking(path) if not low else 0,
                           str(path).lower()),
     )
 

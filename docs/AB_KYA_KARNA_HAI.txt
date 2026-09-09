@@ -1,95 +1,91 @@
 AB KYA KARNA HAI
 ================
 
-Character mil gaya, framing theek ho gayi, bachche jaisa anupaat aa
-gaya. Do cheezein baaki hain. Bas ye do kijiye.
+Ab sirf EK cell chalani hai. Koi file upload nahi karni.
 
 
-KADAM 1 - CHARACTER CHUNIYE  (2 minute)
----------------------------------------
-Notebook mein ye line dhoondhiye aur bhar dijiye:
+DRIVE MEIN SIRF YE
+------------------
+      My Drive / NikStudio / Mixamo /   <- character pack, unzipped
+      My Drive / NikStudio / input /    <- script.txt (pehle se hai)
 
-      CHARACTER = "Casual_Male"
-
-Abhi wo khaali hai, isliye "BaseCharacter" chal raha hai - wo pack ka
-khaali dhaancha hai, isi liye kaala aur bina shakal ka dikhta hai.
-
-Doosre theek option: Casual2_Male, Casual3_Male, Casual_Bald
-
-MAT LIJIYE: Zombie, Goblin, Knight, Ninja, Pirate, Soldier, Witch,
-Wizard, Viking - bachchon ke channel ke liye galat hain.
-
-Cell 2 chalaiye. Nik.blend khud dobara banegi.
+Bas. nik_blender.py aur from_mixamo.py ab Drive mein NAHI chahiye -
+wo notebook ke andar hi hain. Agar wahan padi hain to rehne dijiye,
+koi farq nahi padta.
 
 
-KADAM 2 - ANIMATION LIBRARY  (15 minute)
-----------------------------------------
-Ye sabse zaroori kaam hai. Iske bina scenes jam ke khade rehte hain.
+CHALANA
+-------
+NikStudio_Rigged.ipynb kholiye. Ek hi cell hai. Chala dijiye.
 
-Abhi jo pack hai wo GAME ke liye bana hai - usme death, punch, sword
-slash hai. Aapke gaane ko clap, wave, nod, point, spin, sway chahiye.
-44 mein se zyada lines ke paas koi movement hai hi nahi, isliye wo
-'idle' par gir jati hain, aur is pack ka idle patthar jaisa hai.
+Blender khud install ho jayega (~2 min pehli baar).
+Character khud chun liya jayega.
+Nik.blend khud ban jayegi.
+3 clips ban jayengi.
 
-  1. quaternius.com par ISKA PAID VERSION dikhta hai. Free wala
-     itch.io par hai. Seedha yahan jaiye:
+Kuch bhi bharna zaroori NAHI hai.
 
-        https://quaternius.itch.io/universal-animation-library
 
-     "Download Now" dabaiye. Daam poochhega - "Name your own price"
-     hai. Wahan 0 likhiye, ya "No thanks, just take me to the
-     downloads" par click kijiye. Bilkul free.
+AGAR KUCH BADALNA HO
+--------------------
+Cell mein sabse upar settings hain:
 
-     Pack ka 60-70% hissa free hai (120+ animation), aur wahi CC0 hai
-     - commercial use allowed. Baaki 30-40% premium hai, uski
-     zaroorat nahi.
+  CHARACTER = ""       khaali = khud chunega. Pack ka khaali putla
+                       (BaseCharacter) aur zombie/knight/ninja apne
+                       aap chhod diye jaate hain. Koi aur chahiye to
+                       naam ka hissa likh dijiye: "Casual_Male"
 
-  2. Download kijiye, unzip kijiye
+  MOVEMENTS = ""       animation library ka folder (neeche padhiye)
 
-  3. Drive mein NAYA folder banaiye aur poori extracted folder usme
-     daal dijiye:
+  FIRST_ONLY = 3       3 clips. Saari banane ke liye 0
 
+  CHILD = 1.0          bachche ka anupaat. 0 = jaisa download kiya
+
+  ENGINE               "BLENDER_WORKBENCH" = flat, tez, bina GPU
+                       "BLENDER_EEVEE_NEXT" = accha dikhta hai, GPU on
+
+
+MOVEMENT ACCHI KARNI HO TO (marzi ki baat, zaroori nahi)
+--------------------------------------------------------
+Ab agar koi movement pack mein nahi hai, to character KHADA NAHI
+rahega - uske sabse kareeb wali movement chalegi:
+
+      wave  nahi mili  ->  clap chalega
+      sway  nahi mili  ->  walk chalega
+      nod   nahi mili  ->  crouch chalega
+
+Aur death, punch, sword slash kabhi nahi chalenge - wo bachchon ke
+liye nahi hain, chahe aur kuch bhi na ho.
+
+Ye kaam chalau hai. Asli movements chahiye to:
+
+  1. https://quaternius.itch.io/universal-animation-library
+     "Download Now" -> daam ke box mein 0 likh dijiye. Free hai.
+     (quaternius.com par ISKA PAID version dikhta hai - wahan mat
+     jaiye)
+
+  2. Unzip kar ke poori folder yahan daaliye:
         My Drive / NikStudio / Moves /
 
-  4. Notebook mein:
-
-        MOVEMENTS = "Moves"
-
-  5. Cell 2 chalaiye
+  3. Cell mein:  MOVEMENTS = "Moves"
 
 
-DONO KE BAAD
-------------
-Notebook mein ye do line honi chahiye:
+CHALNE KE BAAD MUJHE BHEJIYE
+----------------------------
+Neeche ye table print hoga:
 
-      CHARACTER = "Casual_Male"
-      MOVEMENTS = "Moves"
+      Movement, clip by clip:
+        Scene01    3.42
+        Scene02    2.80
+        Scene03    3.58
 
-Cell 2 chalaiye aur jo 3 clips banein wo mujhe bhej dijiye.
-
-Output mein ye line dekh lijiye - ismein wave, nod, point, sway
-dikhne chahiye:
-
-      Actions   : NN (clap, idle, jump, nod, point, ...)
-
-Aur ye wali khaali honi chahiye:
-
-      ! These movements have no action ...
+1 se kam matlab character khada hai. Ye table aur 3 clips bhej
+dijiye.
 
 
-AGAR "No module named 'bpy'" AAYE
----------------------------------
-Session restart ho gaya tha aur Blender uske saath chala gaya.
-Notebook ab khud install kar leti hai - bas Cell 2 chalaiye. Agar wo
-kahe "restart session", to Runtime > Restart session, phir SIRF
-Cell 2 dobara. Cell 1 ki zaroorat nahi.
-
-
-ABHI KYA HO CHUKA HAI
----------------------
-  framing        pair kat rahe the       -> poora body frame mein
-  background     kaala andhera           -> aasman, zameen, parchhai
-  anupaat        bada aadmi              -> bada sar, chhota dhad
-  Scene03 hilna  1.46                    -> 3.58
-
-  bacha hai: Scene01/02 abhi 0.06 par hain - Kadam 2 se theek hoga
+AGAR ATAK JAYEIN
+----------------
+"No module named 'bpy'"     -> cell dobara chalaiye, khud lag jayega
+"restart session"           -> Runtime > Restart session, phir cell
+"No .../Mixamo"             -> folder ka naam "Mixamo" hi rakhiye
+Kuch aur                    -> screenshot bhej dijiye

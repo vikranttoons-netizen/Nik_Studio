@@ -76,6 +76,35 @@ ACTIONS = [
 
 FALLBACK_ACTION = "idle"
 
+# When the rig has not got the movement a line asks for, what will do
+# instead - in order, best first. Standing still is the last resort,
+# not the first: a character frozen through a whole line is worse for
+# a two year old than a wave that came out as a clap.
+STAND_INS = {
+    "wave":   ("clap", "point", "victory", "jump"),
+    "clap":   ("victory", "wave", "jump"),
+    "jump":   ("roll", "clap", "walk"),
+    "walk":   ("run", "walk carry", "jump"),
+    "sway":   ("dance", "walk", "clap", "jump"),
+    "point":  ("pick up", "wave", "clap"),
+    "crouch": ("sit down", "pick up", "stand up", "roll"),
+    "nod":    ("crouch", "pick up", "clap"),
+    "spin":   ("turn", "roll", "walk"),
+}
+
+# Never, whatever a line seems to ask for and whatever is missing.
+# A pack built for games ships these and this is a children's channel.
+NEVER = ("death", "defeat", "punch", "kick", "shoot", "sword", "slash",
+         "stab", "hit", "die", "dead", "attack", "gun", "knife")
+
+
+def allowed(name):
+    """Is this movement one a nursery rhyme can use?"""
+
+    plain = name.lower()
+
+    return not any(word in plain for word in NEVER)
+
 
 # ======================================================================
 # Reading the script
@@ -447,13 +476,46 @@ def join(pictures, target):
         )
 
 
-def play(rig, action_name):
-    """Put an action on the rig, and say how long it runs."""
+def stand_in_for(action_name):
+    """
+    The nearest movement the rig actually has, and what it cost.
+
+    Returns (action, instead_of) - instead_of is the name that was
+    asked for, when something else had to be used.
+    """
 
     action = bpy.data.actions.get(action_name)
 
-    if action is None:
-        action = bpy.data.actions.get(FALLBACK_ACTION)
+    if action is not None and allowed(action_name):
+        return action, ""
+
+    for other in STAND_INS.get(action_name, ()):
+
+        action = bpy.data.actions.get(other)
+
+        if action is not None and allowed(other):
+            return action, action_name
+
+    # Nothing close. Anything that moves and is not violent beats
+    # standing still, so take the longest one going - a longer action
+    # is a fuller movement.
+    moving = [act for act in bpy.data.actions
+              if allowed(act.name) and act.name != FALLBACK_ACTION]
+
+    if moving:
+
+        longest = max(moving,
+                      key=lambda act: act.frame_range[1] - act.frame_range[0])
+
+        return longest, action_name
+
+    return bpy.data.actions.get(FALLBACK_ACTION), action_name
+
+
+def play(rig, action_name):
+    """Put an action on the rig, and say how long it runs."""
+
+    action, instead = stand_in_for(action_name)
 
     if action is None:
         raise SystemExit(f"No action '{action_name}' and no fallback.")
@@ -465,7 +527,9 @@ def play(rig, action_name):
 
     start, end = (int(round(v)) for v in action.frame_range)
 
-    return action.name, max(1, end - start), start
+    called = action.name if not instead else f"{action.name} (for {instead})"
+
+    return called, max(1, end - start), start
 
 
 def render_scene(rig, line, target, seconds=CLIP_SECONDS):
