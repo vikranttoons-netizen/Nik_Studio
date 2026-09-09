@@ -1,98 +1,80 @@
-AB KYA KARNA HAI - SIRF YE, AUR KUCH NAHI
-=========================================
+AB KYA KARNA HAI
+================
 
-Aapko abhi 4 kadam karne hain. Bas. Neeche jo nahi likha, wo abhi
-mat kijiye.
-
-Animate wali notebook ko abhi HAATH MAT LAGAIYE. Uski baari baad
-mein aayegi (Kadam 5, aur wo mai bataungi).
+Character mil gaya, framing theek ho gayi, bachche jaisa anupaat aa
+gaya. Do cheezein baaki hain. Bas ye do kijiye.
 
 
-KADAM 1 - EK CHARACTER DOWNLOAD KIJIYE
---------------------------------------
-Koi bhi pack NAHI chalega. Sirf wo chalega jisme DONO cheezein hon:
+KADAM 1 - CHARACTER CHUNIYE  (2 minute)
+---------------------------------------
+Notebook mein ye line dhoondhiye aur bhar dijiye:
 
-      character ka SHAREER  +  uski ANIMATION
+      CHARACTER = "Casual_Male"
 
-Isliye seedha ye kijiye - quaternius.com ke search box mein likhiye:
+Abhi wo khaali hai, isliye "BaseCharacter" chal raha hai - wo pack ka
+khaali dhaancha hai, isi liye kaala aur bina shakal ka dikhta hai.
 
-      Ultimate Animated Character
+Doosre theek option: Casual2_Male, Casual3_Male, Casual_Bald
 
-Pack ka naam: "Ultimate Animated Character Pack"
-50+ animated character, CC0 (free, commercial allowed), FBX format.
+MAT LIJIYE: Zombie, Goblin, Knight, Ninja, Pirate, Soldier, Witch,
+Wizard, Viking - bachchon ke channel ke liye galat hain.
 
-Download karte waqt FBX chuniye (.blend mat lijiye).
-
-JO AAPKI SCREEN PAR DIKH RAHA HAI, USME SE KOI NAHI CHALEGA:
-  All In One File          -> $3 ka hai, paisa nahi dena
-  Bestiary Dungeon Monsters-> daraawne monster, bachchon ke liye nahi
-  Downtown City MegaKit    -> sirf buildings, character hai hi nahi
-  Universal Animation Lib 2-> sirf animations hain, character nahi
-
-Quaternius par kuch cheezon par daam likha hota hai - wo "premium"
-extra hai. Neeche free download ka button hota hai, wahi dabaiye.
+Cell 2 chalaiye. Nik.blend khud dobara banegi.
 
 
-KADAM 2 - ZIP KO DRIVE MEIN RAKHIYE
------------------------------------
-Download ek ZIP file hai. Use pehle KHOLIYE (unzip):
+KADAM 2 - ANIMATION LIBRARY  (15 minute)
+----------------------------------------
+Ye sabse zaroori kaam hai. Iske bina scenes jam ke khade rehte hain.
 
-  Windows: zip par right-click -> "Extract All..." -> Extract
+Abhi jo pack hai wo GAME ke liye bana hai - usme death, punch, sword
+slash hai. Aapke gaane ko clap, wave, nod, point, spin, sway chahiye.
+44 mein se zyada lines ke paas koi movement hai hi nahi, isliye wo
+'idle' par gir jati hain, aur is pack ka idle patthar jaisa hai.
 
-Ek folder ban jayega. Uske andar chhote folder honge - FBX, glTF,
-Blend, OBJ. UNHE CHHEDNA NAHI HAI. Andar jaakar file dhoondhne ki
-zaroorat nahi - code khud neeche tak dhoondh leta hai.
+  1. quaternius.com par search kijiye:
 
-Ab Google Drive mein bilkul aisa banaiye:
+        Universal Animation Library
 
-  My Drive / NikStudio / nik_blender.py    <- maine bheji hai
-  My Drive / NikStudio / from_mixamo.py    <- maine bheji hai
-  My Drive / NikStudio / Mixamo /          <- ye folder banaiye
+     120+ animation, CC0, free.
 
-Aur us khuli hui (extracted) poori folder ko "Mixamo" ke andar
-daal dijiye. Bas.
+  2. Download kijiye, unzip kijiye
 
-  - Folder ka naam "Mixamo" hi rakhiye, chahe file Quaternius se
-    aayi ho. Naam sirf ek naam hai, code wahi folder dhoondhta hai.
-  - Kisi file ka naam badalna NAHI hai.
-  - ZIP file khud upload mat kijiye - kholi hui folder upload kijiye.
-  - Upload mein waqt lagega. Poora hone dijiye.
+  3. Drive mein NAYA folder banaiye aur poori extracted folder usme
+     daal dijiye:
 
-PACK MEIN 50 CHARACTER HAIN - EK CHUNNA HAI
-Code apne aap pehla (naam ke hisaab se) le lega. Agar aapko koi khaas
-character chahiye, to notebook mein ye line bharaiye:
+        My Drive / NikStudio / Moves /
 
-      CHARACTER = "Boy"
+  4. Notebook mein:
 
-File ke naam ka koi bhi hissa kaafi hai. Khaali chhodi to pehla wala.
+        MOVEMENTS = "Moves"
+
+  5. Cell 2 chalaiye
 
 
-KADAM 3 - RIGGED NOTEBOOK CHALAIYE
-----------------------------------
-Colab mein kholiye:  colab/NikStudio_Rigged.ipynb
+DONO KE BAAD
+------------
+Notebook mein ye do line honi chahiye:
 
-  Cell 1 chalaiye  -> Blender install (~2 minute)
-  Cell 2 chalaiye  -> Nik.blend banega, phir 3 clips
+      CHARACTER = "Casual_Male"
+      MOVEMENTS = "Moves"
 
-GPU ki zaroorat NAHI hai. T4 bhi chalega.
+Cell 2 chalaiye aur jo 3 clips banein wo mujhe bhej dijiye.
 
-Cell 2 chalte hi wo bata dega usne kaun sa character uthaya, aur
-kaun kaun si movement us file mein mili. Wo line padh lijiye - agar
-character galat lage to CHARACTER = "..." bhar kar, REBUILD = True
-kar ke dobara chalaiye.
+Output mein ye line dekh lijiye - ismein wave, nod, point, sway
+dikhne chahiye:
 
+      Actions   : NN (clap, idle, jump, nod, point, ...)
 
-KADAM 4 - MUJHE BHEJIYE
------------------------
-Output / Clips / se jo 3 video banengi, wo mujhe bhej dijiye,
-aur screen par jo "Movement: __" wali line aaye wo bhi.
+Aur ye wali khaali honi chahiye:
 
-Yahin ruk jaiye. Aage kya karna hai, wo mai clips dekh kar bataungi.
+      ! These movements have no action ...
 
 
-AGAR ATAK JAYEIN
-----------------
-"no character file found"  -> file Mixamo folder ke andar nahi hai
-"no movements found"       -> pack mein animation nahi thi, dusra
-                              pack lijiye
-Kuch aur error aaye        -> screenshot bhej dijiye, jhelna mat
+ABHI KYA HO CHUKA HAI
+---------------------
+  framing        pair kat rahe the       -> poora body frame mein
+  background     kaala andhera           -> aasman, zameen, parchhai
+  anupaat        bada aadmi              -> bada sar, chhota dhad
+  Scene03 hilna  1.46                    -> 3.58
+
+  bacha hai: Scene01/02 abhi 0.06 par hain - Kadam 2 se theek hoga
