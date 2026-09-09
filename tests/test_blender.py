@@ -1162,6 +1162,83 @@ def test_the_notebook_carries_the_code_it_runs(root):
     print("\n   [OK] one cell, and it carries exactly what is tested")
 
 
+class Slotted:
+    """
+    An action shaped the way Blender 4.4 and later shape one.
+
+    This container has Blender 4.2, where an action holds its curves
+    directly. Colab installs a newer one, where they are down inside
+    layers, strips and channelbags - and reaching for the old place
+    there is an AttributeError that stopped the render after the
+    character, the cameras and the framing were all correct.
+    """
+
+    class Curve:
+
+        def __init__(self, values):
+
+            self.keyframe_points = [
+                type("Point", (), {"co": (index + 1.0, value)})()
+                for index, value in enumerate(values)
+            ]
+
+    class Bag:
+
+        def __init__(self, curves):
+            self.fcurves = curves
+
+    class Strip:
+
+        def __init__(self, bags):
+            self.channelbags = bags
+
+    class Layer:
+
+        def __init__(self, strips):
+            self.strips = strips
+
+    def __init__(self, name, values):
+
+        self.name = name
+
+        self.layers = [Slotted.Layer([
+            Slotted.Strip([Slotted.Bag([Slotted.Curve(values)])])])]
+
+
+def test_the_curves_are_found_on_any_blender(root):
+
+    heading("18  Where the curves live changed, and both places work")
+
+    import nik_blender
+
+    new_shape = Slotted("clap", [0.0, 1.0, 0.0])
+
+    found = nik_blender.curves_of(new_shape)
+
+    print(f"   layers/strips/channelbags: {len(found)} curve(s), "
+          f"liveliness {nik_blender.liveliness(new_shape):.2f}")
+
+    assert len(found) == 1, found
+
+    assert nik_blender.liveliness(new_shape) == 1.0
+
+    # And nothing readable at all must not turn every movement in the
+    # film into a stand-in.
+    class Unreadable:
+
+        name = "idle"
+
+    blank = [Unreadable(), Unreadable()]
+
+    assert nik_blender.liveliness(blank[0]) == 0.0
+
+    assert not nik_blender.too_still(blank[0], blank)
+
+    print("   unreadable curves     : nothing rejected")
+
+    print("\n   [OK] old shape, new shape, and neither")
+
+
 # ======================================================================
 
 def main():
@@ -1186,6 +1263,7 @@ def main():
         test_a_tall_character_still_fits_in_the_frame(root)
         test_a_grown_up_rig_becomes_a_child(root)
         test_a_missing_movement_does_not_freeze_the_shot(root)
+        test_the_curves_are_found_on_any_blender(root)
         test_the_notebook_carries_the_code_it_runs(root)
 
     print("\nALL BLENDER TESTS PASSED")

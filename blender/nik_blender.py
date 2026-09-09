@@ -480,12 +480,60 @@ def join(pictures, target):
         )
 
 
+def curves_of(action):
+    """
+    Every f-curve in an action, whichever Blender this is.
+
+    Blender 4.4 moved them: an action used to hold its curves directly
+    and now holds layers, which hold strips, which hold a channelbag
+    per slot, which holds the curves. Colab installs the new one and
+    this reads both - and if it can read neither, it says so by
+    returning nothing rather than by stopping the render.
+    """
+
+    curves = list(getattr(action, "fcurves", None) or ())
+
+    if curves:
+        return curves
+
+    for layer in getattr(action, "layers", None) or ():
+
+        for strip in getattr(layer, "strips", None) or ():
+
+            for bag in getattr(strip, "channelbags", None) or ():
+
+                curves.extend(getattr(bag, "fcurves", None) or ())
+
+            if curves:
+                continue
+
+            # The other way in, when channelbags is not a collection:
+            # one bag per slot, asked for by name.
+            asking = getattr(strip, "channelbag", None)
+
+            if not callable(asking):
+                continue
+
+            for slot in getattr(action, "slots", None) or ():
+
+                try:
+                    bag = asking(slot)
+
+                except (TypeError, RuntimeError):
+                    continue
+
+                if bag is not None:
+                    curves.extend(getattr(bag, "fcurves", None) or ())
+
+    return curves
+
+
 def liveliness(action):
     """How much this action actually moves, in its own units."""
 
     total = 0.0
 
-    for curve in action.fcurves:
+    for curve in curves_of(action):
 
         values = [point.co[1] for point in curve.keyframe_points]
 
@@ -511,6 +559,13 @@ def too_still(action, among):
         return False
 
     middle = scores[len(scores) // 2]
+
+    # Every action reading as motionless means the curves could not be
+    # read at all, not that the pack is full of statues. Nothing is
+    # rejected then - a wrong guess here would replace every movement
+    # in the film.
+    if middle <= 0.0:
+        return False
 
     return liveliness(action) < middle * 0.25
 
