@@ -880,6 +880,157 @@ def test_a_tall_character_still_fits_in_the_frame(root):
     print("\n   [OK] rendered against a sky, framed for its own height")
 
 
+def test_a_grown_up_rig_becomes_a_child(root):
+
+    heading("15  A grown-up rig, given a child's proportions")
+
+    import bpy, from_mixamo, nik_blender
+
+    # Free rigged characters are grown-ups, and a free rigged toddler
+    # that also takes an animation library does not exist. What reads
+    # as a small child is proportion, not anatomy - so the proportions
+    # are changed here, on whatever rig arrives, and the animations
+    # still play because the skeleton is the same skeleton.
+    folder = root / "GrownUp"
+
+    folder.mkdir(parents=True, exist_ok=True)
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    bpy.ops.object.armature_add(location=(0, 0, 0))
+
+    rig = bpy.context.active_object
+
+    bpy.context.view_layer.objects.active = rig
+
+    bpy.ops.object.mode_set(mode="EDIT")
+
+    spine = rig.data.edit_bones[0]
+
+    spine.name = "Spine"
+
+    spine.head = (0.0, 0.0, 0.0)
+
+    spine.tail = (0.0, 0.0, 3.0)
+
+    neck = rig.data.edit_bones.new("Head")
+
+    neck.head = (0.0, 0.0, 3.0)
+
+    neck.tail = (0.0, 0.0, 4.0)
+
+    neck.parent = spine
+
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    # A body from the floor to the neck, and a head above it.
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 1.5))
+
+    body = bpy.context.active_object
+
+    body.name = "Body"
+
+    body.scale = (0.4, 0.3, 3.0)
+
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.5, location=(0, 0, 3.5))
+
+    skull = bpy.context.active_object
+
+    skull.name = "Skull"
+
+    for part, bone in ((body, "Spine"), (skull, "Head")):
+
+        bpy.context.view_layer.objects.active = part
+
+        bpy.ops.object.transform_apply(location=False, rotation=False,
+                                       scale=True)
+
+        group = part.vertex_groups.new(name=bone)
+
+        group.add(range(len(part.data.vertices)), 1.0, "REPLACE")
+
+        change = part.modifiers.new("Armature", "ARMATURE")
+
+        change.object = rig
+
+        part.parent = rig
+
+    rig.animation_data_create()
+
+    action = bpy.data.actions.new("Idle")
+
+    action.use_fake_user = True
+
+    rig.animation_data.action = action
+
+    for frame, turn in ((1, 0.0), (12, 0.3), (24, 0.0)):
+        rig.rotation_euler.z = turn
+        rig.keyframe_insert("rotation_euler", frame=frame)
+
+    track = rig.animation_data.nla_tracks.new()
+    track.name = "Idle"
+    track.strips.new("Idle", 1, action)
+
+    rig.animation_data.action = None
+
+    bpy.ops.export_scene.gltf(filepath=str(folder / "Grown.glb"),
+                              export_format="GLB")
+
+    def proportions(blend):
+        """How tall it is, and what share of that is head."""
+
+        bpy.ops.wm.open_mainfile(filepath=str(blend))
+
+        rig = nik_blender.armature_in()
+
+        low, high = nik_blender.span_of(rig)
+
+        skull = bpy.data.objects.get("Skull")
+
+        head = skull.dimensions.z
+
+        return high - low, head
+
+    grown = from_mixamo.build(folder, root / "Grown.blend")
+
+    tall, head = proportions(grown)
+
+    print(f"   grown up: {tall:.2f} tall, head {head:.2f} "
+          f"= {head / tall:.0%} of it")
+
+    kid = from_mixamo.build(folder, root / "Kid.blend", child=1.0)
+
+    small, big_head = proportions(kid)
+
+    print(f"   child   : {small:.2f} tall, head {big_head:.2f} "
+          f"= {big_head / small:.0%} of it")
+
+    # Shorter overall, a bigger head, and so a much larger share of it.
+    assert small < tall, (small, tall)
+
+    assert big_head > head, (big_head, head)
+
+    assert big_head / small > (head / tall) * 1.4, (
+        big_head / small, head / tall)
+
+    # And it still animates: the action survived, and the render runs.
+    assert "idle" in {action.name for action in bpy.data.actions}
+
+    script = root / "kid.txt"
+
+    script.write_text("Wide shot of him standing in the meadow, the "
+                      "camera does not move\n", encoding="utf-8")
+
+    into = root / "KidClips"
+
+    nik_blender.render(kid, script, into, width=160, height=96,
+                       seconds=0.3, engine="BLENDER_WORKBENCH")
+
+    assert (into / "Scene01.mp4").exists()
+
+    print("\n   [OK] shorter body, bigger head, and it still moves")
+
+
 # ======================================================================
 
 def main():
@@ -902,6 +1053,7 @@ def main():
         test_movements_from_a_second_folder(root)
         test_renders_without_ffmpeg_inside_blender(root)
         test_a_tall_character_still_fits_in_the_frame(root)
+        test_a_grown_up_rig_becomes_a_child(root)
 
     print("\nALL BLENDER TESTS PASSED")
 

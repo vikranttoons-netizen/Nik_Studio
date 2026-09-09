@@ -350,7 +350,141 @@ def build_cameras(low=0.0, tall=1.6):
     return made
 
 
-def build(folder, target, wanted="", movements=""):
+HEAD_BONE = re.compile(r"head", re.I)
+
+NOT_A_HEAD = re.compile(r"(top|end|_?tip)$", re.I)
+
+
+def head_bone_of(rig):
+    """The bone the head is hung on, or None."""
+
+    named = [bone for bone in rig.data.bones
+             if HEAD_BONE.search(bone.name)
+             and not NOT_A_HEAD.search(bone.name)]
+
+    if not named:
+        return None
+
+    # The one nearest the top of the chain - "Head" rather than
+    # "HeadTop_End" or a hat bone parented under it.
+    return min(named, key=lambda bone: len(bone.name))
+
+
+def under(bone, top):
+    """Is this bone the head, or hanging off it?"""
+
+    while bone:
+
+        if bone is top:
+            return True
+
+        bone = bone.parent
+
+    return False
+
+
+def childlike(rig, amount=1.0):
+    """
+    Give a grown-up rig a child's proportions.
+
+    What reads as a small child is not anatomy, it is proportion: the
+    head is nearly the same size it will always be, and everything
+    below it is short. So the body is squashed towards the floor, the
+    head is grown a little and set back on top of it, and because the
+    bones and the mesh are moved by exactly the same amounts the
+    skinning still lines up and every animation still plays.
+
+    `amount` is 0 for a grown-up and 1 for a toddler.
+    """
+
+    if amount <= 0:
+        return None
+
+    from mathutils import Vector
+
+    head = head_bone_of(rig)
+
+    if head is None:
+        return None
+
+    # How much shorter the body gets, and how much bigger the head.
+    shorter = 1.0 - 0.30 * amount
+
+    bigger = 1.0 + 0.25 * amount
+
+    joint = rig.matrix_world @ head.head_local
+
+    drop = joint.z * shorter - joint.z
+
+    def moved(point, weight):
+        """Where a point goes: squashed if body, carried if head."""
+
+        low = Vector((point.x, point.y, point.z * shorter))
+
+        high = Vector((
+            joint.x + (point.x - joint.x) * bigger,
+            joint.y + (point.y - joint.y) * bigger,
+            joint.z + drop + (point.z - joint.z) * bigger,
+        ))
+
+        return low.lerp(high, weight)
+
+    # The bones first, in edit mode, which is the only place their rest
+    # positions can be changed.
+    was = bpy.context.view_layer.objects.active
+
+    bpy.context.view_layer.objects.active = rig
+
+    names = {bone.name: under(bone, head) for bone in rig.data.bones}
+
+    bpy.ops.object.mode_set(mode="EDIT")
+
+    for bone in rig.data.edit_bones:
+
+        mine = 1.0 if names.get(bone.name) else 0.0
+
+        bone.head = moved(bone.head, mine)
+
+        bone.tail = moved(bone.tail, mine)
+
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    bpy.context.view_layer.objects.active = was
+
+    # Then the body, vertex by vertex, blended by how much of each one
+    # the head bone owns - so the neck bends rather than steps.
+    moved_count = 0
+
+    for item in bpy.data.objects:
+
+        if item.type != "MESH" or not worn_by(item, rig):
+            continue
+
+        group = item.vertex_groups.get(head.name)
+
+        for vertex in item.data.vertices:
+
+            weight = 0.0
+
+            if group is not None:
+
+                for member in vertex.groups:
+
+                    if member.group == group.index:
+                        weight = member.weight
+                        break
+
+            vertex.co = moved(vertex.co, weight)
+
+        moved_count += len(item.data.vertices)
+
+    print(f"  child     : body {shorter:.0%}, head {bigger:.0%}, "
+          f"around '{head.name}' ({moved_count} points)")
+
+    return head.name
+
+
+def build(folder, target, wanted="", movements="", child=0.0):
     """
     A folder of downloads -> one .blend the renderer can use.
 
@@ -545,6 +679,8 @@ def build(folder, target, wanted="", movements=""):
         print(f"  {len(strays)} stray object(s) the importer left - "
               f"removed")
 
+    childlike(character, child)
+
     low, high = span_of(character)
 
     tall = max(0.5, high - low)
@@ -602,7 +738,8 @@ def main(argv):
 
     build(argv[0], argv[1],
           argv[2] if len(argv) > 2 else "",
-          argv[3] if len(argv) > 3 else "")
+          argv[3] if len(argv) > 3 else "",
+          float(argv[4]) if len(argv) > 4 else 0.0)
 
     return 0
 
