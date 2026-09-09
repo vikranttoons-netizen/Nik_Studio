@@ -542,52 +542,114 @@ def childlike(rig, amount=1.0):
     return called
 
 
-def not_a_silhouette():
+def base_colour_of(stuff):
     """
-    Give a colour to anything whose colour was in a missing texture.
+    The colour a material's shader is actually set to, if it says.
 
-    A material that gets all its colour from an image stores black as
-    its own colour - there is nothing for it to hold - so when the
-    image is not found the part renders as a black cut-out. A character
-    with a black head is not a shot anybody can judge.
+    Returns (colour, from_a_picture). A colour fed by an image is not
+    a colour anyone can read off, so it is reported rather than used.
+    """
 
-    Only materials that are both near-black and have no picture behind
-    them are touched, so a part that is meant to be dark stays dark.
+    if not stuff.use_nodes or stuff.node_tree is None:
+        return None, False
+
+    for node in stuff.node_tree.nodes:
+
+        base = node.inputs.get("Base Color") if node.inputs else None
+
+        if base is None:
+            continue
+
+        if base.is_linked:
+
+            behind = base.links[0].from_node
+
+            painted = (getattr(behind, "image", None) is not None
+                       and behind.image.has_data)
+
+            return None, painted
+
+        return tuple(base.default_value)[:3], False
+
+    return None, False
+
+
+def true_colours():
+    """
+    Make what renders match what the material says.
+
+    Workbench - the renderer that needs no GPU, and so the one every
+    check runs on - paints a material by its viewport colour, not by
+    its shader. An FBX import fills in the shader and leaves the
+    viewport colour black, so a character whose materials are all
+    correct renders as a black cut-out. Measured: a shader set to skin
+    renders 38,38,38.
+
+    A part fed by a picture is left alone, because the picture is what
+    Workbench will use. A part with no colour anywhere is given a plain
+    one, since a black head is not a shot anybody can judge - but only
+    if it is black by default rather than on purpose.
     """
 
     plain = (0.62, 0.55, 0.50, 1.0)
 
-    fixed = 0
+    # Only exactly nothing counts as nothing. A part set to 0.02 is a
+    # part somebody meant to be nearly black - a boot, a pupil - and
+    # inventing a colour for it is worse than leaving it.
+    nothing = 0.005
+
+    copied = invented = 0
 
     for stuff in bpy.data.materials:
 
-        pictures = [node for node in
-                    (stuff.node_tree.nodes if stuff.use_nodes else ())
-                    if node.type == "TEX_IMAGE"]
+        colour, painted = base_colour_of(stuff)
 
-        if any(node.image is not None and node.image.has_data
-               for node in pictures):
+        if painted:
             continue
 
-        red, green, blue = stuff.diffuse_color[:3]
+        if colour is not None and max(colour) > nothing:
 
-        if not pictures or max(red, green, blue) > 0.05:
+            stuff.diffuse_color = (*colour, 1.0)
+
+            copied += 1
+
             continue
 
-        stuff.diffuse_color = plain
+        if max(stuff.diffuse_color[:3]) <= nothing:
 
-        if stuff.use_nodes:
+            stuff.diffuse_color = plain
 
-            for node in stuff.node_tree.nodes:
+            if stuff.use_nodes and stuff.node_tree is not None:
 
-                base = node.inputs.get("Base Color") if node.inputs else None
+                for node in stuff.node_tree.nodes:
 
-                if base is not None and not base.is_linked:
-                    base.default_value = plain
+                    base = (node.inputs.get("Base Color")
+                            if node.inputs else None)
 
-        fixed += 1
+                    if base is not None and not base.is_linked:
+                        base.default_value = plain
 
-    return fixed
+            invented += 1
+
+    return copied, invented
+
+
+def what_they_look_like():
+    """Every material and the colour it will render, for reading."""
+
+    said = []
+
+    for stuff in sorted(bpy.data.materials, key=lambda one: one.name):
+
+        _, painted = base_colour_of(stuff)
+
+        red, green, blue = (round(value, 2)
+                            for value in stuff.diffuse_color[:3])
+
+        said.append(f"{stuff.name} {red},{green},{blue}"
+                    + (" (picture)" if painted else ""))
+
+    return said
 
 
 def build(folder, target, wanted="", movements="", child=0.0):
@@ -817,16 +879,20 @@ def build(folder, target, wanted="", movements="", child=0.0):
     except TypeError:
         scene.render.engine = "BLENDER_EEVEE"
 
+    # The colours before the file is written, not after: what is saved
+    # is what gets rendered.
+    copied, invented = true_colours()
+
     target = Path(target)
 
     target.parent.mkdir(parents=True, exist_ok=True)
 
     bpy.ops.wm.save_as_mainfile(filepath=str(target))
 
-    rescued = not_a_silhouette()
-
     missing = [picture.name for picture in bpy.data.images
                if picture.source == "FILE" and not picture.has_data]
+
+    loaded = sum(1 for picture in bpy.data.images if picture.has_data)
 
     if missing:
         print(f"\n  ! {len(missing)} texture(s) named but not found: "
@@ -835,21 +901,24 @@ def build(folder, target, wanted="", movements="", child=0.0):
                 "the model file, which it\n    is if the zip went in "
                 "whole.")
 
-    if rescued:
-        print(f"  colour    : {rescued} material(s) had no colour of "
-              f"their own and would have\n              rendered "
-              f"black - given a plain one so the shot is readable")
+    if loaded:
+        print(f"  textures  : {loaded} loaded")
 
-    elif any(picture.has_data for picture in bpy.data.images):
+    elif not missing:
+        print("  textures  : none - the character is flat colours, "
+              "which is how these\n              packs are usually "
+              "made")
 
-        found = sum(1 for picture in bpy.data.images if picture.has_data)
+    if copied or invented:
 
-        print(f"  textures  : {found} loaded")
+        print("  colour    : "
+              + (f"{copied} material(s) painted from their shader"
+                 if copied else "")
+              + (", and " if copied and invented else "")
+              + (f"{invented} with no colour anywhere given a plain one"
+                 if invented else ""))
 
-    else:
-        print("  textures  : none in the file - the character is "
-              "flat colours, which is\n              how these packs "
-              "are usually made")
+    print("  materials : " + "; ".join(what_they_look_like()[:10]))
 
     print(f"\n{target}")
     print(f"  character : {character.name}, {tall:.2f} units tall "

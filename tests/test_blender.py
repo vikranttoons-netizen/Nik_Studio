@@ -1249,73 +1249,128 @@ def test_the_curves_are_found_on_any_blender(root):
     print("\n   [OK] old shape, new shape, and neither")
 
 
-def test_a_missing_texture_is_not_a_black_cut_out(root):
+def test_the_render_matches_what_the_material_says(root):
 
-    heading("19  A part whose colour was in a missing texture")
+    heading("19  A character whose materials are right renders right")
 
-    import bpy, from_mixamo
+    import bpy, from_mixamo, nik_blender
 
-    # The character came out with a black head. A material that takes
-    # all its colour from an image keeps black as its own colour -
-    # there is nothing for it to hold - so when the image is not found
-    # the part renders as a silhouette, and no one can judge the shot.
+    # The clips came back with a black head twice over. Workbench -
+    # the renderer that needs no GPU, and so the one every check runs
+    # on - paints a material by its viewport colour, not by its
+    # shader. An FBX import fills in the shader and leaves the viewport
+    # colour black. Measured: a shader set to skin renders 38,38,38.
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    def a_material(name, colour, picture):
+    def a_material(name, shader, viewport, picture=None):
 
         stuff = bpy.data.materials.new(name)
 
         stuff.use_nodes = True
 
-        stuff.diffuse_color = colour
+        stuff.diffuse_color = viewport
+
+        node = stuff.node_tree.nodes.get("Principled BSDF")
 
         if picture is not None:
 
-            node = stuff.node_tree.nodes.new("ShaderNodeTexImage")
+            image = stuff.node_tree.nodes.new("ShaderNodeTexImage")
 
-            node.image = picture
+            image.image = picture
+
+            stuff.node_tree.links.new(image.outputs["Color"],
+                                      node.inputs["Base Color"])
+
+        elif shader is not None:
+            node.inputs["Base Color"].default_value = (*shader, 1.0)
 
         return stuff
 
-    lost = bpy.data.images.new("face.png", 4, 4)
-
-    lost.source = "FILE"
-
-    lost.filepath = "/nowhere/face.png"
-
-    lost.reload()
-
     real = bpy.data.images.new("shirt.png", 4, 4)
 
-    head = a_material("Head", (0.0, 0.0, 0.0, 1.0), lost)
+    skin = a_material("Skin", (0.85, 0.62, 0.45), (0.0, 0.0, 0.0, 1.0))
 
-    shirt = a_material("Shirt", (0.0, 0.0, 0.0, 1.0), real)
+    boots = a_material("Boots", (0.02, 0.02, 0.02), (0.02, 0.02, 0.02, 1.0))
 
-    boots = a_material("Boots", (0.02, 0.02, 0.02, 1.0), None)
+    shirt = a_material("Shirt", None, (0.0, 0.0, 0.0, 1.0), picture=real)
 
-    trews = a_material("Trousers", (0.3, 0.2, 0.6, 1.0), None)
+    blank = a_material("Blank", (0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0))
 
-    fixed = from_mixamo.not_a_silhouette()
+    copied, invented = from_mixamo.true_colours()
 
-    for stuff in (head, shirt, boots, trews):
-        print(f"   {stuff.name:<10} {tuple(round(v, 2) for v in stuff.diffuse_color[:3])}")
+    for stuff in (skin, boots, shirt, blank):
+        print(f"   {stuff.name:<7} "
+              f"{tuple(round(v, 2) for v in stuff.diffuse_color[:3])}")
 
-    # The head had a picture and it is gone, so it gets a colour.
-    assert max(head.diffuse_color[:3]) > 0.3, head.diffuse_color[:]
+    # The shader said skin, so skin is what renders.
+    assert abs(skin.diffuse_color[0] - 0.85) < 0.01, skin.diffuse_color[:]
 
-    # The shirt's picture is there - leave it to the picture.
-    assert max(shirt.diffuse_color[:3]) < 0.05, shirt.diffuse_color[:]
-
-    # Boots are meant to be black. Nothing was lost, so nothing is
-    # invented.
+    # Boots are meant to be nearly black. Their shader says so, so
+    # that is what is used - inventing a colour for them would be
+    # worse than leaving them.
     assert max(boots.diffuse_color[:3]) < 0.05, boots.diffuse_color[:]
 
-    assert abs(trews.diffuse_color[2] - 0.6) < 0.01, trews.diffuse_color[:]
+    # A picture is what Workbench will use; leave it to the picture.
+    assert max(shirt.diffuse_color[:3]) < 0.05, shirt.diffuse_color[:]
 
-    assert fixed == 1, fixed
+    # Black everywhere is nothing to go on, so it gets a plain colour
+    # rather than a silhouette.
+    assert max(blank.diffuse_color[:3]) > 0.3, blank.diffuse_color[:]
 
-    print("\n   [OK] only what lost its colour, and nothing that "
-          "meant to be dark")
+    print(f"   {copied} painted from the shader, {invented} invented")
+
+    assert (copied, invented) == (2, 1), (copied, invented)
+
+    # And it is not just the numbers: render it and look.
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0)
+
+    bpy.context.active_object.data.materials.append(skin)
+
+    bpy.ops.object.light_add(type="SUN", location=(3, -4, 6))
+
+    camera = bpy.data.objects.new("C", bpy.data.cameras.new("C"))
+
+    bpy.context.scene.collection.objects.link(camera)
+
+    camera.location = (0.0, -5.0, 0.0)
+
+    camera.rotation_euler = (1.5708, 0.0, 0.0)
+
+    scene = bpy.context.scene
+
+    scene.camera = camera
+
+    scene.render.resolution_x = scene.render.resolution_y = 64
+
+    scene.render.engine = "BLENDER_WORKBENCH"
+
+    nik_blender.flat_but_visible(scene)
+
+    shot = root / "skin.png"
+
+    scene.render.filepath = str(shot)
+
+    scene.render.image_settings.file_format = "PNG"
+
+    bpy.ops.render.render(write_still=True)
+
+    middle = subprocess.run(
+        [nik_blender.ffmpeg(), "-v", "error", "-i", str(shot),
+         "-vf", "crop=8:8:28:28,scale=1:1", "-pix_fmt", "rgb24",
+         "-f", "rawvideo", "-"],
+        capture_output=True).stdout
+
+    red, green, blue = middle[0], middle[1], middle[2]
+
+    print(f"   rendered RGB {red},{green},{blue}")
+
+    # 38,38,38 was the black cut-out. Skin is lighter than that, and
+    # warmer - more red than blue.
+    assert red > 90, (red, green, blue)
+
+    assert red > blue + 20, (red, green, blue)
+
+    print("\n   [OK] what the material says is what comes out")
 
 
 # ======================================================================
@@ -1344,7 +1399,7 @@ def main():
         test_a_grown_up_rig_becomes_a_child(root)
         test_a_missing_movement_does_not_freeze_the_shot(root)
         test_the_curves_are_found_on_any_blender(root)
-        test_a_missing_texture_is_not_a_black_cut_out(root)
+        test_the_render_matches_what_the_material_says(root)
         test_the_notebook_carries_the_code_it_runs(root)
 
     print("\nALL BLENDER TESTS PASSED")
