@@ -45,6 +45,9 @@ import bpy
 
 
 FPS = 24
+
+# The same sky the .blend is built with.
+SKY = (0.53, 0.75, 0.95)
 CLIP_SECONDS = 2.0
 
 # Cameras, by how the script line begins.
@@ -235,6 +238,137 @@ def report(rig):
 
 # Whether this Blender can write video, once it has been found out.
 _WRITES_VIDEO = None
+
+
+def worn_by(item, rig):
+    """Is this object part of that character?"""
+
+    parent = item.parent
+
+    while parent:
+
+        if parent is rig:
+            return True
+
+        parent = parent.parent
+
+    # A body is usually driven by the armature rather than parented to
+    # it, and the modifier is what says so.
+    for change in getattr(item, "modifiers", ()):
+
+        if change.type == "ARMATURE" and change.object is rig:
+            return True
+
+    return False
+
+
+def span_of(rig):
+    """
+    How low and how high the character actually reaches.
+
+    Not the armature's own size, which is what a bone happens to
+    measure and has nothing to do with the body hanging off it. What is
+    seen is the mesh, so the mesh is what is measured.
+    """
+
+    from mathutils import Vector
+
+    low = high = None
+
+    for item in bpy.data.objects:
+
+        if item.type != "MESH" or item.name == "Ground":
+            continue
+
+        if not worn_by(item, rig):
+            continue
+
+        for corner in item.bound_box:
+
+            up = (item.matrix_world @ Vector(corner[:])).z
+
+            low = up if low is None else min(low, up)
+
+            high = up if high is None else max(high, up)
+
+    if low is None:
+
+        tall = max(0.5, rig.dimensions.z or 1.6)
+
+        return 0.0, tall
+
+    return low, high
+
+
+def aim_cameras(rig, width, height):
+    """
+    Re-frame every camera for this character and this picture size.
+
+    Done here rather than only when the .blend is built, because the
+    frame's shape is not known until the render is asked for, and
+    because a .blend built before this existed is then fixed too.
+    """
+
+    low, high = span_of(rig)
+
+    tall = max(0.5, high - low)
+
+    for camera in bpy.data.objects:
+
+        if camera.type != "CAMERA" or "fill" not in camera:
+            continue
+
+        target = bpy.data.objects.get(f"{camera.name}_Target")
+
+        if target is None:
+            continue
+
+        lens = camera.data.lens
+
+        # Blender fits the 36mm sensor across the longer side of the
+        # picture, so on a landscape frame its height is the smaller
+        # share.
+        sensor = 36.0 * min(1.0, height / width)
+
+        away = (tall / camera["fill"]) * lens / sensor
+
+        up = low + tall * camera["aim"]
+
+        camera.location = (0.0, -away, up)
+
+        target.location = (0.0, 0.0, up)
+
+    return tall
+
+
+def flat_but_visible(scene):
+    """
+    Workbench, told to show colour and sky instead of grey on black.
+
+    Workbench is what runs without a GPU, and out of the box it paints
+    an unlit grey model against a black void - which says nothing about
+    whether a shot is right.
+    """
+
+    shading = scene.display.shading
+
+    shading.light = "STUDIO"
+
+    for wanted in ("TEXTURE", "MATERIAL", "OBJECT"):
+
+        try:
+            shading.color_type = wanted
+
+            break
+
+        except TypeError:
+            continue
+
+    shading.show_shadows = True
+
+    shading.background_type = "VIEWPORT"
+
+    shading.background_color = SKY
 
 
 def writes_video():
@@ -443,6 +577,14 @@ def render(blend, script, into, width=960, height=544,
 
     if engine:
         scene.render.engine = engine
+
+    tall = aim_cameras(rig, width, height)
+
+    print(f"Framing   : {tall:.2f} units tall, cameras set for "
+          f"{width}x{height}")
+
+    if scene.render.engine == "BLENDER_WORKBENCH":
+        flat_but_visible(scene)
 
     made = []
 

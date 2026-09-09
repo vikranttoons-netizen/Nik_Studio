@@ -17,6 +17,7 @@ Run from the project root:
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -769,6 +770,116 @@ def test_renders_without_ffmpeg_inside_blender(root):
           "nothing left behind")
 
 
+def test_a_tall_character_still_fits_in_the_frame(root):
+
+    heading("14  A character of any height fits, head and feet")
+
+    import bpy, from_mixamo, nik_blender
+
+    # The pack imported at 3.85 units and the cameras were placed for
+    # something 1.6 tall, so the render came out cut off at the shins
+    # against a black void. The height is not knowable in advance, so
+    # the framing has to be worked out from it.
+    folder = root / "Tall"
+
+    folder.mkdir(parents=True, exist_ok=True)
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    bpy.ops.object.armature_add(location=(0, 0, 0))
+
+    rig = bpy.context.active_object
+
+    # A body four units tall, standing on the ground - feet at zero,
+    # head at four.
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=(0, 0, 2.0))
+
+    body = bpy.context.active_object
+
+    body.scale = (0.35, 0.2, 4.0)
+
+    body.parent = rig
+
+    rig.animation_data_create()
+
+    action = bpy.data.actions.new("Idle")
+
+    action.use_fake_user = True
+
+    rig.animation_data.action = action
+
+    for frame, lean in ((1, 0.0), (12, 0.15), (24, 0.0)):
+        rig.rotation_euler.y = lean
+        rig.keyframe_insert("rotation_euler", frame=frame)
+
+    track = rig.animation_data.nla_tracks.new()
+    track.name = "Idle"
+    track.strips.new("Idle", 1, action)
+
+    rig.animation_data.action = None
+
+    bpy.ops.export_scene.gltf(filepath=str(folder / "Tall.glb"),
+                              export_format="GLB")
+
+    made = from_mixamo.build(folder, root / "Tall.blend")
+
+    into = root / "TallClips"
+
+    script = root / "wide.txt"
+
+    script.write_text("Wide shot of him standing in the meadow, the "
+                      "camera does not move\n", encoding="utf-8")
+
+    nik_blender.render(made, script, into, width=320, height=180,
+                       seconds=0.3, engine="BLENDER_WORKBENCH")
+
+    clip = into / "Scene01.mp4"
+
+    assert clip.exists(), clip
+
+    # Look at the picture. Sky and ground stretch right across the
+    # frame, so they cannot be told apart from the character by
+    # brightness alone - but they are the same at the edge as in the
+    # middle, and the character is not. Every row where the middle
+    # differs from the edge is a row the character is standing in.
+    wide, high = 320, 180
+
+    raw = subprocess.run(
+        [nik_blender.ffmpeg(), "-v", "error", "-i", str(clip),
+         "-frames:v", "1", "-pix_fmt", "gray", "-f", "rawvideo", "-"],
+        capture_output=True,
+    ).stdout
+
+    assert len(raw) >= wide * high, len(raw)
+
+    rows = [raw[y * wide:(y + 1) * wide] for y in range(high)]
+
+    here = [y for y, row in enumerate(rows)
+            if abs(row[wide // 2] - row[3]) > 20]
+
+    assert here, "the character is not in the picture at all"
+
+    top, bottom = here[0], here[-1]
+
+    print(f"   character rows {top}..{bottom} of {high}")
+
+    # Head not jammed against the ceiling, feet not cut by the floor.
+    assert top > 2, f"the head is at row {top} - cut off at the top"
+
+    assert bottom < high - 3, (f"the feet are at row {bottom} of "
+                               f"{high} - cut off at the bottom")
+
+    # And it is actually in shot, not a speck in the distance. A wide
+    # shot is asked for, and CAMERAS says that fills half the frame.
+    filled = (bottom - top) / high
+
+    print(f"   fills {filled:.0%} of the frame height")
+
+    assert 0.3 < filled < 0.8, filled
+
+    print("\n   [OK] rendered against a sky, framed for its own height")
+
+
 # ======================================================================
 
 def main():
@@ -790,6 +901,7 @@ def main():
         test_one_file_per_movement_per_character(root)
         test_movements_from_a_second_folder(root)
         test_renders_without_ffmpeg_inside_blender(root)
+        test_a_tall_character_still_fits_in_the_frame(root)
 
     print("\nALL BLENDER TESTS PASSED")
 

@@ -62,6 +62,10 @@ from pathlib import Path
 
 import bpy
 
+# The renderer knows how a character is measured and what "part of the
+# character" means; there is no reason for two answers to that.
+from nik_blender import span_of, worn_by
+
 
 # Where the three cameras sit, relative to a character about 1.6 units
 # tall standing at the origin, and how much of them each one holds.
@@ -100,8 +104,8 @@ NOISE = {"action", "mixamo", "com", "take", "root", "avatar", "anim",
 TAILS = ("armature", "rig", "skeleton")
 
 
-def our_name_for(name):
-    """Their name for a movement -> ours."""
+def plain_name(name):
+    """Their name with the exporter's decoration off. May be empty."""
 
     # Blender adds ".001" when a name is taken. Off first, so that it
     # is not mistaken for a word.
@@ -131,9 +135,38 @@ def our_name_for(name):
 
             words.append(piece)
 
-    plain = " ".join(words)
+    return " ".join(words)
+
+
+def our_name_for(name):
+    """Their name for a movement -> ours."""
+
+    plain = plain_name(name)
 
     return ALIASES.get(plain, plain or "idle")
+
+
+KNOWN = set(ALIASES.values())
+
+
+def stated_movement(name):
+    """
+    The movement this name says outright, or "" if it says none.
+
+    Mixamo calls every single download "mixamo.com", which says
+    nothing, and the file name has to speak instead. A pack that calls
+    its action "Idle" has already said it, and the file name -
+    "Tall.glb", "BaseCharacter.fbx" - must not talk over it.
+    """
+
+    plain = plain_name(name)
+
+    if not plain:
+        return ""
+
+    ours = ALIASES.get(plain, plain)
+
+    return ours if ours in KNOWN else ""
 
 
 def first_word(stem):
@@ -161,11 +194,22 @@ def a_movement(stem):
     return our_name_for(stem) in set(ALIASES.values())
 
 
+# What each camera is for, and how it is worked out rather than
+# guessed: a lens, how much of the frame's height the character should
+# fill, and how far up the character to look. The distance follows from
+# those and from how tall the character turns out to be, which is not
+# known until the file is opened - a pack that imports four units tall
+# was being framed by the knees.
 CAMERAS = {
-    "Cam_Wide":   ((0.0, -7.0, 1.6), 0.8),
-    "Cam_Medium": ((0.0, -4.2, 1.4), 1.1),
-    "Cam_Close":  ((0.0, -1.9, 1.45), 1.5),
+    "Cam_Wide":   (35.0, 0.50, 0.55),
+    "Cam_Medium": (50.0, 0.75, 0.55),
+    "Cam_Close":  (85.0, 2.20, 0.88),
 }
+
+# The sky. Workbench paints it flat, EEVEE lights the character with
+# it, and black behind a dark character is why the first clips looked
+# like a silhouette in a cave.
+SKY = (0.53, 0.75, 0.95)
 
 
 def clear():
@@ -231,69 +275,79 @@ def bring_in(path):
     return arrived, rig, actions
 
 
-def worn_by(item, rig):
-    """Is this object part of that character?"""
-
-    parent = item.parent
-
-    while parent:
-
-        if parent is rig:
-            return True
-
-        parent = parent.parent
-
-    # A body is usually driven by the armature rather than parented to
-    # it, and the modifier is what says so.
-    for change in getattr(item, "modifiers", ()):
-
-        if change.type == "ARMATURE" and change.object is rig:
-            return True
-
-    return False
-
-
 def has_mesh(objects):
     """A character comes with a body; an animation does not have to."""
 
     return any(item.type == "MESH" for item in objects)
 
 
-def build_cameras(height=1.6):
-    """Three cameras, all looking at the character."""
+def place(camera, target, low, tall, wide=16, high=9):
+    """
+    Put one camera where its whole subject fits.
 
-    aim = bpy.data.objects.new("Cam_Target", None)
+    The lens and the fraction of the frame to fill are on the camera
+    already; what is left is arithmetic. A camera sees, at distance d,
+    a height of d * sensor / lens - so to show `tall / fill` of world,
+    stand back by that much times lens over sensor.
+    """
 
-    bpy.context.scene.collection.objects.link(aim)
+    lens = camera.data.lens
 
-    aim.location = (0.0, 0.0, height * 0.55)
+    fill = camera.get("fill", 0.75)
 
-    for name, (where, zoom) in CAMERAS.items():
+    look = camera.get("aim", 0.55)
+
+    # Blender fits the 36mm sensor across the longer side of the image,
+    # so on a landscape frame the height of it is the smaller share.
+    sensor = 36.0 * min(1.0, high / wide)
+
+    away = (tall / fill) * lens / sensor
+
+    up = low + tall * look
+
+    camera.location = (0.0, -away, up)
+
+    target.location = (0.0, 0.0, up)
+
+
+def build_cameras(low=0.0, tall=1.6):
+    """Three cameras, each aimed at what it is for."""
+
+    made = []
+
+    for name, (lens, fill, look) in CAMERAS.items():
 
         camera = bpy.data.cameras.new(name)
 
-        camera.lens = 50.0 * zoom
+        camera.lens = lens
 
-        made = bpy.data.objects.new(name, camera)
+        thing = bpy.data.objects.new(name, camera)
 
-        bpy.context.scene.collection.objects.link(made)
+        bpy.context.scene.collection.objects.link(thing)
 
-        # The whole camera rig scales with the character, not only its
-        # height: a file that imports four units tall needs the camera
-        # further back as well as higher up, or the shot is a kneecap.
-        grown = height / 1.6
+        thing["fill"] = fill
 
-        made.location = (where[0] * grown, where[1] * grown,
-                         where[2] * grown)
+        thing["aim"] = look
+
+        # Its own target, because a close-up looks at the face and a
+        # wide shot looks at the middle, and one shared point cannot be
+        # both.
+        aim = bpy.data.objects.new(f"{name}_Target", None)
+
+        bpy.context.scene.collection.objects.link(aim)
 
         # Pointed by a constraint rather than by arithmetic, so moving
         # a camera in Blender later keeps it aimed.
-        track = made.constraints.new("TRACK_TO")
+        track = thing.constraints.new("TRACK_TO")
         track.target = aim
         track.track_axis = "TRACK_NEGATIVE_Z"
         track.up_axis = "UP_Y"
 
-    return aim
+        place(thing, aim, low, tall)
+
+        made.append(thing)
+
+    return made
 
 
 def build(folder, target, wanted="", movements=""):
@@ -373,9 +427,12 @@ def build(folder, target, wanted="", movements=""):
 
             if len(actions) == 1:
 
-                # One movement in the character's own file, so the file
-                # name says which - "Astronaut_Idle.fbx" is the idle.
-                named = [keep(actions[0], without(path.stem, family))]
+                # One movement in the character's own file. Whichever
+                # of the two names actually names a movement wins.
+                only = actions[0]
+
+                named = [keep(only, only.name if stated_movement(only.name)
+                              else without(path.stem, family))]
 
             else:
                 named = [keep(action, action.name) for action in actions]
@@ -422,10 +479,13 @@ def build(folder, target, wanted="", movements=""):
 
         elif len(actions) == 1:
 
-            # One movement in the file, so the file name is what it is
-            # called. This is the Mixamo case, where the name inside is
-            # always "mixamo.com".
-            name = keep(actions[0], without(path.stem, family))
+            # One movement in the file. This is the Mixamo case, where
+            # the name inside is always "mixamo.com" and the file name
+            # is the only one saying anything.
+            only = actions[0]
+
+            name = keep(only, only.name if stated_movement(only.name)
+                        else without(path.stem, family))
 
             print(f"  {path.name}: '{name}'")
 
@@ -485,13 +545,22 @@ def build(folder, target, wanted="", movements=""):
         print(f"  {len(strays)} stray object(s) the importer left - "
               f"removed")
 
-    tall = max(0.5, character.dimensions.z or 1.6)
+    low, high = span_of(character)
 
-    build_cameras(tall)
+    tall = max(0.5, high - low)
 
-    bpy.ops.object.light_add(type="SUN", location=(3.0, -4.0, 6.0))
+    build_cameras(low, tall)
 
-    bpy.ops.mesh.primitive_plane_add(size=40.0, location=(0.0, 0.0, 0.0))
+    bpy.ops.object.light_add(type="SUN", location=(3.0 * tall, -4.0 * tall,
+                                                   6.0 * tall))
+
+    if bpy.context.scene.world is None:
+        bpy.context.scene.world = bpy.data.worlds.new("World")
+
+    bpy.context.scene.world.color = SKY
+
+    bpy.ops.mesh.primitive_plane_add(size=40.0 * tall,
+                                     location=(0.0, 0.0, 0.0))
 
     bpy.context.active_object.name = "Ground"
 
@@ -513,7 +582,8 @@ def build(folder, target, wanted="", movements=""):
     bpy.ops.wm.save_as_mainfile(filepath=str(target))
 
     print(f"\n{target}")
-    print(f"  character : {character.name}, {tall:.2f} units tall")
+    print(f"  character : {character.name}, {tall:.2f} units tall "
+          f"(from {low:.2f} to {high:.2f})")
     print(f"  actions   : {len(kept)} ({', '.join(sorted(kept)) or 'none'})")
     print(f"  cameras   : {', '.join(CAMERAS)}")
 
