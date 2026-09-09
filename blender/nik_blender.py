@@ -35,6 +35,7 @@ and is left alone.
 """
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -269,8 +270,7 @@ def report(rig):
 # Rendering
 # ======================================================================
 
-# Whether this Blender can write video, once it has been found out.
-_WRITES_VIDEO = None
+
 
 
 def worn_by(item, rig):
@@ -404,38 +404,6 @@ def flat_but_visible(scene):
     shading.background_color = SKY
 
 
-def writes_video():
-    """
-    Was this Blender built with ffmpeg inside it?
-
-    By trying it, not by asking. The list of formats RNA reports is the
-    one Blender was compiled to know about, not the one this build can
-    actually write, and it says FFMPEG either way - so asking gets a
-    yes and the assignment still throws.
-    """
-
-    global _WRITES_VIDEO
-
-    if _WRITES_VIDEO is None:
-
-        settings = bpy.context.scene.render.image_settings
-
-        before = settings.file_format
-
-        try:
-            settings.file_format = "FFMPEG"
-
-        except TypeError:
-            _WRITES_VIDEO = False
-
-        else:
-            _WRITES_VIDEO = True
-
-            settings.file_format = before
-
-    return _WRITES_VIDEO
-
-
 def ffmpeg():
     """Wherever ffmpeg is - the one imageio carries, or the system's."""
 
@@ -448,25 +416,88 @@ def ffmpeg():
         return "ffmpeg"
 
 
-def as_video(scene, target):
-    """Point the render at an mp4. TypeError if this build cannot."""
+def looks_the_same(one, other):
+    """Are these two frames near enough the same picture?"""
 
-    scene.render.filepath = str(target)
+    def grey(path):
 
-    scene.render.image_settings.file_format = "FFMPEG"
+        return subprocess.run(
+            [ffmpeg(), "-v", "error", "-i", str(path),
+             "-vf", "scale=64:36", "-pix_fmt", "gray",
+             "-f", "rawvideo", "-"],
+            capture_output=True,
+        ).stdout
 
-    scene.render.ffmpeg.format = "MPEG4"
-    scene.render.ffmpeg.codec = "H264"
-    scene.render.ffmpeg.constant_rate_factor = "HIGH"
+    here, there = grey(one), grey(other)
+
+    if not here or len(here) != len(there):
+        return False
+
+    apart = sum(abs(a - b) for a, b in zip(here, there)) / len(here)
+
+    return apart < 3.0
 
 
-def join(pictures, target):
-    """A folder of numbered PNGs -> one mp4."""
+def ordered(frames, wanted):
+    """
+    The frames, in the order that fills a shot of `wanted` frames.
+
+    An action is usually shorter than the shot it has to cover - a
+    walk cycle is under a second - and holding on the last pose for
+    the rest is the standing-still problem again. So it repeats.
+
+    A cycle repeats straight: a walk that ends where it began walks on
+    without a seam. Anything else goes forwards and back, because a
+    clap played from the top jumps and a clap played backwards does
+    not.
+    """
+
+    if not frames or len(frames) >= wanted:
+        return frames[:wanted] or frames
+
+    if looks_the_same(frames[0], frames[-1]):
+        run = frames
+
+    else:
+        run = frames + frames[-2:0:-1]
+
+    order = []
+
+    while len(order) < wanted:
+        order.extend(run)
+
+    return order[:wanted]
+
+
+def join(pictures, target, wanted=0):
+    """A folder of numbered PNGs -> one mp4 of the length asked for."""
+
+    pictures = Path(pictures)
+
+    frames = sorted(pictures.glob("f*.png"))
+
+    if not frames:
+        raise SystemExit(f"Blender rendered no frames into {pictures}.")
+
+    laid_out = pictures / "in order"
+
+    laid_out.mkdir(exist_ok=True)
+
+    for number, frame in enumerate(ordered(frames, wanted or len(frames)),
+                                   start=1):
+
+        placed = laid_out / f"g{number:04d}.png"
+
+        try:
+            os.link(frame, placed)
+
+        except OSError:
+            shutil.copyfile(frame, placed)
 
     made = subprocess.run(
         [ffmpeg(), "-y", "-v", "error",
          "-framerate", str(FPS),
-         "-i", str(Path(pictures) / "f%04d.png"),
+         "-i", str(laid_out / "g%04d.png"),
          "-c:v", "libx264", "-crf", "18",
          "-pix_fmt", "yuv420p",
          str(target)],
@@ -646,37 +677,22 @@ def render_scene(rig, line, target, seconds=CLIP_SECONDS):
 
     scene.frame_start = start
 
-    # An action shorter than the clip is looped by the tool afterwards -
-    # the same forwards-and-back the AI clips get - so render what there
-    # is rather than hold on the last frame.
+    # Render the action once, however short it is. Holding on the last
+    # pose for the rest of the shot is the standing-still problem
+    # again, so instead the frames repeat - straight for a cycle,
+    # forwards and back for anything else.
     scene.frame_end = start + min(wanted, length)
 
     scene.render.fps = FPS
 
-    frames = scene.frame_end - scene.frame_start + 1
+    # What the action has to give, and what the shot asks for. The
+    # second is what comes out, because the frames repeat to fill it.
+    rendered = scene.frame_end - scene.frame_start + 1
 
-    if writes_video():
-
-        try:
-            as_video(scene, target)
-
-        except TypeError:
-
-            # It said it could and then it could not. Fall through
-            # rather than stop 44 clips over an encoder.
-            global _WRITES_VIDEO
-
-            _WRITES_VIDEO = False
-
-        else:
-            bpy.ops.render.render(animation=True)
-
-            return name, camera_name, frames
-
-    # Blender installed with pip is built without ffmpeg in it, so it
-    # can only write stills. Write them, then join them with the ffmpeg
-    # that comes with imageio - the same encoder the rest of the
-    # pipeline uses anyway.
+    # Blender writes the frames and ffmpeg makes the film, always.
+    # Blender installed with pip is built without ffmpeg and cannot
+    # write video at all, and even where it can, a clip it wrote
+    # cannot have its frames reordered to fill the shot.
     pictures = Path(target).with_suffix("")
 
     if pictures.exists():
@@ -690,11 +706,14 @@ def render_scene(rig, line, target, seconds=CLIP_SECONDS):
 
     bpy.ops.render.render(animation=True)
 
-    join(pictures, target)
+    join(pictures, target, wanted)
 
     shutil.rmtree(pictures)
 
-    return name, camera_name, frames
+    if rendered < wanted:
+        name = f"{name} x{wanted / rendered:.1f}"
+
+    return name, camera_name, wanted
 
 
 def render(blend, script, into, width=960, height=544,

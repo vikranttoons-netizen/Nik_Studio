@@ -684,95 +684,105 @@ def test_movements_from_a_second_folder(root):
           "the movements")
 
 
-def test_renders_without_ffmpeg_inside_blender(root):
+def test_a_clip_lasts_as_long_as_the_shot(root):
 
-    heading("13  A Blender built without ffmpeg still makes mp4s")
+    heading("13  A short action still fills the shot")
 
     import bpy, nik_blender
 
-    # Blender installed with pip - which is the only way to have it in
-    # Colab - is built without ffmpeg, so FFMPEG is not among the
-    # formats it will write and asking for it is a TypeError. This
-    # container's Blender does have it, so the other path is forced.
-    blend = root / "NoFF.blend"
+    # A walk cycle is under a second and the shot is nearly three, and
+    # what came back was a 0.92 second clip. Holding the last pose for
+    # the rest is the standing-still problem again, so the frames
+    # repeat instead - and Blender installed with pip cannot write
+    # video at all, so ffmpeg makes every clip either way.
+    blend = root / "Length.blend"
 
     nik_blender.template(blend)
 
-    script = root / "two.txt"
+    script = root / "one.txt"
 
-    script.write_text("\n".join(SCRIPT.splitlines()[:2]) + "\n",
-                      encoding="utf-8")
+    script.write_text(SCRIPT.splitlines()[0] + "\n", encoding="utf-8")
 
-    into = root / "NoFFClips"
+    into = root / "LengthClips"
 
-    was = nik_blender.writes_video
+    wanted = 2.5
 
-    nik_blender.writes_video = lambda: False
+    nik_blender.render(blend, script, into, width=160, height=96,
+                       seconds=wanted, engine="BLENDER_WORKBENCH")
 
-    try:
-        nik_blender.render(blend, script, into, width=160, height=96,
-                           seconds=0.5, engine="BLENDER_WORKBENCH")
+    clip = into / "Scene01.mp4"
 
-    finally:
-        nik_blender.writes_video = was
+    assert clip.exists(), clip
 
-    # And the other way round: a Blender that claims it can encode and
-    # then throws when asked must not take 44 clips down with it. This
-    # is what Colab actually did.
-    into_lied = root / "LiedClips"
+    # Counted by decoding it, so this needs nothing but the ffmpeg
+    # the renderer already uses.
+    decoded = subprocess.run(
+        [nik_blender.ffmpeg(), "-v", "info", "-i", str(clip),
+         "-vf", "showinfo", "-f", "null", os.devnull],
+        capture_output=True, text=True)
 
-    nik_blender._WRITES_VIDEO = True
+    seen = (decoded.stderr or "").count("pts_time:")
 
-    told = {"asked": 0}
+    how_long = seen / nik_blender.FPS
 
-    real = nik_blender.as_video
+    print(f"   {seen} frames at {nik_blender.FPS}fps")
 
-    def refuse(scene, target):
+    print(f"   asked {wanted}s, got {how_long:.2f}s")
 
-        told["asked"] += 1
+    assert abs(how_long - wanted) < 0.15, (how_long, wanted)
 
-        raise TypeError('bpy_struct: enum "FFMPEG" not found')
-
-    try:
-        nik_blender.as_video = refuse
-
-        nik_blender.render(blend, script, into_lied, width=160,
-                           height=96, seconds=0.5,
-                           engine="BLENDER_WORKBENCH")
-
-    finally:
-        nik_blender.as_video = real
-
-        nik_blender._WRITES_VIDEO = None
-
-    lied = sorted(into_lied.glob("Scene*.mp4"))
-
-    print(f"   after a lie: {', '.join(path.name for path in lied)} "
-          f"(refused {told['asked']}x)")
-
-    assert len(lied) == 2, [path.name for path in lied]
-
-    # It should stop asking after the first refusal, not once a clip.
-    assert told["asked"] == 1, told
-
-    made = sorted(into.glob("Scene*.mp4"))
-
-    print(f"   made    : {', '.join(path.name for path in made)}")
-
-    assert len(made) == 2, [path.name for path in made]
-
-    for path in made:
-        assert path.stat().st_size > 0, path
-
-    # The frames were a means, not an output.
+    # And the frames were a means, not an output.
     leftover = [item.name for item in into.iterdir() if item.is_dir()]
 
     print(f"   leftover: {leftover or 'none'}")
 
     assert not leftover, leftover
 
-    print("\n   [OK] stills out of Blender, mp4 out of ffmpeg, "
-          "nothing left behind")
+    print("\n   [OK] the clip is as long as the shot, whatever the "
+          "action was")
+
+
+def test_a_cycle_repeats_and_a_gesture_turns_back(root):
+
+    heading("13b  How the frames repeat depends on the action")
+
+    import nik_blender
+
+    # A walk that ends where it began walks on without a seam, so it
+    # repeats straight. A clap does not end where it began, and played
+    # from the top it jumps - so it goes forwards and back.
+    frames = [root / f"f{n:04d}.png" for n in range(1, 5)]
+
+    was = nik_blender.looks_the_same
+
+    try:
+        nik_blender.looks_the_same = lambda one, other: True
+
+        cycle = nik_blender.ordered(frames, 10)
+
+        nik_blender.looks_the_same = lambda one, other: False
+
+        gesture = nik_blender.ordered(frames, 10)
+
+    finally:
+        nik_blender.looks_the_same = was
+
+    def shape(order):
+        return [int(path.stem[1:]) for path in order]
+
+    print(f"   cycle  : {shape(cycle)}")
+
+    print(f"   gesture: {shape(gesture)}")
+
+    assert shape(cycle) == [1, 2, 3, 4, 1, 2, 3, 4, 1, 2]
+
+    assert shape(gesture) == [1, 2, 3, 4, 3, 2, 1, 2, 3, 4]
+
+    # Never longer than asked for, and never shorter.
+    for count in (1, 4, 7, 25):
+        assert len(nik_blender.ordered(frames, count)) == count, count
+
+    print("\n   [OK] a walk walks on, a clap turns back")
 
 
 def test_a_tall_character_still_fits_in_the_frame(root):
@@ -1259,7 +1269,8 @@ def main():
         test_an_unzipped_pack_of_many_characters(root)
         test_one_file_per_movement_per_character(root)
         test_movements_from_a_second_folder(root)
-        test_renders_without_ffmpeg_inside_blender(root)
+        test_a_clip_lasts_as_long_as_the_shot(root)
+        test_a_cycle_repeats_and_a_gesture_turns_back(root)
         test_a_tall_character_still_fits_in_the_frame(root)
         test_a_grown_up_rig_becomes_a_child(root)
         test_a_missing_movement_does_not_freeze_the_shot(root)
