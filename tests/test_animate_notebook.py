@@ -1809,6 +1809,66 @@ def test_clips_made_somewhere_else(root):
     print("\n   [OK] one edit, whatever made the clips")
 
 
+def test_no_gpu_is_asked_for_when_nothing_is_generated(root):
+
+    heading("32b  Cutting clips together needs no card at all")
+
+    drive = make_input(root / "NoCard", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not move\n"
+        "He claps his hands twice, grass rippling, the camera does not "
+        "move\n"
+        "Close up of the puppy barking, leaves swaying, the camera does "
+        "not move\n",
+        encoding="utf-8",
+    )
+
+    # Made once, standing in for the rigged notebook putting its
+    # renders in the same folder.
+    printed, refusal, calls = run(drive)
+
+    assert not refusal and len(calls) == 3, (refusal, calls)
+
+    # A T4 is refused when there is a model to run on it, because the
+    # small model drifts rather than moves. With the clips already
+    # made there is no model, no drawing, no GPU - it is ffmpeg from
+    # here - and stopping the run over the card was asking for a
+    # graphics card to do some cutting.
+    printed, refusal, calls = run(drive, source_kind="clips",
+                                  vram=15.0, ram=55.0, capability=7)
+
+    assert not refusal, refusal
+
+    assert LOADED == [] and calls == [], (LOADED, calls)
+
+    assert (drive / "Output" / "Episode.mp4").exists()
+
+    print("   Tesla-sized card, clips already made -> ran, cut the "
+          "video")
+
+    # And no card whatsoever is fine for the same reason.
+    printed, refusal, calls = run(drive, source_kind="clips", gpu=False)
+
+    assert not refusal, refusal
+
+    assert (drive / "Output" / "Episode.mp4").exists()
+
+    print("   no card at all                       -> ran, cut the "
+          "video")
+
+    # But a run that does generate still says the card is too small.
+    printed, refusal, calls = run(drive, source_kind="ai",
+                                  vram=15.0, ram=55.0, capability=7)
+
+    assert refusal and "2B model" in refusal, refusal
+
+    print("   the same card, generating            -> refused, as "
+          "before")
+
+    print("\n   [OK] the card is only judged when something runs on it")
+
+
 def test_the_movement_lands_on_the_words(root):
 
     heading("33  The clap lands on the clap")
@@ -2523,6 +2583,7 @@ def main():
         test_a_folder_with_no_pictures_in_it(root)
         test_a_model_you_do_not_need_is_not_fetched(root)
         test_clips_made_somewhere_else(root)
+        test_no_gpu_is_asked_for_when_nothing_is_generated(root)
         test_the_movement_lands_on_the_words(root)
         test_preview_only(root)
         test_a_preview_small_enough_to_send(root)
