@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-20 - says when it is Drive that did not connect"
+BUILD = "2026-09-21 - set to make every clip, nothing to change"
 
 DRIVE = "/content/drive/MyDrive"
 
@@ -53,7 +53,7 @@ WIDTH, HEIGHT = 1024, 576
 CLIP_SECONDS = 4.0
 
 # Only make this many, to see what they look like. 0 makes all of them.
-FIRST_ONLY = 3
+FIRST_ONLY = 0
 
 # Build Nik.blend again even when the settings have not changed. Only
 # needed after dropping another file into one of the folders.

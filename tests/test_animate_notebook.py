@@ -21,6 +21,7 @@ Run from the project root:
 import builtins
 import io
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -383,7 +384,7 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         beats=None, short=False, full_size=False,
         uploads=None, local=None, fast=False, force="",
         quality="good", reference="", check_drawings=False,
-        preview_only=False, borrow_repeats=True, source="ai"):
+        preview_only=False, borrow_repeats=True, source_kind="ai"):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -422,7 +423,41 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
 
     install_stand_ins(vram, ram, capability)
 
-    source = cell_two().replace(
+    def set_to(text, name, value):
+        """
+        Give a setting a value, whatever it says in the notebook.
+
+        Written as a replacement of the whole line rather than of the
+        value it happens to hold, because the notebook is shipped set
+        to whatever the next run needs - and a test that matched the
+        old value would quietly stop setting anything and test
+        something else instead.
+        """
+
+        found = re.subn(rf"^{name} = .*$", f"{name} = {value}",
+                        text, count=1, flags=re.M)
+
+        assert found[1] == 1, f"no {name} setting in cell two"
+
+        return found[0]
+
+    source = cell_two()
+
+    for name, value in (
+        ("TEST_ONE_PICTURE", test_one),
+        ("MAKE_SHORT", short),
+        ("FAST_MODEL", fast),
+        ("FORCE_MODEL", repr(force)),
+        ("QUALITY", repr(quality)),
+        ("REFERENCE_NAME", repr(reference)),
+        ("BORROW_REPEATS", borrow_repeats),
+        ("SOURCE", repr(source_kind)),
+        ("RUN", repr("drawings" if check_drawings
+                     else ("video" if preview_only else "final"))),
+    ):
+        source = set_to(source, name, value)
+
+    source = source.replace(
         'FOLDER = DRIVE + "/NikStudio"',
         f"FOLDER = {str(drive)!r}",
     ).replace(
@@ -431,34 +466,6 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
     ).replace(
         'LOCAL = "/content/NikStudio"',
         f"LOCAL = {str(local or '/content/NikStudio')!r}",
-    ).replace(
-        "TEST_ONE_PICTURE = False",
-        f"TEST_ONE_PICTURE = {test_one}",
-    ).replace(
-        "MAKE_SHORT = True",
-        f"MAKE_SHORT = {short}",
-    ).replace(
-        "FAST_MODEL = False",
-        f"FAST_MODEL = {fast}",
-    ).replace(
-        'FORCE_MODEL = ""',
-        f"FORCE_MODEL = {force!r}",
-    ).replace(
-        'QUALITY = "good"',
-        f"QUALITY = {quality!r}",
-    ).replace(
-        'REFERENCE_NAME = ""',
-        f"REFERENCE_NAME = {reference!r}",
-    ).replace(
-        'RUN = "drawings"',
-        'RUN = "drawings"' if check_drawings
-        else ('RUN = "video"' if preview_only else 'RUN = "final"'),
-    ).replace(
-        "BORROW_REPEATS = True",
-        f"BORROW_REPEATS = {borrow_repeats}",
-    ).replace(
-        'SOURCE = "ai"',
-        f"SOURCE = {source!r}",
     )
 
     if not full_size:
@@ -1772,7 +1779,7 @@ def test_clips_made_somewhere_else(root):
     # Now the edit alone. There is one edit and it does not care what
     # made the pictures - the beat cut, the words on screen, the song
     # and the preview are the same either way.
-    printed, refusal, calls = run(drive, source="clips")
+    printed, refusal, calls = run(drive, source_kind="clips")
 
     assert not refusal, refusal
     assert calls == [] and DRAWN == [], (calls, DRAWN)
@@ -1790,7 +1797,7 @@ def test_clips_made_somewhere_else(root):
     # A clip that is not there is said out loud, not quietly made.
     (drive / "Output" / "Clips" / "Scene02.mp4").unlink()
 
-    printed, refusal, calls = run(drive, source="clips")
+    printed, refusal, calls = run(drive, source_kind="clips")
 
     assert refusal, "it carried on with a clip missing"
     assert "Scene02" in refusal, refusal
