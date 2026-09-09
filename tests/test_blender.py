@@ -153,7 +153,12 @@ def test_renders_a_clip_per_scene(root):
 
     # The close up of the puppy is the third line, and it is a close up.
     assert made[2]["camera"] == "Cam_Close", made[2]
-    assert made[2]["action"] == "idle", made[2]
+
+    # It asks for no movement of its own, so it asks for 'idle' - and
+    # since the template's idle barely moves, something that does is
+    # put in its place and says what it stood in for. A shot held on a
+    # motionless character for four seconds is the thing being fixed.
+    assert "idle" in made[2]["action"], made[2]
 
     written = json.loads((clips / "rendered.json").read_text(encoding="utf-8"))
 
@@ -1043,6 +1048,13 @@ def test_a_grown_up_rig_becomes_a_child(root):
     print("\n   [OK] shorter body, bigger head, and it still moves")
 
 
+def liveliness_of(action):
+
+    import nik_blender
+
+    return nik_blender.liveliness(action)
+
+
 def test_a_missing_movement_does_not_freeze_the_shot(root):
 
     heading("16  A movement the pack has not got is not a frozen shot")
@@ -1055,8 +1067,12 @@ def test_a_missing_movement_does_not_freeze_the_shot(root):
     # pack is a statue. Standing still is the last resort now.
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-    for name, length in (("idle", 4), ("clap", 30), ("walk", 24),
-                         ("sword slash", 60), ("death", 90)):
+    # The pack's idle is a statue - that is what a 0.06 clip was - so
+    # it is given almost no movement here, and the others real amounts.
+    for name, length, moves in (("idle", 40, 0.001), ("clap", 30, 1.0),
+                                ("walk", 24, 0.8), ("crouch", 20, 0.6),
+                                ("sword slash", 60, 2.0),
+                                ("death", 90, 3.0)):
 
         action = bpy.data.actions.new(name)
 
@@ -1066,11 +1082,15 @@ def test_a_missing_movement_does_not_freeze_the_shot(root):
 
         curve.keyframe_points.insert(1, 0.0)
 
-        curve.keyframe_points.insert(length, 1.0)
+        curve.keyframe_points.insert(length, moves)
 
     for asked, wanted in (("wave", "clap"), ("clap", "clap"),
                           ("sway", "walk"), ("spin", "walk"),
-                          ("nod", "clap"), ("walk", "walk")):
+                          ("nod", "crouch"), ("walk", "walk"),
+                          # The one that was still coming back frozen:
+                          # a line with no verb asks for 'idle', the
+                          # idle is there, and it does nothing.
+                          ("idle", "walk")):
 
         got, instead = nik_blender.stand_in_for(asked)
 
@@ -1086,6 +1106,16 @@ def test_a_missing_movement_does_not_freeze_the_shot(root):
         got, _ = nik_blender.stand_in_for(banned)
 
         assert nik_blender.allowed(got.name), (banned, got.name)
+
+    # And a still action is refused even when it is asked for by name.
+    still = bpy.data.actions.get("idle")
+
+    usable = [act for act in bpy.data.actions
+              if nik_blender.allowed(act.name)]
+
+    assert nik_blender.too_still(still, usable), liveliness_of(still)
+
+    assert not nik_blender.too_still(bpy.data.actions.get("clap"), usable)
 
     print("\n   [OK] something that moves, and never the sword")
 

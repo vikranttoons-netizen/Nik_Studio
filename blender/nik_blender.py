@@ -81,6 +81,10 @@ FALLBACK_ACTION = "idle"
 # not the first: a character frozen through a whole line is worse for
 # a two year old than a wave that came out as a clap.
 STAND_INS = {
+    # A line with no verb in it lands here, and in a game pack the
+    # idle is a statue. A song for two year olds cannot hold on a
+    # statue for four seconds.
+    "idle":   ("sway", "dance", "walk", "clap", "jump"),
     "wave":   ("clap", "point", "victory", "jump"),
     "clap":   ("victory", "wave", "jump"),
     "jump":   ("roll", "clap", "walk"),
@@ -476,6 +480,41 @@ def join(pictures, target):
         )
 
 
+def liveliness(action):
+    """How much this action actually moves, in its own units."""
+
+    total = 0.0
+
+    for curve in action.fcurves:
+
+        values = [point.co[1] for point in curve.keyframe_points]
+
+        if len(values) > 1:
+            total += max(values) - min(values)
+
+    return total
+
+
+def too_still(action, among):
+    """
+    Is this one a statue, next to the others in the file?
+
+    Judged against the rest rather than against a number, because a
+    unit is a metre in one pack and a centimetre in the next. A pack's
+    idle can be a full breathing cycle or it can be nothing at all,
+    and the two look the same from outside.
+    """
+
+    scores = sorted(liveliness(other) for other in among)
+
+    if not scores:
+        return False
+
+    middle = scores[len(scores) // 2]
+
+    return liveliness(action) < middle * 0.25
+
+
 def stand_in_for(action_name):
     """
     The nearest movement the rig actually has, and what it cost.
@@ -484,32 +523,31 @@ def stand_in_for(action_name):
     asked for, when something else had to be used.
     """
 
+    usable = [act for act in bpy.data.actions if allowed(act.name)]
+
     action = bpy.data.actions.get(action_name)
 
-    if action is not None and allowed(action_name):
+    if (action is not None and allowed(action_name)
+            and not too_still(action, usable)):
         return action, ""
 
     for other in STAND_INS.get(action_name, ()):
 
-        action = bpy.data.actions.get(other)
+        stand_in = bpy.data.actions.get(other)
 
-        if action is not None and allowed(other):
-            return action, action_name
+        if (stand_in is not None and allowed(other)
+                and not too_still(stand_in, usable)):
+            return stand_in, action_name
 
     # Nothing close. Anything that moves and is not violent beats
-    # standing still, so take the longest one going - a longer action
-    # is a fuller movement.
-    moving = [act for act in bpy.data.actions
-              if allowed(act.name) and act.name != FALLBACK_ACTION]
+    # standing still, so take the liveliest one going.
+    moving = [act for act in usable if act.name != FALLBACK_ACTION]
 
     if moving:
+        return max(moving, key=liveliness), action_name
 
-        longest = max(moving,
-                      key=lambda act: act.frame_range[1] - act.frame_range[0])
-
-        return longest, action_name
-
-    return bpy.data.actions.get(FALLBACK_ACTION), action_name
+    # Only then, and only because something has to be on the rig.
+    return action or bpy.data.actions.get(FALLBACK_ACTION), action_name
 
 
 def play(rig, action_name):
