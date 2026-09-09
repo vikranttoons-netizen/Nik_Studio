@@ -1249,6 +1249,75 @@ def test_the_curves_are_found_on_any_blender(root):
     print("\n   [OK] old shape, new shape, and neither")
 
 
+def test_a_missing_texture_is_not_a_black_cut_out(root):
+
+    heading("19  A part whose colour was in a missing texture")
+
+    import bpy, from_mixamo
+
+    # The character came out with a black head. A material that takes
+    # all its colour from an image keeps black as its own colour -
+    # there is nothing for it to hold - so when the image is not found
+    # the part renders as a silhouette, and no one can judge the shot.
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+
+    def a_material(name, colour, picture):
+
+        stuff = bpy.data.materials.new(name)
+
+        stuff.use_nodes = True
+
+        stuff.diffuse_color = colour
+
+        if picture is not None:
+
+            node = stuff.node_tree.nodes.new("ShaderNodeTexImage")
+
+            node.image = picture
+
+        return stuff
+
+    lost = bpy.data.images.new("face.png", 4, 4)
+
+    lost.source = "FILE"
+
+    lost.filepath = "/nowhere/face.png"
+
+    lost.reload()
+
+    real = bpy.data.images.new("shirt.png", 4, 4)
+
+    head = a_material("Head", (0.0, 0.0, 0.0, 1.0), lost)
+
+    shirt = a_material("Shirt", (0.0, 0.0, 0.0, 1.0), real)
+
+    boots = a_material("Boots", (0.02, 0.02, 0.02, 1.0), None)
+
+    trews = a_material("Trousers", (0.3, 0.2, 0.6, 1.0), None)
+
+    fixed = from_mixamo.not_a_silhouette()
+
+    for stuff in (head, shirt, boots, trews):
+        print(f"   {stuff.name:<10} {tuple(round(v, 2) for v in stuff.diffuse_color[:3])}")
+
+    # The head had a picture and it is gone, so it gets a colour.
+    assert max(head.diffuse_color[:3]) > 0.3, head.diffuse_color[:]
+
+    # The shirt's picture is there - leave it to the picture.
+    assert max(shirt.diffuse_color[:3]) < 0.05, shirt.diffuse_color[:]
+
+    # Boots are meant to be black. Nothing was lost, so nothing is
+    # invented.
+    assert max(boots.diffuse_color[:3]) < 0.05, boots.diffuse_color[:]
+
+    assert abs(trews.diffuse_color[2] - 0.6) < 0.01, trews.diffuse_color[:]
+
+    assert fixed == 1, fixed
+
+    print("\n   [OK] only what lost its colour, and nothing that "
+          "meant to be dark")
+
+
 # ======================================================================
 
 def main():
@@ -1275,6 +1344,7 @@ def main():
         test_a_grown_up_rig_becomes_a_child(root)
         test_a_missing_movement_does_not_freeze_the_shot(root)
         test_the_curves_are_found_on_any_blender(root)
+        test_a_missing_texture_is_not_a_black_cut_out(root)
         test_the_notebook_carries_the_code_it_runs(root)
 
     print("\nALL BLENDER TESTS PASSED")

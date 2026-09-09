@@ -293,7 +293,14 @@ def bring_in(path):
     known = set(bpy.data.actions)
 
     if path.suffix.lower() == ".fbx":
-        bpy.ops.import_scene.fbx(filepath=str(path))
+
+        # An FBX names its textures but does not carry them; they sit
+        # in a Textures folder beside it, or a folder up. Without the
+        # search they are simply not found, the material falls back to
+        # a dark grey, and the character renders as a silhouette.
+        bpy.ops.import_scene.fbx(filepath=str(path),
+                                 use_image_search=True)
+
     else:
         bpy.ops.import_scene.gltf(filepath=str(path))
 
@@ -535,6 +542,54 @@ def childlike(rig, amount=1.0):
     return called
 
 
+def not_a_silhouette():
+    """
+    Give a colour to anything whose colour was in a missing texture.
+
+    A material that gets all its colour from an image stores black as
+    its own colour - there is nothing for it to hold - so when the
+    image is not found the part renders as a black cut-out. A character
+    with a black head is not a shot anybody can judge.
+
+    Only materials that are both near-black and have no picture behind
+    them are touched, so a part that is meant to be dark stays dark.
+    """
+
+    plain = (0.62, 0.55, 0.50, 1.0)
+
+    fixed = 0
+
+    for stuff in bpy.data.materials:
+
+        pictures = [node for node in
+                    (stuff.node_tree.nodes if stuff.use_nodes else ())
+                    if node.type == "TEX_IMAGE"]
+
+        if any(node.image is not None and node.image.has_data
+               for node in pictures):
+            continue
+
+        red, green, blue = stuff.diffuse_color[:3]
+
+        if not pictures or max(red, green, blue) > 0.05:
+            continue
+
+        stuff.diffuse_color = plain
+
+        if stuff.use_nodes:
+
+            for node in stuff.node_tree.nodes:
+
+                base = node.inputs.get("Base Color") if node.inputs else None
+
+                if base is not None and not base.is_linked:
+                    base.default_value = plain
+
+        fixed += 1
+
+    return fixed
+
+
 def build(folder, target, wanted="", movements="", child=0.0):
     """
     A folder of downloads -> one .blend the renderer can use.
@@ -767,6 +822,34 @@ def build(folder, target, wanted="", movements="", child=0.0):
     target.parent.mkdir(parents=True, exist_ok=True)
 
     bpy.ops.wm.save_as_mainfile(filepath=str(target))
+
+    rescued = not_a_silhouette()
+
+    missing = [picture.name for picture in bpy.data.images
+               if picture.source == "FILE" and not picture.has_data]
+
+    if missing:
+        print(f"\n  ! {len(missing)} texture(s) named but not found: "
+              + ", ".join(sorted(missing)[:6])
+              + "\n    The pack's Textures folder has to be beside "
+                "the model file, which it\n    is if the zip went in "
+                "whole.")
+
+    if rescued:
+        print(f"  colour    : {rescued} material(s) had no colour of "
+              f"their own and would have\n              rendered "
+              f"black - given a plain one so the shot is readable")
+
+    elif any(picture.has_data for picture in bpy.data.images):
+
+        found = sum(1 for picture in bpy.data.images if picture.has_data)
+
+        print(f"  textures  : {found} loaded")
+
+    else:
+        print("  textures  : none in the file - the character is "
+              "flat colours, which is\n              how these packs "
+              "are usually made")
 
     print(f"\n{target}")
     print(f"  character : {character.name}, {tall:.2f} units tall "

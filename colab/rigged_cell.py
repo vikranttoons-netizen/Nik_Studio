@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-21 - set to make every clip, nothing to change"
+BUILD = "2026-09-22 - textures found, and no black cut-outs"
 
 DRIVE = "/content/drive/MyDrive"
 
@@ -53,7 +53,10 @@ WIDTH, HEIGHT = 1024, 576
 CLIP_SECONDS = 4.0
 
 # Only make this many, to see what they look like. 0 makes all of them.
-FIRST_ONLY = 0
+# Two, this time, only to see whether the colour came back - forty-four
+# is forty minutes and there is no sense spending it on a black
+# silhouette.
+FIRST_ONLY = 2
 
 # Build Nik.blend again even when the settings have not changed. Only
 # needed after dropping another file into one of the folders.
