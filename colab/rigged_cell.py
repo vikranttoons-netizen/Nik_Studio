@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-19 - one cell, nothing to upload"
+BUILD = "2026-09-20 - says when it is Drive that did not connect"
 
 DRIVE = "/content/drive/MyDrive"
 
@@ -92,15 +92,40 @@ except ImportError:
             "    Runtime > Restart session, then run this cell again."
         )
 
+HOME = Path(FOLDER)
+
 try:
     from google.colab import drive
 
     drive.mount("/content/drive")
 
+except ImportError:
+
+    # Not Colab. Fine - FOLDER is then a folder on this machine.
+    pass
+
 except Exception as trouble:
+
     print(f"\nDrive did not mount ({type(trouble).__name__}).")
 
-HOME = Path(FOLDER)
+    if not HOME.exists():
+        raise SystemExit(
+            "\nGoogle Drive is not connected, so nothing below can "
+            "find your files.\nEverything after this would complain "
+            "about the wrong thing.\n\n"
+            "Usually the permission window was closed, or never "
+            "appeared:\n\n"
+            "    1. Run this cell again, and when the window opens, "
+            "pick your account\n       and click through every "
+            "'Allow'. It asks for a lot; that is normal.\n\n"
+            "    2. If no window appears, allow pop-ups for "
+            "colab.research.google.com\n       in the address bar, "
+            "then run the cell again.\n\n"
+            "    3. Still nothing: Runtime > Disconnect and delete "
+            "runtime, then run\n       the cell again."
+        )
+
+    print("            (but the folder is there, so carrying on)")
 
 INTO = HOME / "Output" / "Clips"
 
@@ -150,11 +175,17 @@ if REBUILD or not BLEND.exists() or BEFORE != RECIPE:
     downloads = HOME / MIXAMO
 
     if not downloads.exists():
+
+        near = (", ".join(sorted(path.name for path in HOME.iterdir()))
+                if HOME.exists() else "")
+
         raise SystemExit(
             f"No {downloads}.\n\n"
             "Download a character pack - CC0, from quaternius.com - and "
             "put it in\nthere. The zip goes in unzipped and whole; "
-            "subfolders are read."
+            "subfolders are read.\n\n"
+            + (f"What is in {HOME}: {near}" if near
+               else f"{HOME} is empty, or is not the right folder.")
         )
 
     found = from_mixamo.model_files(downloads, CHARACTER)
