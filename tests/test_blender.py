@@ -1434,6 +1434,45 @@ def test_a_renderer_that_is_not_there(root):
     print("\n   [OK] the nearest renderer, or a straight answer")
 
 
+def test_a_pack_that_ships_both_formats(root):
+
+    heading("21  The same character in two formats: take the one with "
+            "its textures")
+
+    import from_mixamo
+
+    folder = root / "BothFormats"
+
+    (folder / "FBX").mkdir(parents=True, exist_ok=True)
+
+    (folder / "glTF").mkdir(parents=True, exist_ok=True)
+
+    # These packs ship every character four times over. An .fbx only
+    # names its textures, so out of it this character's face - which
+    # is a texture - is a white blob; a .glb carries them inside it.
+    for name in ("Casual2_Male", "Casual_Male"):
+
+        (folder / "FBX" / f"{name}.fbx").write_bytes(b"")
+
+        (folder / "glTF" / f"{name}.glb").write_bytes(b"")
+
+    order = from_mixamo.model_files(folder)
+
+    print("   " + ", ".join(path.name for path in order))
+
+    assert order[0].suffix == ".glb", order[0]
+
+    # And asking for one by name still picks that one, in the format
+    # that carries the most.
+    named = from_mixamo.model_files(folder, "Casual2")
+
+    print(f"   asked 'Casual2' -> {named[0].name}")
+
+    assert named[0].name == "Casual2_Male.glb", named[0]
+
+    print("\n   [OK] the file that brought its pictures goes first")
+
+
 # ======================================================================
 
 def main():
@@ -1462,6 +1501,7 @@ def main():
         test_the_curves_are_found_on_any_blender(root)
         test_the_render_matches_what_the_material_says(root)
         test_a_renderer_that_is_not_there(root)
+        test_a_pack_that_ships_both_formats(root)
         test_the_notebook_carries_the_code_it_runs(root)
 
     print("\nALL BLENDER TESTS PASSED")

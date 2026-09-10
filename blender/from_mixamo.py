@@ -227,7 +227,12 @@ def clear():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-READABLE = (".fbx", ".glb", ".gltf")
+# Best first. A .glb carries its textures inside it; an .fbx only
+# names them, and a pack that ships both leaves the .fbx faces blank -
+# the face of this character is a texture, so out of the FBX it is a
+# white blob. Where the same character is in the folder twice, the one
+# that brought its pictures wins.
+READABLE = (".glb", ".gltf", ".fbx")
 
 
 # Which character to reach for when nobody said. A pack sorts
@@ -284,6 +289,7 @@ def model_files(folder, wanted=""):
         found,
         key=lambda path: (0 if low and low in path.name.lower() else 1,
                           liking(path) if not low else 0,
+                          READABLE.index(path.suffix.lower()),
                           str(path).lower()),
     )
 
