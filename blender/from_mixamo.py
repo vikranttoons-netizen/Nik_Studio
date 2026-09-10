@@ -616,6 +616,54 @@ def no_colour(colour):
     return high <= 0.03 and (high - low) <= 0.02
 
 
+def solid_again():
+    """
+    Undo a material that arrived fully transparent.
+
+    An FBX import sets the shader's Alpha to 0 on every material of
+    this pack. Workbench ignores alpha, so the character showed up
+    there; EEVEE obeys it, so the character rendered as nothing at all
+    and the shot came back as ground and sky. Nobody ships a character
+    meant to be invisible.
+    """
+
+    fixed = 0
+
+    for stuff in bpy.data.materials:
+
+        if not stuff.use_nodes or stuff.node_tree is None:
+            continue
+
+        for node in stuff.node_tree.nodes:
+
+            clear = node.inputs.get("Alpha") if node.inputs else None
+
+            if clear is None or clear.is_linked:
+                continue
+
+            if clear.default_value > 0.02:
+                continue
+
+            clear.default_value = 1.0
+
+            fixed += 1
+
+        # And the setting that decides whether alpha is obeyed at all.
+        # It is called different things in different Blenders.
+        for name, want in (("blend_method", "OPAQUE"),
+                           ("surface_render_method", "DITHERED")):
+
+            if hasattr(stuff, name):
+
+                try:
+                    setattr(stuff, name, want)
+
+                except TypeError:
+                    pass
+
+    return fixed
+
+
 def true_colours():
     """
     Make what renders match what the material says.
@@ -918,6 +966,8 @@ def build(folder, target, wanted="", movements="", child=0.0):
 
     # The colours before the file is written, not after: what is saved
     # is what gets rendered.
+    solid = solid_again()
+
     copied, invented = true_colours()
 
     target = Path(target)
@@ -945,6 +995,10 @@ def build(folder, target, wanted="", movements="", child=0.0):
         print("  textures  : none - the character is flat colours, "
               "which is how these\n              packs are usually "
               "made")
+
+    if solid:
+        print(f"  solid     : {solid} material(s) came in fully "
+              f"transparent - made opaque")
 
     if copied or invented:
 

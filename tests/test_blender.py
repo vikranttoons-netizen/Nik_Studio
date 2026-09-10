@@ -1302,6 +1302,28 @@ def test_the_render_matches_what_the_material_says(root):
 
     shirt = a_material("Shirt", None, (0.0, 0.0, 0.0, 1.0), picture=real)
 
+    # Every material of the real pack arrived with Alpha 0 - fully
+    # transparent. Workbench ignores alpha, so the character showed up
+    # there; EEVEE obeys it, so the shot came back as ground and sky
+    # with nobody in it. Measured on the pack's own file.
+    for stuff in (skin, pants, hair, shirt):
+
+        node = stuff.node_tree.nodes.get("Principled BSDF")
+
+        node.inputs["Alpha"].default_value = 0.0
+
+    solid = from_mixamo.solid_again()
+
+    print(f"   {solid} material(s) were invisible")
+
+    assert solid == 4, solid
+
+    for stuff in (skin, pants, hair, shirt):
+
+        node = stuff.node_tree.nodes.get("Principled BSDF")
+
+        assert node.inputs["Alpha"].default_value == 1.0, stuff.name
+
     copied, invented = from_mixamo.true_colours()
 
     for stuff in (skin, pants, hair, shirt):
