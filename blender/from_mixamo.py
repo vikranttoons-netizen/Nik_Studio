@@ -574,6 +574,48 @@ def base_colour_of(stuff):
     return None, False
 
 
+# What to put on a part that has no colour of its own, by what the
+# part is called. A material named Skin is meant to be skin, and
+# whoever built the pack left it black.
+INSTEAD = (
+    (("skin", "face", "head", "body", "hand", "arm", "leg", "foot",
+      "ear", "neck"), (0.85, 0.66, 0.50, 1.0)),
+    (("hair", "beard", "brow"), (0.28, 0.18, 0.08, 1.0)),
+    (("eye", "tooth", "teeth"), (0.95, 0.95, 0.92, 1.0)),
+)
+
+PLAIN = (0.55, 0.52, 0.50, 1.0)
+
+
+def instead_of_black(name):
+    """A colour for a part that has none, going by what it is called."""
+
+    plain = name.lower()
+
+    for words, colour in INSTEAD:
+
+        if any(word in plain for word in words):
+            return colour
+
+    return PLAIN
+
+
+def no_colour(colour):
+    """
+    Is this not a colour anybody chose?
+
+    Near-black and with no hue in it at all. A part written as
+    0.01,0.01,0.01 renders as a silhouette and is indistinguishable
+    from one that was never filled in - measured, that is exactly what
+    the pack's Skin material says. A part that is dark but has a hue -
+    0.02,0.03,0.07, a navy trouser - is dark on purpose and is left.
+    """
+
+    high, low = max(colour), min(colour)
+
+    return high <= 0.03 and (high - low) <= 0.02
+
+
 def true_colours():
     """
     Make what renders match what the material says.
@@ -591,13 +633,6 @@ def true_colours():
     if it is black by default rather than on purpose.
     """
 
-    plain = (0.62, 0.55, 0.50, 1.0)
-
-    # Only exactly nothing counts as nothing. A part set to 0.02 is a
-    # part somebody meant to be nearly black - a boot, a pupil - and
-    # inventing a colour for it is worse than leaving it.
-    nothing = 0.005
-
     copied = invented = 0
 
     for stuff in bpy.data.materials:
@@ -607,7 +642,7 @@ def true_colours():
         if painted:
             continue
 
-        if colour is not None and max(colour) > nothing:
+        if colour is not None and not no_colour(colour):
 
             stuff.diffuse_color = (*colour, 1.0)
 
@@ -615,7 +650,9 @@ def true_colours():
 
             continue
 
-        if max(stuff.diffuse_color[:3]) <= nothing:
+        if colour is not None or no_colour(stuff.diffuse_color[:3]):
+
+            plain = instead_of_black(stuff.name)
 
             stuff.diffuse_color = plain
 

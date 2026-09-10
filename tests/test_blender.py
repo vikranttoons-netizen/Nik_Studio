@@ -1288,34 +1288,41 @@ def test_the_render_matches_what_the_material_says(root):
 
     real = bpy.data.images.new("shirt.png", 4, 4)
 
-    skin = a_material("Skin", (0.85, 0.62, 0.45), (0.0, 0.0, 0.0, 1.0))
+    # The numbers the pack actually shipped, read off a run:
+    #   Belt 0.07,0.04,0.02; Face 1.0,1.0,0.94; Hair 0.26,0.18,0.06;
+    #   Pants 0.02,0.03,0.07; Shirt 0.11,0.1,0.18; Skin 0.01,0.01,0.01
+    # Skin is black. Not missing, not a texture - written black.
+    skin = a_material("Skin", (0.01, 0.01, 0.01),
+                      (0.01, 0.01, 0.01, 1.0))
 
-    boots = a_material("Boots", (0.02, 0.02, 0.02), (0.02, 0.02, 0.02, 1.0))
+    pants = a_material("Pants", (0.02, 0.03, 0.07),
+                       (0.0, 0.0, 0.0, 1.0))
+
+    hair = a_material("Hair", (0.26, 0.18, 0.06), (0.0, 0.0, 0.0, 1.0))
 
     shirt = a_material("Shirt", None, (0.0, 0.0, 0.0, 1.0), picture=real)
 
-    blank = a_material("Blank", (0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0))
-
     copied, invented = from_mixamo.true_colours()
 
-    for stuff in (skin, boots, shirt, blank):
-        print(f"   {stuff.name:<7} "
+    for stuff in (skin, pants, hair, shirt):
+        print(f"   {stuff.name:<6} "
               f"{tuple(round(v, 2) for v in stuff.diffuse_color[:3])}")
 
-    # The shader said skin, so skin is what renders.
-    assert abs(skin.diffuse_color[0] - 0.85) < 0.01, skin.diffuse_color[:]
+    # Black with no hue in it is not a colour anybody chose, and a
+    # material called Skin is meant to be skin.
+    assert skin.diffuse_color[0] > 0.5, skin.diffuse_color[:]
 
-    # Boots are meant to be nearly black. Their shader says so, so
-    # that is what is used - inventing a colour for them would be
-    # worse than leaving them.
-    assert max(boots.diffuse_color[:3]) < 0.05, boots.diffuse_color[:]
+    assert skin.diffuse_color[0] > skin.diffuse_color[2], (
+        skin.diffuse_color[:])
 
-    # A picture is what Workbench will use; leave it to the picture.
+    # Dark but with a hue - a navy trouser - is dark on purpose.
+    assert abs(pants.diffuse_color[2] - 0.07) < 0.01, pants.diffuse_color[:]
+
+    # And an ordinary colour is simply carried across.
+    assert abs(hair.diffuse_color[0] - 0.26) < 0.01, hair.diffuse_color[:]
+
+    # A picture is what the renderer will use; leave it to the picture.
     assert max(shirt.diffuse_color[:3]) < 0.05, shirt.diffuse_color[:]
-
-    # Black everywhere is nothing to go on, so it gets a plain colour
-    # rather than a silhouette.
-    assert max(blank.diffuse_color[:3]) > 0.3, blank.diffuse_color[:]
 
     print(f"   {copied} painted from the shader, {invented} invented")
 
