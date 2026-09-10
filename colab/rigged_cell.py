@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-22 - textures found, and no black cut-outs"
+BUILD = "2026-09-23 - EEVEE, which reads the material itself"
 
 DRIVE = "/content/drive/MyDrive"
 
@@ -41,10 +41,13 @@ MOVEMENTS = ""
 # is not.
 CHILD = 1.0
 
-# Flat and fast and no GPU, for checking that the movements are right.
-# "BLENDER_EEVEE_NEXT" is the one that looks like something, and wants
-# a GPU turned on.
-ENGINE = "BLENDER_WORKBENCH"
+# "BLENDER_WORKBENCH" is flat and fast and needs no GPU, and it paints
+# a material by its viewport colour, which an FBX import often leaves
+# black. "BLENDER_EEVEE_NEXT" reads the shader itself - the real
+# colour, real light, real shadow - and wants a GPU.
+#
+# Runtime > Change runtime type > T4 GPU > Save, before running.
+ENGINE = "BLENDER_EEVEE_NEXT"
 
 WIDTH, HEIGHT = 1024, 576
 

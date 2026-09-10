@@ -1373,6 +1373,38 @@ def test_the_render_matches_what_the_material_says(root):
     print("\n   [OK] what the material says is what comes out")
 
 
+def test_a_renderer_that_is_not_there(root):
+
+    heading("20  Asking for a renderer this Blender has not got")
+
+    import nik_blender
+
+    # Workbench is not in the list of engines RNA reports, on a build
+    # that renders with it perfectly well - which is why this asks by
+    # setting it rather than by reading a list.
+    for asked in ("BLENDER_WORKBENCH", "BLENDER_EEVEE_NEXT",
+                  "BLENDER_EEVEE"):
+
+        got = nik_blender.an_engine(asked)
+
+        print(f"   {asked:<18} -> {got}")
+
+        assert got.startswith("BLENDER_"), (asked, got)
+
+    # And something that is nothing at all says so, with the list.
+    try:
+        nik_blender.an_engine("BLENDER_MAGIC")
+
+    except SystemExit as stop:
+        print("   BLENDER_MAGIC      -> refused")
+        assert "no stand-in" in str(stop), stop
+
+    else:
+        raise AssertionError("a made-up renderer was accepted")
+
+    print("\n   [OK] the nearest renderer, or a straight answer")
+
+
 # ======================================================================
 
 def main():
@@ -1400,6 +1432,7 @@ def main():
         test_a_missing_movement_does_not_freeze_the_shot(root)
         test_the_curves_are_found_on_any_blender(root)
         test_the_render_matches_what_the_material_says(root)
+        test_a_renderer_that_is_not_there(root)
         test_the_notebook_carries_the_code_it_runs(root)
 
     print("\nALL BLENDER TESTS PASSED")

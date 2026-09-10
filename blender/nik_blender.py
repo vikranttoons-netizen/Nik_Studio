@@ -374,6 +374,51 @@ def aim_cameras(rig, width, height):
     return tall
 
 
+# What a renderer is called changes between Blender versions, and
+# asking for one that is not there is a TypeError rather than a
+# fallback. EEVEE was BLENDER_EEVEE, then BLENDER_EEVEE_NEXT, and
+# Colab does not install the same Blender this was written against.
+ENGINE_ALSO = {
+    "BLENDER_EEVEE_NEXT": ("BLENDER_EEVEE", "BLENDER_WORKBENCH"),
+    "BLENDER_EEVEE": ("BLENDER_EEVEE_NEXT", "BLENDER_WORKBENCH"),
+    "CYCLES": ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"),
+}
+
+
+def an_engine(wanted, scene=None):
+    """
+    The renderer asked for, or the nearest one this Blender has.
+
+    Found out by setting it, not by reading the list of engines: that
+    list is what Blender was built knowing about and leaves out
+    Workbench entirely on a build that renders with it perfectly well.
+    The same lesson as the encoder - ask by doing.
+    """
+
+    scene = scene or bpy.context.scene
+
+    before = scene.render.engine
+
+    for name in (wanted, *ENGINE_ALSO.get(wanted, ())):
+
+        try:
+            scene.render.engine = name
+
+        except TypeError:
+            continue
+
+        scene.render.engine = before
+
+        if name != wanted:
+            print(f"  ! No {wanted} in this Blender. Using {name}.")
+
+        return name
+
+    raise SystemExit(
+        f"No renderer called {wanted}, and no stand-in for it."
+    )
+
+
 def flat_but_visible(scene):
     """
     Workbench, told to show colour and sky instead of grey on black.
@@ -752,7 +797,7 @@ def render(blend, script, into, width=960, height=544,
     scene.render.resolution_percentage = 100
 
     if engine:
-        scene.render.engine = engine
+        scene.render.engine = an_engine(engine)
 
     tall = aim_cameras(rig, width, height)
 
