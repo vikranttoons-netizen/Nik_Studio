@@ -211,6 +211,15 @@ CAMERAS = {
 # like a silhouette in a cave.
 SKY = (0.53, 0.75, 0.95)
 
+# The ground. Left as it comes it is the default white, which against a
+# pale sky gives no horizon at all - the first EEVEE shot was a pale
+# character on a pale nothing. Grass is what these songs are set in.
+GRASS = (0.24, 0.42, 0.16, 1.0)
+
+# How hard the sun is. The default blows the character out; this is
+# daylight that still leaves the colours where they were put.
+SUN = 3.0
+
 
 def clear():
     """An empty file, including the datablocks nothing points at."""
@@ -943,6 +952,14 @@ def build(folder, target, wanted="", movements="", child=0.0):
     bpy.ops.object.light_add(type="SUN", location=(3.0 * tall, -4.0 * tall,
                                                    6.0 * tall))
 
+    sun = bpy.context.active_object
+
+    sun.data.energy = SUN
+
+    # Pointed down and across rather than straight down, so the
+    # character has a lit side and a shaded one and reads as solid.
+    sun.rotation_euler = (0.9, 0.0, 0.6)
+
     if bpy.context.scene.world is None:
         bpy.context.scene.world = bpy.data.worlds.new("World")
 
@@ -951,7 +968,29 @@ def build(folder, target, wanted="", movements="", child=0.0):
     bpy.ops.mesh.primitive_plane_add(size=40.0 * tall,
                                      location=(0.0, 0.0, 0.0))
 
-    bpy.context.active_object.name = "Ground"
+    ground = bpy.context.active_object
+
+    ground.name = "Ground"
+
+    grass = bpy.data.materials.new("Grass")
+
+    grass.use_nodes = True
+
+    grass.diffuse_color = GRASS
+
+    for node in grass.node_tree.nodes:
+
+        base = node.inputs.get("Base Color") if node.inputs else None
+
+        if base is not None and not base.is_linked:
+            base.default_value = GRASS
+
+        rough = node.inputs.get("Roughness") if node.inputs else None
+
+        if rough is not None and not rough.is_linked:
+            rough.default_value = 1.0
+
+    ground.data.materials.append(grass)
 
     scene = bpy.context.scene
 
