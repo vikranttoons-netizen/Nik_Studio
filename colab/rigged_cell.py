@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-23 - EEVEE, which reads the material itself"
+BUILD = "2026-09-24 - shows why an install failed"
 
 DRIVE = "/content/drive/MyDrive"
 
@@ -85,8 +85,31 @@ except ImportError:
     print("\nBlender is not in this session. Installing it - about two "
           "minutes.\n")
 
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-                    "bpy", "imageio-ffmpeg"], check=True)
+    # Not quiet. A quiet install that fails leaves an exit code and
+    # nothing else, and pip's own sentence is the only thing that says
+    # what went wrong - a Python it has no build for, a full disk, a
+    # network that went away.
+    putting = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "bpy", "imageio-ffmpeg"],
+        capture_output=True, text=True,
+    )
+
+    if putting.returncode != 0:
+
+        said = ((putting.stderr or "") + (putting.stdout or "")).strip()
+
+        raise SystemExit(
+            "Blender would not install. pip said:\n\n"
+            + "\n".join(said.splitlines()[-12:])
+            + f"\n\nThis session is Python "
+              f"{sys.version_info.major}.{sys.version_info.minor}. "
+              f"If pip says it cannot find a\nversion of bpy, that is "
+              f"a Python this Blender has no build for:\n\n"
+              "    Runtime > Disconnect and delete runtime, then open "
+              "the notebook\n    again and run the cell. Colab hands "
+              "out different Pythons.\n\n"
+              "If it says something else, send me these lines."
+        )
 
     try:
         import bpy
