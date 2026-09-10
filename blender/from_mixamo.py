@@ -996,6 +996,23 @@ def build(folder, target, wanted="", movements="", child=0.0):
 
     scene.render.fps = 24
 
+    # Blender's default view transform is AgX, which rolls colour off
+    # the way film does. On a cartoon it turns a tan skin into a pale
+    # one and a brown hair into olive - the flat colours the pack was
+    # painted in stop being the colours that come out. "Standard"
+    # gives back what the material says.
+    for plain in ("Standard", "Raw"):
+
+        try:
+            scene.view_settings.view_transform = plain
+
+            break
+
+        except TypeError:
+            continue
+
+    scene.view_settings.look = "None"
+
     scene.camera = bpy.data.objects.get("Cam_Medium")
 
     try:
