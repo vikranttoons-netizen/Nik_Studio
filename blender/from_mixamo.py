@@ -969,7 +969,27 @@ def build(folder, target, wanted="", movements="", child=0.0):
     if bpy.context.scene.world is None:
         bpy.context.scene.world = bpy.data.worlds.new("World")
 
-    bpy.context.scene.world.color = SKY
+    world = bpy.context.scene.world
+
+    # Two places hold the sky and two renderers read different ones.
+    # Workbench takes world.color; EEVEE takes the Background node, and
+    # setting only the first gave a blue sky in one and a grey void in
+    # the other.
+    world.color = SKY
+
+    world.use_nodes = True
+
+    for node in world.node_tree.nodes:
+
+        colour = node.inputs.get("Color") if node.inputs else None
+
+        if colour is not None and not colour.is_linked:
+            colour.default_value = (*SKY, 1.0)
+
+        strength = node.inputs.get("Strength") if node.inputs else None
+
+        if strength is not None and not strength.is_linked:
+            strength.default_value = 1.0
 
     bpy.ops.mesh.primitive_plane_add(size=40.0 * tall,
                                      location=(0.0, 0.0, 0.0))

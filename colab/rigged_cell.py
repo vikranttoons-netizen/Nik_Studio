@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-24 - shows why an install failed"
+BUILD = "2026-09-25 - the character is visible, coloured and lit"
 
 DRIVE = "/content/drive/MyDrive"
 
@@ -56,10 +56,7 @@ WIDTH, HEIGHT = 1024, 576
 CLIP_SECONDS = 4.0
 
 # Only make this many, to see what they look like. 0 makes all of them.
-# Two, this time, only to see whether the colour came back - forty-four
-# is forty minutes and there is no sense spending it on a black
-# silhouette.
-FIRST_ONLY = 2
+FIRST_ONLY = 0
 
 # Build Nik.blend again even when the settings have not changed. Only
 # needed after dropping another file into one of the folders.
