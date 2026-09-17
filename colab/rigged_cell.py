@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-25 - the character is visible, coloured and lit"
+BUILD = "2026-09-26 - skin is a skin colour, not near-white"
 
 DRIVE = "/content/drive/MyDrive"
 

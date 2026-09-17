@@ -592,14 +592,20 @@ def base_colour_of(stuff):
 # What to put on a part that has no colour of its own, by what the
 # part is called. A material named Skin is meant to be skin, and
 # whoever built the pack left it black.
+# These are LINEAR, which is what a shader holds - not the numbers a
+# colour picker shows. Linear 0.85 is very nearly white: the first
+# skin tone here was written as if it were sRGB and rendered as a
+# blank white face. Each one is followed by what it looks like on
+# screen, worked out rather than guessed.
 INSTEAD = (
+    #                                   linear              on screen
     (("skin", "face", "head", "body", "hand", "arm", "leg", "foot",
-      "ear", "neck"), (0.85, 0.66, 0.50, 1.0)),
-    (("hair", "beard", "brow"), (0.28, 0.18, 0.08, 1.0)),
-    (("eye", "tooth", "teeth"), (0.95, 0.95, 0.92, 1.0)),
+      "ear", "neck"), (0.807, 0.456, 0.262, 1.0)),      # 232,180,140
+    (("hair", "beard", "brow"), (0.107, 0.052, 0.017, 1.0)),  # 95,68,42
+    (("eye", "tooth", "teeth"), (0.879, 0.879, 0.835, 1.0)),  # 243,243,237
 )
 
-PLAIN = (0.55, 0.52, 0.50, 1.0)
+PLAIN = (0.246, 0.226, 0.215, 1.0)                      # 138,133,130
 
 
 def instead_of_black(name):
