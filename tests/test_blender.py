@@ -1077,6 +1077,17 @@ def test_a_missing_movement_does_not_freeze_the_shot(root):
     # pack is a statue. Standing still is the last resort now.
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
+    # Made by keyframing a real object rather than by building curves
+    # by hand. Blender 4.4 moved where an action keeps its curves, and
+    # action.fcurves is gone in the Blender that Colab installs - the
+    # tool reads both, but a fixture written the old way cannot even
+    # be built there, so the test died before testing anything.
+    bpy.ops.object.empty_add()
+
+    mover = bpy.context.active_object
+
+    mover.animation_data_create()
+
     # The pack's idle is a statue - that is what a 0.06 clip was - so
     # it is given almost no movement here, and the others real amounts.
     for name, length, moves in (("idle", 40, 0.001), ("clap", 30, 1.0),
@@ -1088,11 +1099,22 @@ def test_a_missing_movement_does_not_freeze_the_shot(root):
 
         action.use_fake_user = True
 
-        curve = action.fcurves.new("location", index=2)
+        mover.animation_data.action = action
 
-        curve.keyframe_points.insert(1, 0.0)
+        if hasattr(action, "slots") and hasattr(mover.animation_data,
+                                                "action_slot"):
 
-        curve.keyframe_points.insert(length, moves)
+            slot = action.slots.new(id_type="OBJECT", name=name)
+
+            mover.animation_data.action_slot = slot
+
+        for frame, height in ((1, 0.0), (length, moves)):
+
+            mover.location.z = height
+
+            mover.keyframe_insert("location", index=2, frame=frame)
+
+    mover.animation_data.action = None
 
     for asked, wanted in (("wave", "clap"), ("clap", "clap"),
                           ("sway", "walk"), ("spin", "walk"),
