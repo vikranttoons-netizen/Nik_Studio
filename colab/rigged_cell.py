@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-26 - skin is a skin colour, not near-white"
+BUILD = "2026-09-27 - forty-four shots that are not the same shot"
 
 DRIVE = "/content/drive/MyDrive"
 

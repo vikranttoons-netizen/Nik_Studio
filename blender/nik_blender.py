@@ -171,8 +171,22 @@ def action_for(line):
     return min(found)[1]
 
 
-def camera_for(line):
-    """Which camera this line is asking for."""
+# When a line does not say how it wants to be shot, this is the order
+# the shots are taken in. Every line that said nothing was a medium
+# shot, which is most of them, so the film had one size all the way
+# through. A song cuts between sizes.
+UNSAID = ("Cam_Medium", "Cam_Wide", "Cam_Medium", "Cam_Close",
+          "Cam_Wide", "Cam_Medium", "Cam_Close", "Cam_Wide")
+
+
+def camera_for(line, turn=None):
+    """
+    Which camera this line is asking for.
+
+    A line that opens with "Close up of" or "Wide shot of" has said so
+    and is obeyed. One that says nothing gets a size chosen by where
+    it falls in the film, so the sizes change from shot to shot.
+    """
 
     lowered = line.lower()
 
@@ -180,7 +194,10 @@ def camera_for(line):
         if lowered.startswith(opening):
             return camera
 
-    return DEFAULT_CAMERA
+    if turn is None:
+        return DEFAULT_CAMERA
+
+    return UNSAID[turn % len(UNSAID)]
 
 
 # ======================================================================
@@ -333,6 +350,68 @@ def span_of(rig):
     return low, high
 
 
+# Where the camera stands, shot by shot: how far round the character
+# it swings, and how much higher or lower than its resting height.
+# Three cameras and one angle made forty-four clips look like three;
+# these are deliberately uneven so the pattern does not show, and the
+# same shot number always gives the same place, so a run repeats.
+AROUND = (0, -24, 16, 34, -12, 26, -34, 8, -18, 30, -8, 20)
+
+RISE = (0.0, 0.06, -0.04, 0.10, -0.07, 0.03, 0.08, -0.05, 0.05, -0.02)
+
+# How much closer the camera creeps over one shot. Small: a toddler
+# should not feel chased.
+PUSH_IN = 0.93
+
+
+def stand_at(camera, target, turn, first, last):
+    """
+    Put the camera where this shot wants it, and creep it forward.
+
+    Everything is worked out from where aim_cameras left the camera,
+    which is remembered on the camera itself - so a shot can be moved
+    about without losing the framing that was calculated for this
+    character's height.
+    """
+
+    from math import cos, radians, sin
+
+    rest = camera.get("rest")
+
+    if rest is None:
+        return
+
+    away = (rest[0] ** 2 + rest[1] ** 2) ** 0.5
+
+    tall = camera.get("look", rest[2])
+
+    swing = radians(AROUND[turn % len(AROUND)])
+
+    lift = 1.0 + RISE[turn % len(RISE)]
+
+    # Old keys first, or shot two would still be moving on shot one's.
+    if camera.animation_data:
+        camera.animation_data_clear()
+
+    for frame, near in ((first, 1.0), (last, PUSH_IN)):
+
+        camera.location = (sin(swing) * away * near,
+                           -cos(swing) * away * near,
+                           tall * lift)
+
+        camera.keyframe_insert("location", frame=frame)
+
+    if camera.animation_data and camera.animation_data.action:
+
+        for curve in curves_of(camera.animation_data.action):
+
+            for point in curve.keyframe_points:
+                point.interpolation = "SINE"
+                point.easing = "EASE_IN_OUT"
+
+    target.location = (0.0, 0.0, tall)
+
+
 def aim_cameras(rig, width, height):
     """
     Re-frame every camera for this character and this picture size.
@@ -370,6 +449,12 @@ def aim_cameras(rig, width, height):
         camera.location = (0.0, -away, up)
 
         target.location = (0.0, 0.0, up)
+
+        # Remembered, so a shot can swing the camera round without
+        # losing the distance worked out for this character.
+        camera["rest"] = (0.0, -away, up)
+
+        camera["look"] = up
 
     return tall
 
@@ -646,12 +731,19 @@ def too_still(action, among):
     return liveliness(action) < middle * 0.25
 
 
-def stand_in_for(action_name):
+def stand_in_for(action_name, turn=0):
     """
     The nearest movement the rig actually has, and what it cost.
 
     Returns (action, instead_of) - instead_of is the name that was
     asked for, when something else had to be used.
+
+    `turn` is which shot of the film this is. Forty-four lines asking
+    for a wave, against a pack that has no wave, all took the same
+    first stand-in and the film became clap, walk, clap, walk. The
+    list is started from a different place each time instead, so a
+    line that cannot have what it asked for at least does not get the
+    same substitute as the line before it.
     """
 
     usable = [act for act in bpy.data.actions if allowed(act.name)]
@@ -662,7 +754,17 @@ def stand_in_for(action_name):
             and not too_still(action, usable)):
         return action, ""
 
-    for other in STAND_INS.get(action_name, ()):
+    others = list(STAND_INS.get(action_name, ()))
+
+    ready = [name for name in others
+             if (bpy.data.actions.get(name) is not None and allowed(name)
+                 and not too_still(bpy.data.actions[name], usable))]
+
+    if ready:
+
+        return bpy.data.actions[ready[turn % len(ready)]], action_name
+
+    for other in others:
 
         stand_in = bpy.data.actions.get(other)
 
@@ -681,10 +783,10 @@ def stand_in_for(action_name):
     return action or bpy.data.actions.get(FALLBACK_ACTION), action_name
 
 
-def play(rig, action_name):
+def play(rig, action_name, turn=0):
     """Put an action on the rig, and say how long it runs."""
 
-    action, instead = stand_in_for(action_name)
+    action, instead = stand_in_for(action_name, turn)
 
     if action is None:
         raise SystemExit(f"No action '{action_name}' and no fallback.")
@@ -701,19 +803,22 @@ def play(rig, action_name):
     return called, max(1, end - start), start
 
 
-def render_scene(rig, line, target, seconds=CLIP_SECONDS):
+def render_scene(rig, line, target, seconds=CLIP_SECONDS, turn=0):
     """One line of the script -> one clip."""
 
     scene = bpy.context.scene
 
-    name, length, start = play(rig, action_for(line))
+    name, length, start = play(rig, action_for(line), turn)
 
-    camera_name = camera_for(line)
+    camera_name = camera_for(line, turn)
 
     camera = bpy.data.objects.get(camera_name)
 
     if camera is None:
-        camera = bpy.data.objects.get(DEFAULT_CAMERA)
+
+        camera_name = DEFAULT_CAMERA
+
+        camera = bpy.data.objects.get(camera_name)
 
     if camera is not None:
         scene.camera = camera
@@ -733,6 +838,12 @@ def render_scene(rig, line, target, seconds=CLIP_SECONDS):
     # What the action has to give, and what the shot asks for. The
     # second is what comes out, because the frames repeat to fill it.
     rendered = scene.frame_end - scene.frame_start + 1
+
+    # Where this shot is taken from, and the slow creep forward.
+    aimed = bpy.data.objects.get(f"{camera_name}_Target")
+
+    if camera is not None and aimed is not None:
+        stand_at(camera, aimed, turn, scene.frame_start, scene.frame_end)
 
     # Blender writes the frames and ffmpeg makes the film, always.
     # Blender installed with pip is built without ffmpeg and cannot
@@ -813,7 +924,8 @@ def render(blend, script, into, width=960, height=544,
 
         target = into / f"Scene{number:02d}.mp4"
 
-        action, camera, frames = render_scene(rig, line, target, seconds)
+        action, camera, frames = render_scene(rig, line, target, seconds,
+                                              turn=number - 1)
 
         print(f"[{number}/{len(lines)}] {target.name}: "
               f"{action} on {camera}, {frames} frames")
