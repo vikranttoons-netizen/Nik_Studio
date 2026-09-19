@@ -1116,6 +1116,11 @@ def test_a_missing_movement_does_not_freeze_the_shot(root):
 
     mover.animation_data.action = None
 
+    # These are the character's movements, so they are what the
+    # judging is done against - exactly as a run does it, right after
+    # the file is opened and before any camera has been keyframed.
+    nik_blender.remember_movements()
+
     for asked, wanted in (("wave", "clap"), ("clap", "clap"),
                           ("sway", "walk"), ("spin", "walk"),
                           ("nod", "crouch"), ("walk", "walk"),
@@ -1138,6 +1143,42 @@ def test_a_missing_movement_does_not_freeze_the_shot(root):
         got, _ = nik_blender.stand_in_for(banned)
 
         assert nik_blender.allowed(got.name), (banned, got.name)
+
+    # A camera move is not one of the character's movements. Blender
+    # makes an action for every camera it keyframes, one per shot, and
+    # those piling into the same list is what made the pack's
+    # motionless idle stop looking motionless after a dozen shots.
+    bpy.ops.object.camera_add()
+
+    eye = bpy.context.active_object
+
+    for shot in range(20):
+
+        eye.location = (shot * 0.5, -6.0, 1.5)
+
+        eye.keyframe_insert("location", frame=1)
+
+        eye.location = (shot * 0.5, -5.5, 1.5)
+
+        eye.keyframe_insert("location", frame=24)
+
+        eye.animation_data_clear()
+
+    made = len([a for a in bpy.data.actions
+                if a.name not in nik_blender._ITS_OWN])
+
+    print(f"   camera actions left lying about: {made}")
+
+    assert made >= 10, made
+
+    after, why = nik_blender.stand_in_for("idle")
+
+    print(f"   idle after {made} camera moves -> {after.name}"
+          + (f"  (asked for {why})" if why else "  STILL THE STATUE"))
+
+    assert why == "idle", (after.name, why)
+
+    assert after.name != "idle", after.name
 
     # And a still action is refused even when it is asked for by name.
     still = bpy.data.actions.get("idle")

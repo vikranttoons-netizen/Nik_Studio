@@ -12,7 +12,7 @@
 #
 # ----------------------------------------------------------- SETTINGS
 
-BUILD = "2026-09-27 - forty-four shots that are not the same shot"
+BUILD = "2026-09-28 - a camera move is not one of the movements"
 
 DRIVE = "/content/drive/MyDrive"
 

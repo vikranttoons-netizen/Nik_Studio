@@ -731,6 +731,33 @@ def too_still(action, among):
     return liveliness(action) < middle * 0.25
 
 
+# The movements the character arrived with. Keyframing a camera makes
+# Blender create an action for it, one per shot, and those piled into
+# the same list the character's movements are judged against - so after
+# a dozen shots the pack's motionless idle stopped looking motionless
+# and the film went back to holding on a statue. A camera move is not
+# a movement.
+_ITS_OWN = set()
+
+
+def remember_movements():
+    """Note which actions belong to the character, before any camera."""
+
+    global _ITS_OWN
+
+    _ITS_OWN = {action.name for action in bpy.data.actions}
+
+    return _ITS_OWN
+
+
+def the_movements():
+    """Every movement the character has, and nothing else."""
+
+    return [action for action in bpy.data.actions
+            if allowed(action.name)
+            and (not _ITS_OWN or action.name in _ITS_OWN)]
+
+
 def stand_in_for(action_name, turn=0):
     """
     The nearest movement the rig actually has, and what it cost.
@@ -746,7 +773,7 @@ def stand_in_for(action_name, turn=0):
     same substitute as the line before it.
     """
 
-    usable = [act for act in bpy.data.actions if allowed(act.name)]
+    usable = the_movements()
 
     action = bpy.data.actions.get(action_name)
 
@@ -893,6 +920,10 @@ def render(blend, script, into, width=960, height=544,
 
     for problem in problems:
         print(f"  ! {problem}")
+
+    # Before a single camera is keyframed, so a camera move is never
+    # mistaken for one of the character's movements.
+    remember_movements()
 
     lines = scenes_in(script)
 
