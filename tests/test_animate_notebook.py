@@ -1857,9 +1857,11 @@ def test_a_shot_is_assembled_from_the_sheets(root):
 
     a_body(sheets / "cast" / "duckling.png", (230, 200, 30))
 
-    for where in ("meadow", "garden", "park"):
+    # One place, seen three ways - which is what the script asks for,
+    # and what the sheets are named after.
+    for seen in ("wide", "medium", "close"):
         Image.new("RGB", (1024, 576), (20, 120, 20)).save(
-            sheets / "places" / f"{where}.png")
+            sheets / "places" / f"meadow_{seen}.png")
 
     printed, refusal, calls = run(drive, source_kind="character")
 
