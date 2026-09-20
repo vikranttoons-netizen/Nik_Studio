@@ -379,6 +379,29 @@ def cell_two():
     return "".join(notebook["cells"][2]["source"])
 
 
+def notebook_thing(name):
+    """
+    One function out of the notebook, on its own.
+
+    Some of what the cell does is plain picture work with no model and
+    no folder behind it - cutting a background off, say. Lifting the
+    function out and calling it directly says more, and in a second,
+    than running the whole cell to look at what came out the end.
+    """
+
+    source = cell_two()
+
+    start = source.index(f"def {name}(")
+
+    end = source.index("\ndef ", start + 1)
+
+    room = {}
+
+    exec(compile(source[start:end], "cell two", "exec"), room)
+
+    return room[name]
+
+
 def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         mounted=None, gpu=True, test_one=False, mount_fails=False,
         beats=None, short=False, full_size=False,
@@ -1702,10 +1725,16 @@ def _a_folder_with_no_pictures(root):
 
     assert not refusal, refusal
 
-    assert "Found your files in" in printed, printed
+    # It is found either way. A folder that is already there is now
+    # taken whatever case it is written in, so the hunt does not have
+    # to fire at all - and when it does not, nothing should complain.
+    hunted = [row.strip() for row in printed.splitlines()
+              if "Found your" in row]
 
-    print("  ", [row.strip() for row in printed.splitlines()
-                 if "Found your" in row][0][:70])
+    print("  ", hunted[0][:70] if hunted
+          else "taken as it stands, no hunt needed")
+
+    assert "is not there" not in printed or hunted, printed
 
     assert len(calls) == 2, calls
 
@@ -1816,6 +1845,69 @@ def test_clips_made_somewhere_else(root):
           "back")
 
     print("\n   [OK] one edit, whatever made the clips")
+
+
+def test_a_drawn_character_is_cut_out(root):
+
+    heading("32f  Somebody drawn on a plain field, taken off it")
+
+    cut_out = notebook_thing("cut_out")
+
+    # What came back: the boy on a blue panel, on white. Pasting that
+    # onto a meadow pastes two rectangles.
+    him = Image.new("RGBA", (400, 500), (255, 255, 255, 255))
+
+    him.paste(Image.new("RGBA", (300, 380), (150, 200, 240, 255)),
+              (50, 60))
+
+    him.paste(Image.new("RGBA", (120, 260), (220, 60, 40, 255)),
+              (140, 140))
+
+    done = cut_out(him)
+
+    def what_is_left(shot):
+
+        counted = {"gone": 0, "him": 0, "panel": 0}
+
+        for red, green, blue, clear in shot.getdata():
+
+            if clear == 0:
+                counted["gone"] += 1
+
+            elif red > 180 and green < 110:
+                counted["him"] += 1
+
+            elif blue > 200 and red < 200:
+                counted["panel"] += 1
+
+        return counted
+
+    left = what_is_left(done)
+
+    print(f"   transparent {left['gone']}, him {left['him']}, "
+          f"panel {left['panel']}")
+
+    # The white and the blue panel are gone; he is still there, whole.
+    assert left["him"] == 120 * 260, left
+
+    assert left["panel"] == 0, left
+
+    assert left["gone"] == 400 * 500 - 120 * 260, left
+
+    # And somebody who reaches the edge is not eaten: a pass that would
+    # take most of the picture is refused.
+    wide = Image.new("RGBA", (200, 200), (240, 240, 240, 255))
+
+    wide.paste(Image.new("RGBA", (200, 150), (30, 160, 60, 255)),
+               (0, 25))
+
+    kept = what_is_left(cut_out(wide))
+
+    print(f"   edge to edge: {kept['gone']} transparent of 40000")
+
+    assert kept["gone"] < 200 * 200 * 0.4, kept
+
+    print("\n   [OK] the field goes, the character stays")
 
 
 def test_the_sheets_run_draws_them_and_stops(root):
@@ -2739,6 +2831,7 @@ def main():
         test_a_folder_with_no_pictures_in_it(root)
         test_a_model_you_do_not_need_is_not_fetched(root)
         test_clips_made_somewhere_else(root)
+        test_a_drawn_character_is_cut_out(root)
         test_the_sheets_run_draws_them_and_stops(root)
         test_a_shot_is_assembled_from_the_sheets(root)
         test_no_gpu_is_asked_for_when_nothing_is_generated(root)
