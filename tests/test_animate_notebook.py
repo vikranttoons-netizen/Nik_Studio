@@ -1918,6 +1918,107 @@ def test_the_character_is_a_picture_you_own(root):
           "ones that are not")
 
 
+def test_a_shot_is_assembled_from_the_sheets(root):
+
+    heading("32d  The place, and whoever the line names, put together")
+
+    drive = make_input(root / "Assembled", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not "
+        "move\n"
+        "Close up of the puppy barking, grass rippling, the camera "
+        "does not move\n"
+        "Wide shot of him sitting with the puppy, leaves swaying, the "
+        "camera does not move\n",
+        encoding="utf-8",
+    )
+
+    # The sheets, drawn already, each a flat colour so who ended up in
+    # a shot can be counted off the pixels.
+    sheets = drive / "Input" / "sheets"
+
+    (sheets / "cast").mkdir(parents=True, exist_ok=True)
+
+    (sheets / "places").mkdir(parents=True, exist_ok=True)
+
+    def a_body(path, colour):
+
+        made = Image.new("RGBA", (300, 600), (0, 0, 0, 0))
+
+        made.paste(Image.new("RGBA", (200, 500), colour + (255,)),
+                   (50, 50))
+
+        made.save(path)
+
+    a_body(sheets / "cast" / "nik.png", (220, 30, 30))
+
+    a_body(sheets / "cast" / "puppy.png", (30, 30, 220))
+
+    a_body(sheets / "cast" / "kitten.png", (200, 30, 200))
+
+    a_body(sheets / "cast" / "duckling.png", (230, 200, 30))
+
+    for where in ("meadow", "garden", "park"):
+        Image.new("RGB", (1024, 576), (20, 120, 20)).save(
+            sheets / "places" / f"{where}.png")
+
+    printed, refusal, calls = run(drive, source_kind="character")
+
+    assert not refusal, refusal
+
+    # Nothing was drawn: every sheet was already there, and a scene is
+    # not drawn at all when it can be built.
+    print(f"   {len(DRAWN)} drawn, {len(calls)} animated")
+
+    assert DRAWN == [], DRAWN
+
+    scenes = sorted((drive / "Output" / "Scenes").glob("*.png"))
+
+    def who_is_in(path):
+        """How much of the shot is each sheet's colour."""
+
+        small = Image.open(path).convert("RGB").resize((100, 56))
+
+        counted = {"nik": 0, "puppy": 0}
+
+        for red, green, blue in small.getdata():
+
+            if red > 150 and green < 90 and blue < 90:
+                counted["nik"] += 1
+
+            if blue > 150 and red < 90 and green < 90:
+                counted["puppy"] += 1
+
+        return {name: n / 5600 for name, n in counted.items()}
+
+    waving = who_is_in(scenes[0])
+
+    barking = who_is_in(scenes[1])
+
+    together = who_is_in(scenes[2])
+
+    for name, got in (("he waves", waving), ("puppy barks", barking),
+                      ("both", together)):
+        print(f"   {name:<12} nik {got['nik']:.1%}, puppy "
+              f"{got['puppy']:.1%}")
+
+    # "He waves" - him, and no puppy.
+    assert waving["nik"] > 0.02 and waving["puppy"] == 0, waving
+
+    # "Close up of the puppy" - the puppy, and not him.
+    assert barking["puppy"] > 0.02 and barking["nik"] == 0, barking
+
+    # "him sitting with the puppy" - both of them, in one shot.
+    assert together["nik"] > 0.01 and together["puppy"] > 0.01, together
+
+    # And a close up is closer than a wide shot.
+    assert barking["puppy"] > together["puppy"] * 1.5, (barking, together)
+
+    print("\n   [OK] the line says who and where, the sheets say what "
+          "they look like")
+
+
 def test_no_gpu_is_asked_for_when_nothing_is_generated(root):
 
     heading("32b  Cutting clips together needs no card at all")
@@ -2693,6 +2794,7 @@ def main():
         test_a_model_you_do_not_need_is_not_fetched(root)
         test_clips_made_somewhere_else(root)
         test_the_character_is_a_picture_you_own(root)
+        test_a_shot_is_assembled_from_the_sheets(root)
         test_no_gpu_is_asked_for_when_nothing_is_generated(root)
         test_the_movement_lands_on_the_words(root)
         test_preview_only(root)
