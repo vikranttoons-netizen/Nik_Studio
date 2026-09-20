@@ -1837,8 +1837,21 @@ def test_the_character_is_a_picture_you_own(root):
 
     assert not refusal, refusal
 
-    # Two of the three lines are about him; the puppy's is not.
-    asked = [entry["prompt"] for entry in DRAWN]
+    # The cast and the places are drawn first, once. What this test is
+    # about is the scenes, so the sheets are counted separately.
+    every = [entry["prompt"] for entry in DRAWN]
+
+    sheets = [p for p in every if "plain white background" in p
+              or "nobody in it" in p]
+
+    print(f"   {len(sheets)} sheet(s) drawn first, once")
+
+    assert len(sheets) == 7, sheets
+
+    for one in sheets:
+        assert "a single a" not in one, one
+
+    asked = [p for p in every if p not in sheets]
 
     for prompt in asked:
         print(f"   {prompt[:66]}")
