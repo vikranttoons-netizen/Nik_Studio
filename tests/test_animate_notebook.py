@@ -384,7 +384,8 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         beats=None, short=False, full_size=False,
         uploads=None, local=None, fast=False, force="",
         quality="good", reference="", check_drawings=False,
-        preview_only=False, borrow_repeats=True, source_kind="ai"):
+        preview_only=False, borrow_repeats=True, source_kind="ai",
+        run_as=""):
     """
     Run the notebook against a folder. Returns (printed, refusal, calls)
     where refusal is the message it stopped with, or "".
@@ -452,8 +453,9 @@ def run(drive, vram=24.0, ram=53.0, capability=8, out_of_memory=False,
         ("REFERENCE_NAME", repr(reference)),
         ("BORROW_REPEATS", borrow_repeats),
         ("SOURCE", repr(source_kind)),
-        ("RUN", repr("drawings" if check_drawings
-                     else ("video" if preview_only else "final"))),
+        ("RUN", repr(run_as if run_as else
+                     ("drawings" if check_drawings
+                      else ("video" if preview_only else "final")))),
     ):
         source = set_to(source, name, value)
 
@@ -1816,6 +1818,50 @@ def test_clips_made_somewhere_else(root):
     print("\n   [OK] one edit, whatever made the clips")
 
 
+def test_the_sheets_run_draws_them_and_stops(root):
+
+    heading("32e  The sheets run: everybody, everywhere, and stop")
+
+    drive = make_input(root / "SheetRun", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not "
+        "move\n"
+        "Close up of the puppy barking, grass rippling, the camera "
+        "does not move\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive, source_kind="character",
+                                  run_as="sheets")
+
+    # It stops on purpose, so it refuses - and says so.
+    assert refusal and "Stopped after the sheets" in refusal, refusal
+
+    made = sorted(path.name for path in
+                  (drive / "Input" / "sheets").rglob("*.png"))
+
+    print(f"   drew: {', '.join(made)}")
+
+    # The cast, and the place in each size the script uses. Two lines,
+    # one medium and one close - and no wide, because nothing asks for
+    # one.
+    assert "meadow_medium.png" in made and "meadow_close.png" in made, made
+
+    assert "meadow_wide.png" not in made, made
+
+    for name in ("nik.png", "puppy.png", "kitten.png", "duckling.png"):
+        assert name in made, (name, made)
+
+    # Nothing animated, nothing cut.
+    assert calls == [], calls
+
+    assert not (drive / "Output" / "Episode.mp4").exists()
+
+    print("\n   [OK] the sheets, the ones the script needs, and no "
+          "further")
+
+
 def test_a_shot_is_assembled_from_the_sheets(root):
 
     heading("32d  The place, and whoever the line names, put together")
@@ -2693,6 +2739,7 @@ def main():
         test_a_folder_with_no_pictures_in_it(root)
         test_a_model_you_do_not_need_is_not_fetched(root)
         test_clips_made_somewhere_else(root)
+        test_the_sheets_run_draws_them_and_stops(root)
         test_a_shot_is_assembled_from_the_sheets(root)
         test_no_gpu_is_asked_for_when_nothing_is_generated(root)
         test_the_movement_lands_on_the_words(root)
