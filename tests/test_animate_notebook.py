@@ -1809,6 +1809,95 @@ def test_clips_made_somewhere_else(root):
     print("\n   [OK] one edit, whatever made the clips")
 
 
+def test_the_character_is_a_picture_you_own(root):
+
+    heading("32c  Him, put into every shot, instead of drawn again")
+
+    drive = make_input(root / "Himself", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not "
+        "move\n"
+        "Close up of him clapping, grass rippling, the camera does not "
+        "move\n"
+        "Close up of the puppy barking, leaves swaying, the camera "
+        "does not move\n",
+        encoding="utf-8",
+    )
+
+    # Him: a red square with a transparent border, so where he lands in
+    # the drawn place can be read off the pixels.
+    him = Image.new("RGBA", (300, 600), (0, 0, 0, 0))
+
+    him.paste(Image.new("RGBA", (200, 500), (220, 30, 30, 255)), (50, 50))
+
+    him.save(drive / "Input" / "nik.png")
+
+    printed, refusal, calls = run(drive, source_kind="character")
+
+    assert not refusal, refusal
+
+    # Two of the three lines are about him; the puppy's is not.
+    asked = [entry["prompt"] for entry in DRAWN]
+
+    for prompt in asked:
+        print(f"   {prompt[:66]}")
+
+    his = [p for p in asked if "no people" in p]
+
+    assert len(his) == 2, asked
+
+    # The place is asked for and he is not, because he is not a guess.
+    for prompt in his:
+        assert "3 year old" not in prompt, prompt
+
+    # And what is forbidden in those drawings is people.
+    forbidden = [neg for neg in DRAW_NEGATIVE_SEEN if "no people" not in neg]
+
+    assert any("person" in neg for neg in DRAW_NEGATIVE_SEEN), (
+        DRAW_NEGATIVE_SEEN)
+
+    # The puppy's shot is drawn the old way - there is no picture of a
+    # puppy to put in.
+    assert len(asked) == 3, asked
+
+    # He is actually in the pictures, and bigger in the close up.
+    scenes = sorted((drive / "Output" / "Scenes").glob("*.png"))
+
+    print(f"   scenes: {', '.join(path.name for path in scenes)}")
+
+    def how_much_of_him(path):
+        """The share of the picture that is his red."""
+
+        shot = Image.open(path).convert("RGB")
+
+        small = shot.resize((80, 45))
+
+        red = sum(1 for pixel in small.getdata()
+                  if pixel[0] > 150 and pixel[1] < 90 and pixel[2] < 90)
+
+        return red / (80 * 45)
+
+    wide_ish = how_much_of_him(scenes[0])
+
+    closer = how_much_of_him(scenes[1])
+
+    puppy = how_much_of_him(scenes[2])
+
+    print(f"   he fills {wide_ish:.1%} of shot 1, {closer:.1%} of the "
+          f"close up, {puppy:.1%} of the puppy's")
+
+    assert wide_ish > 0.02, wide_ish
+
+    assert closer > wide_ish * 1.4, (closer, wide_ish)
+
+    # Not in the puppy's shot at all.
+    assert puppy < 0.005, puppy
+
+    print("\n   [OK] the same boy in every shot of him, and out of the "
+          "ones that are not")
+
+
 def test_no_gpu_is_asked_for_when_nothing_is_generated(root):
 
     heading("32b  Cutting clips together needs no card at all")
@@ -2583,6 +2672,7 @@ def main():
         test_a_folder_with_no_pictures_in_it(root)
         test_a_model_you_do_not_need_is_not_fetched(root)
         test_clips_made_somewhere_else(root)
+        test_the_character_is_a_picture_you_own(root)
         test_no_gpu_is_asked_for_when_nothing_is_generated(root)
         test_the_movement_lands_on_the_words(root)
         test_preview_only(root)
