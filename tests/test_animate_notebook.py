@@ -991,7 +991,14 @@ def test_one_picture_on_its_own(root):
     # Nor the words. The first test clip came back with a line of the
     # song burned across it, which is not what a test of the model is
     # for.
-    assert "drawn on" not in printed, printed
+    #
+    # Checked on what the run did, not on a phrase in its output: the
+    # words come from the lyrics, and a test clip has none. "drawn on"
+    # used to stand in for this and had stopped matching anything at
+    # all - until a BUILD line saying "drawn once" set it off.
+    assert "The song is ignored" in printed, printed
+
+    assert "line(s) of the song" not in printed, printed
 
     print("\n   [OK] one clip, its own length, nothing over the top")
 
