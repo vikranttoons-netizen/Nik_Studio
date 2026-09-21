@@ -26,39 +26,34 @@ DRIVE MEIN KYA HONA CHAHIYE
 sheets waali folders khud ban jaati hain, aapko banani nahi hain.
 
 
-ABHI KYA KARNA HAI (ek hi baar, sirf 3 picture banengi)
--------------------------------------------------------
-1. Drive mein jaakar SIRF ye teen file DELETE kijiye:
+ABHI KYA KARNA HAI (sirf 3 picture banengi)
+-------------------------------------------
+Jagah (meadow) teeno theek ban gayi hain - unhe haath mat lagaiye.
+Nik bhi theek hai - use bhi haath mat lagaiye.
 
-        input / sheets / places / meadow_wide.png
-        input / sheets / places / meadow_medium.png
-        input / sheets / places / meadow_close.png
+Sirf ye TEEN file DELETE kijiye:
 
-   (yahi wo teen hain jinmein galti se ek bachcha khada tha)
+        input / sheets / cast / puppy.png
+        input / sheets / cast / kitten.png
+        input / sheets / cast / duckling.png
 
-2. cast waali folder ko HAATH MAT LAGAIYE. Nik, puppy, kitten,
-   duckling - sab rehne dijiye. Unka background ab use karte waqt khud
-   kat jayega, dobara banane ki zaroorat nahi.
+Phir notebook dobara chalaiye. Sirf yahi teen dobara banengi - baaki
+sab jaise hain waise rahengi, kyunki notebook sirf wahi banata hai jo
+Drive mein nahi hai.
 
-3. NikStudio_Animate.ipynb kholiye. Cell 2 mein upar ye do line aisi
-   hi honi chahiye:
+Teeno ab MAGENTA background par banengi, isliye unka background poora
+katega - purani file safed background par bani thi, isliye puppy ka
+aadha hissa kat gaya tha aur kitten/duckling ka bilkul nahi kata.
 
-        RUN    = "sheets"
-        SOURCE = "character"
+Inka description bhi bada kar diya hai. Pehle Nik ke liye 30 shabd
+the aur jaanwaron ke liye sirf 6 - isliye kitten ek grey lump jaisa
+aaya tha. Ab teeno gol, mulaayam, badi aankhon wale banenge.
 
-4. Dono cell chala dijiye. Sirf 3 picture banengi, phir notebook khud
-   ruk jayega aur likhega:
-
-        Stopped after the sheets, on purpose
-
-5. Output mein Sheets.jpg banegi. Wo mujhe bhej dijiye.
-
-   Usme dekhna hai: teeno meadow KHAALI hon (koi bachcha na ho), aur
-   camera zameen ke paas ho - upar se nahi, naqshe jaisa nahi.
+Chalne ke baad nayi Sheets.jpg mujhe bhej dijiye.
 
 
-TEEN GALTIYAN JO IS BAAR THEEK KI HAIN
---------------------------------------
+PICHHLI BAAR KYA THEEK HUA
+--------------------------
 1. Har jagah mein ek bachcha khada tha.
    Wajah: prompt mein "for toddlers" aur "child's eye level" likha
    tha. Model jo naam liya jaata hai wahi banata hai - negative mein
