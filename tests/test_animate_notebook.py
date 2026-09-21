@@ -379,7 +379,7 @@ def cell_two():
     return "".join(notebook["cells"][2]["source"])
 
 
-def notebook_thing(name):
+def notebook_thing(name, *needs):
     """
     One function out of the notebook, on its own.
 
@@ -387,17 +387,24 @@ def notebook_thing(name):
     no folder behind it - cutting a background off, say. Lifting the
     function out and calling it directly says more, and in a second,
     than running the whole cell to look at what came out the end.
+
+    A lifted function can lean on a small helper beside it, and on its
+    own it then fails with a NameError that says nothing about the
+    notebook - which is a test breaking, not a fault found. Name the
+    helpers it leans on and they come along.
     """
 
     source = cell_two()
 
-    start = source.index(f"def {name}(")
-
-    end = source.index("\ndef ", start + 1)
-
     room = {}
 
-    exec(compile(source[start:end], "cell two", "exec"), room)
+    for wanted in (name,) + needs:
+
+        start = source.index(f"def {wanted}(")
+
+        end = source.index("\ndef ", start + 1)
+
+        exec(compile(source[start:end], "cell two", "exec"), room)
 
     return room[name]
 
@@ -1891,7 +1898,8 @@ def test_the_cast_is_keyed_off_magenta(root):
 
     heading("32h  A white puppy on magenta, not on white")
 
-    take_the_chroma_off = notebook_thing("take_the_chroma_off")
+    take_the_chroma_off = notebook_thing("take_the_chroma_off",
+                                     "near_enough")
 
     # The fault this replaces: a white-and-brown dog drawn on white.
     # Walking in from the rim walked into the dog and took half of it.
