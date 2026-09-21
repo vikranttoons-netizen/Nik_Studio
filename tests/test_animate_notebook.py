@@ -18,6 +18,7 @@ Run from the project root:
     python tests/test_animate_notebook.py
 """
 
+import ast
 import builtins
 import io
 import json
@@ -379,6 +380,33 @@ def cell_two():
     return "".join(notebook["cells"][2]["source"])
 
 
+def cell_pieces():
+    """Every top-level def and setting in cell two, by name."""
+
+    source = cell_two()
+
+    lines = source.splitlines()
+
+    pieces = {}
+
+    for node in ast.parse(source).body:
+
+        if isinstance(node, ast.FunctionDef):
+            named = [node.name]
+
+        elif isinstance(node, ast.Assign):
+            named = [target.id for target in node.targets
+                     if isinstance(target, ast.Name)]
+
+        else:
+            continue
+
+        for this in named:
+            pieces[this] = "\n".join(lines[node.lineno - 1:node.end_lineno])
+
+    return pieces
+
+
 def notebook_thing(name, *needs):
     """
     One function out of the notebook, on its own.
@@ -388,23 +416,47 @@ def notebook_thing(name, *needs):
     function out and calling it directly says more, and in a second,
     than running the whole cell to look at what came out the end.
 
-    A lifted function can lean on a small helper beside it, and on its
-    own it then fails with a NameError that says nothing about the
-    notebook - which is a test breaking, not a fault found. Name the
-    helpers it leans on and they come along.
+    Whatever the function leans on comes with it - the helper beside
+    it, the setting above it, and whatever those lean on in turn. On
+    its own it failed with a NameError naming first a helper and then
+    a constant, which is this test breaking rather than a fault found,
+    and a fix per name would have broken again on the next one.
     """
 
-    source = cell_two()
+    pieces = cell_pieces()
+
+    order, brought = [], set()
+
+    def bring(this):
+
+        if this in brought or this not in pieces:
+            return
+
+        brought.add(this)
+
+        for word in sorted(set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*",
+                                          pieces[this]))):
+            if word != this:
+                bring(word)
+
+        order.append(this)
+
+    for this in (name,) + needs:
+        bring(this)
 
     room = {}
 
-    for wanted in (name,) + needs:
+    for this in order:
 
-        start = source.index(f"def {wanted}(")
+        try:
+            exec(compile(pieces[this], "cell two", "exec"), room)
 
-        end = source.index("\ndef ", start + 1)
-
-        exec(compile(source[start:end], "cell two", "exec"), room)
+        except Exception:
+            # Something further out than this function needs. If it
+            # turns out to have been needed after all, the call says
+            # so by name.
+            if this == name:
+                raise
 
     return room[name]
 
@@ -1898,8 +1950,7 @@ def test_the_cast_is_keyed_off_magenta(root):
 
     heading("32h  A white puppy on magenta, not on white")
 
-    take_the_chroma_off = notebook_thing("take_the_chroma_off",
-                                     "near_enough")
+    take_the_chroma_off = notebook_thing("take_the_chroma_off")
 
     # The fault this replaces: a white-and-brown dog drawn on white.
     # Walking in from the rim walked into the dog and took half of it.
