@@ -1,91 +1,103 @@
 AB KYA KARNA HAI
 ================
 
-Ab sirf EK cell chalani hai. Koi file upload nahi karni.
+Naya raasta: pehle SHEETS banti hain (character sheet + background
+sheet), phir har scene un sheets se JOD kar banta hai.
+
+Iska matlab:
+  * Nik har shot mein BILKUL ek jaisa dikhega - kyunki wo ek file hai,
+    model har baar naya nahi banata.
+  * Scene ki picture banane mein ZERO GPU unit lagti hai. Sirf sheets
+    banane mein aur video banane mein lagti hai.
 
 
-DRIVE MEIN SIRF YE
-------------------
-      My Drive / NikStudio / Mixamo /   <- character pack, unzipped
-      My Drive / NikStudio / input /    <- script.txt (pehle se hai)
+DRIVE MEIN KYA HONA CHAHIYE
+---------------------------
+      My Drive / NikStudio / input / script.txt
+      My Drive / NikStudio / input / sheets / cast   / nik.png
+                                                     / puppy.png
+                                                     / kitten.png
+                                                     / duckling.png
+      My Drive / NikStudio / input / sheets / places / meadow_wide.png
+                                                     / meadow_medium.png
+                                                     / meadow_close.png
 
-Bas. nik_blender.py aur from_mixamo.py ab Drive mein NAHI chahiye -
-wo notebook ke andar hi hain. Agar wahan padi hain to rehne dijiye,
-koi farq nahi padta.
-
-
-CHALANA
--------
-NikStudio_Rigged.ipynb kholiye. Ek hi cell hai. Chala dijiye.
-
-Blender khud install ho jayega (~2 min pehli baar).
-Character khud chun liya jayega.
-Nik.blend khud ban jayegi.
-3 clips ban jayengi.
-
-Kuch bhi bharna zaroori NAHI hai.
+"input" ho ya "Input" - dono chalega, notebook khud dhoondh leta hai.
+sheets waali folders khud ban jaati hain, aapko banani nahi hain.
 
 
-AGAR KUCH BADALNA HO
---------------------
-Cell mein sabse upar settings hain:
+ABHI KYA KARNA HAI (ek hi baar, sirf 3 picture banengi)
+-------------------------------------------------------
+1. Drive mein jaakar SIRF ye teen file DELETE kijiye:
 
-  CHARACTER = ""       khaali = khud chunega. Pack ka khaali putla
-                       (BaseCharacter) aur zombie/knight/ninja apne
-                       aap chhod diye jaate hain. Koi aur chahiye to
-                       naam ka hissa likh dijiye: "Casual_Male"
+        input / sheets / places / meadow_wide.png
+        input / sheets / places / meadow_medium.png
+        input / sheets / places / meadow_close.png
 
-  MOVEMENTS = ""       animation library ka folder (neeche padhiye)
+   (yahi wo teen hain jinmein galti se ek bachcha khada tha)
 
-  FIRST_ONLY = 3       3 clips. Saari banane ke liye 0
+2. cast waali folder ko HAATH MAT LAGAIYE. Nik, puppy, kitten,
+   duckling - sab rehne dijiye. Unka background ab use karte waqt khud
+   kat jayega, dobara banane ki zaroorat nahi.
 
-  CHILD = 1.0          bachche ka anupaat. 0 = jaisa download kiya
+3. NikStudio_Animate.ipynb kholiye. Cell 2 mein upar ye do line aisi
+   hi honi chahiye:
 
-  ENGINE               "BLENDER_WORKBENCH" = flat, tez, bina GPU
-                       "BLENDER_EEVEE_NEXT" = accha dikhta hai, GPU on
+        RUN    = "sheets"
+        SOURCE = "character"
 
+4. Dono cell chala dijiye. Sirf 3 picture banengi, phir notebook khud
+   ruk jayega aur likhega:
 
-MOVEMENT ACCHI KARNI HO TO (marzi ki baat, zaroori nahi)
---------------------------------------------------------
-Ab agar koi movement pack mein nahi hai, to character KHADA NAHI
-rahega - uske sabse kareeb wali movement chalegi:
+        Stopped after the sheets, on purpose
 
-      wave  nahi mili  ->  clap chalega
-      sway  nahi mili  ->  walk chalega
-      nod   nahi mili  ->  crouch chalega
+5. Output mein Sheets.jpg banegi. Wo mujhe bhej dijiye.
 
-Aur death, punch, sword slash kabhi nahi chalenge - wo bachchon ke
-liye nahi hain, chahe aur kuch bhi na ho.
-
-Ye kaam chalau hai. Asli movements chahiye to:
-
-  1. https://quaternius.itch.io/universal-animation-library
-     "Download Now" -> daam ke box mein 0 likh dijiye. Free hai.
-     (quaternius.com par ISKA PAID version dikhta hai - wahan mat
-     jaiye)
-
-  2. Unzip kar ke poori folder yahan daaliye:
-        My Drive / NikStudio / Moves /
-
-  3. Cell mein:  MOVEMENTS = "Moves"
+   Usme dekhna hai: teeno meadow KHAALI hon (koi bachcha na ho), aur
+   camera zameen ke paas ho - upar se nahi, naqshe jaisa nahi.
 
 
-CHALNE KE BAAD MUJHE BHEJIYE
-----------------------------
-Neeche ye table print hoga:
+TEEN GALTIYAN JO IS BAAR THEEK KI HAIN
+--------------------------------------
+1. Har jagah mein ek bachcha khada tha.
+   Wajah: prompt mein "for toddlers" aur "child's eye level" likha
+   tha. Model jo naam liya jaata hai wahi banata hai - negative mein
+   mana karne se farq nahi padta. Ab jagah ke prompt mein kisi insaan
+   ka naam ja hi nahi sakta, notebook khud rok deta hai.
 
-      Movement, clip by clip:
-        Scene01    3.42
-        Scene02    2.80
-        Scene03    3.58
+2. Puppy ka aadha hissa kat gaya tha.
+   Wajah: safed kutta safed background par. Ab saara cast MAGENTA
+   (gaadha gulaabi) background par banta hai - bachchon ke gaane mein
+   aisa rang kahin nahi hota, isliye kaatna hisaab hai, andaaza nahi.
 
-1 se kam matlab character khada hai. Ye table aur 3 clips bhej
-dijiye.
+3. Kitten aur duckling ka background nahi kata tha.
+   Ab use karte waqt bhi kaata jaata hai, isliye purani sheets bhi
+   khud theek ho jaati hain.
+
+
+SHEETS KE BAAD (aage ka raasta)
+-------------------------------
+  sheets  ->  44 scene ki picture (ZERO GPU, sheets jodkar)
+          ->  44 clip (Wan 2.2, yahan GPU lagti hai)
+          ->  beat par cut + lyrics + gaana
+          ->  Video + Short
+          ->  gaane waali line par lip sync (Wan 2.2 S2V)
+
+Sab model free hain aur monetise karne ki ijaazat dete hain
+(Apache 2.0).
+
+
+RUN KE TEEN SHABD
+-----------------
+  RUN = "sheets"     sirf sheets banao aur ruk jao  (abhi yahi)
+  RUN = "drawings"   har scene ki picture banao aur ruk jao
+  RUN = "video"      clip banao aur video kaato
+  RUN = "final"      wahi video 1080p + vertical Short
 
 
 AGAR ATAK JAYEIN
 ----------------
-"No module named 'bpy'"     -> cell dobara chalaiye, khud lag jayega
-"restart session"           -> Runtime > Restart session, phir cell
-"No .../Mixamo"             -> folder ka naam "Mixamo" hi rakhiye
-Kuch aur                    -> screenshot bhej dijiye
+"KeyError"                 -> screenshot bhej dijiye
+"No .../input"             -> folder ka naam input ya Input rakhiye
+"Stopped after the sheets" -> ye galti NAHI hai, yahi hona tha
+Kuch aur                   -> screenshot bhej dijiye
