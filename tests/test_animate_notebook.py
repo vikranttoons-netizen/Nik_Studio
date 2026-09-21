@@ -1847,6 +1847,101 @@ def test_clips_made_somewhere_else(root):
     print("\n   [OK] one edit, whatever made the clips")
 
 
+def test_a_place_never_names_anybody(root):
+
+    heading("32g  A place with nobody in it, said in the prompt")
+
+    drive = make_input(root / "Empty", [], song_seconds=19)
+
+    (drive / "Input" / "script.txt").write_text(
+        "He waves both hands, flowers nodding, the camera does not "
+        "move\n"
+        "Wide shot of him sitting, grass rippling, the camera does not "
+        "move\n",
+        encoding="utf-8",
+    )
+
+    printed, refusal, calls = run(drive, source_kind="character",
+                                  run_as="sheets")
+
+    places = [entry["prompt"] for entry in DRAWN
+              if "nobody in it" in entry["prompt"]]
+
+    print(f"   {len(places)} place(s) asked for")
+
+    assert places, [entry["prompt"] for entry in DRAWN]
+
+    # All three came back with a boy standing in them, because the
+    # words placing the camera said "at a small child's eye level" -
+    # and a model draws what a prompt names, whatever the negative
+    # says afterwards.
+    for asked in places:
+
+        for word in ("child", "boy", "girl", "kid", "person", "people",
+                     "toddler", "baby"):
+
+            assert word not in asked.lower(), (word, asked)
+
+    print("   " + places[0][:72])
+
+    print("\n   [OK] the place is a place, and names nobody")
+
+
+def test_the_cast_is_keyed_off_magenta(root):
+
+    heading("32h  A white puppy on magenta, not on white")
+
+    take_the_chroma_off = notebook_thing("take_the_chroma_off")
+
+    # The fault this replaces: a white-and-brown dog drawn on white.
+    # Walking in from the rim walked into the dog and took half of it.
+    on_magenta = Image.new("RGBA", (300, 300), (255, 0, 255, 255))
+
+    on_magenta.paste(Image.new("RGBA", (150, 150), (255, 255, 255, 255)),
+                     (75, 75))
+
+    on_magenta.paste(Image.new("RGBA", (60, 60), (140, 90, 50, 255)),
+                     (120, 120))
+
+    done = take_the_chroma_off(on_magenta)
+
+    assert done is not None, "magenta was not recognised"
+
+    counted = {"gone": 0, "white": 0, "brown": 0}
+
+    for red, green, blue, clear in done.getdata():
+
+        if clear == 0:
+            counted["gone"] += 1
+
+        elif red > 200 and green > 200 and blue > 200:
+            counted["white"] += 1
+
+        elif 100 < red < 190 and green < 130:
+            counted["brown"] += 1
+
+    print(f"   gone {counted['gone']}, white kept {counted['white']}, "
+          f"brown kept {counted['brown']}")
+
+    # The magenta went; every white pixel of the dog stayed.
+    assert counted["gone"] == 300 * 300 - 150 * 150, counted
+
+    assert counted["white"] == 150 * 150 - 60 * 60, counted
+
+    assert counted["brown"] == 60 * 60, counted
+
+    # And something that was never on magenta says so, so the caller
+    # can fall back rather than take the wrong thing off.
+    on_grey = Image.new("RGBA", (100, 100), (200, 200, 200, 255))
+
+    assert take_the_chroma_off(on_grey) is None
+
+    print("   a grey background: left alone, and said so")
+
+    print("\n   [OK] the line between the dog and the field is "
+          "arithmetic")
+
+
 def test_a_drawn_character_is_cut_out(root):
 
     heading("32f  Somebody drawn on a plain field, taken off it")
@@ -2831,6 +2926,8 @@ def main():
         test_a_folder_with_no_pictures_in_it(root)
         test_a_model_you_do_not_need_is_not_fetched(root)
         test_clips_made_somewhere_else(root)
+        test_a_place_never_names_anybody(root)
+        test_the_cast_is_keyed_off_magenta(root)
         test_a_drawn_character_is_cut_out(root)
         test_the_sheets_run_draws_them_and_stops(root)
         test_a_shot_is_assembled_from_the_sheets(root)
